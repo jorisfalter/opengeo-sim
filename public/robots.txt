@@ -1,0 +1,5 @@
+# opengeo-sim — an open-source flight simulator in the browser.
+User-agent: *
+Allow: /
+
+Sitemap: https://opengeo.ai-tigers.com/sitemap.xml
