@@ -1,0 +1,15 @@
+node_modules/
+dist/
+
+# Cached source data. Everything here is rebuilt by the scripts in scripts/;
+# the Overpass and DEM caches exist so a rebuild does not hammer public servers.
+data/*/*.json
+data/dem/
+
+# Generated geometry. These are derivative databases of OpenStreetMap (ODbL);
+# they are committed on purpose so the simulators run without a build step.
+# Remove the negation below if you would rather ship only the builders.
+!public/fly/*.json
+!public/ride/*.json
+public/fdm/wasm/*
+!public/fdm/wasm/README.md

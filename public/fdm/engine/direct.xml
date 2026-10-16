@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<direct name="Direct">
+  <!-- A turbofan's thrust goes straight out of the back; no propeller model. -->
+</direct>

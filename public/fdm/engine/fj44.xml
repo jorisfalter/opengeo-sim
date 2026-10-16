@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<!--
+  Williams FJ44-4A, as flown on the PC-24: 3400 lbf flat rated.
+  Simplified: thrust falls off with altitude and rises slightly with Mach,
+  which is all a simulator needs to feel right in the climb and at cruise.
+-->
+<turbine_engine name="FJ44-4A">
+  <milthrust unit="LBS">3400</milthrust>
+  <bypassratio>3.3</bypassratio>
+  <tsfc>0.46</tsfc>
+  <bleed>0.03</bleed>
+  <idlen1>28.0</idlen1>
+  <idlen2>62.0</idlen2>
+  <maxn1>100.0</maxn1>
+  <maxn2>100.0</maxn2>
+  <augmented>0</augmented>
+  <injected>0</injected>
+
+  <function name="IdleThrust">
+    <table>
+      <independentVar lookup="row">velocities/mach</independentVar>
+      <independentVar lookup="column">atmosphere/density-altitude</independentVar>
+      <tableData>
+                 0     10000    25000    40000
+        0.0   0.060    0.045    0.030    0.018
+        0.4   0.055    0.042    0.029    0.018
+        0.8   0.065    0.050    0.035    0.022
+      </tableData>
+    </table>
+  </function>
+
+  <function name="MilThrust">
+    <table>
+      <independentVar lookup="row">velocities/mach</independentVar>
+      <independentVar lookup="column">atmosphere/density-altitude</independentVar>
+      <tableData>
+                 0     10000    25000    40000    45000
+        0.0   1.000    0.720    0.460    0.235    0.185
+        0.2   0.950    0.691    0.445    0.229    0.180
+        0.4   0.912    0.673    0.437    0.226    0.178
+        0.6   0.898    0.666    0.434    0.226    0.178
+        0.8   0.910    0.677    0.442    0.232    0.182
+      </tableData>
+    </table>
+  </function>
+</turbine_engine>

@@ -1,0 +1,988 @@
+:root {
+  color-scheme: dark;
+  --fly-panel: rgba(16, 18, 21, 0.78);
+  --fly-line: rgba(255, 255, 255, 0.14);
+  --fly-text: #f2efe9;
+  --fly-muted: #a6a7ab;
+  --fly-accent: #5ec8f2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  /* Dynamic viewport units, so the browser chrome appearing and disappearing
+     does not leave the scene taller than the window. */
+  height: 100dvh;
+  overflow: hidden;
+  background: #0a0b0d;
+  color: var(--fly-text);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+#scene,
+#scene .cesium-widget,
+#scene canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.cesium-widget-credits,
+.fly-credits {
+  display: none !important;
+}
+
+#loading {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-content: center;
+  padding: 24px;
+  text-align: center;
+  background: #0a0b0d;
+  color: var(--fly-muted);
+  transition: opacity 0.4s ease;
+}
+
+#loading.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#loading.is-error {
+  color: #ef8a6b;
+}
+
+.fly-hud {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  pointer-events: none;
+  font-size: 13px;
+}
+
+.fly-hud > * {
+  pointer-events: auto;
+}
+
+.fly-hud__top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.fly-hud__title,
+.fly-hud__modes {
+  border: 1px solid var(--fly-line);
+  border-radius: 10px;
+  background: var(--fly-panel);
+  backdrop-filter: blur(8px);
+}
+
+.fly-hud__title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+}
+
+.fly-hud__title strong {
+  font-size: 15px;
+}
+
+.fly-hud__title span {
+  color: var(--fly-muted);
+}
+
+.fly-hud__modes,
+.fly-hud__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 6px;
+}
+
+.fly-hud button {
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fly-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.fly-hud button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.fly-hud button.is-active {
+  border-color: var(--fly-accent);
+  color: var(--fly-accent);
+}
+
+.fly-hud__credit,
+.fly-hud__keys {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.fly-hud__keys kbd {
+  padding: 1px 4px;
+  border: 1px solid var(--fly-line);
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+
+
+/* ---------------------------------------------------------------- the glass
+
+   One SVG, scaled to the window, drawn in the colour head-up displays are
+   drawn in because it reads over snow, rock and sky alike. Everything in it is
+   a transform or a text node, so a frame costs almost nothing. */
+
+.fly-glass {
+  position: absolute;
+  inset: 48px 16px 64px;
+  width: calc(100% - 32px);
+  height: calc(100% - 112px);
+  pointer-events: none;
+  overflow: visible;
+  font-family: ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  transition: opacity 0.3s ease;
+}
+
+.fly-glass.is-outside {
+  opacity: 0.62;
+}
+
+/* The only part of the glass you can touch: the warning that tells you the
+   parking brake is set also releases it. */
+.fly-glass [data-el='warnHit'] {
+  pointer-events: auto;
+}
+
+.fly-glass .g-line,
+.fly-glass .g-horizon,
+.fly-glass .g-plane,
+.fly-glass .g-fpv {
+  fill: none;
+  stroke: #7af0b0;
+  stroke-width: 2;
+  stroke-linecap: round;
+  paint-order: stroke;
+}
+
+.fly-glass .g-horizon {
+  stroke-width: 3;
+}
+
+.fly-glass .g-plane {
+  stroke: #ffd166;
+  stroke-width: 3.5;
+}
+
+.fly-glass .g-fpv {
+  stroke: #ffd166;
+  stroke-width: 2.5;
+}
+
+.fly-glass .g-fill,
+.fly-glass .g-bank {
+  fill: #7af0b0;
+  stroke: none;
+}
+
+.fly-glass .g-bank {
+  fill: #ffd166;
+}
+
+.fly-glass .g-vref polygon {
+  fill: #ffd166;
+}
+
+.fly-glass .g-box {
+  fill: rgba(8, 14, 12, 0.3);
+  stroke: rgba(122, 240, 176, 0.35);
+  stroke-width: 1.5;
+}
+
+/* Opaque, so the tape's own labels do not show through the readout. */
+.fly-glass .g-readout {
+  fill: rgba(6, 11, 9, 0.97);
+  stroke: #7af0b0;
+  stroke-width: 2;
+}
+
+.fly-glass text {
+  fill: #7af0b0;
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 3;
+  paint-order: stroke;
+}
+
+.fly-glass .g-small {
+  font-size: 17px;
+}
+
+.fly-glass .g-label {
+  font-size: 16px;
+  fill: rgba(122, 240, 176, 0.75);
+  letter-spacing: 0.04em;
+}
+
+.fly-glass .g-mid {
+  font-size: 23px;
+}
+
+.fly-glass .g-big {
+  font-size: 34px;
+  font-weight: 600;
+  fill: #ffffff;
+}
+
+.fly-glass .g-rate {
+  font-size: 19px;
+  fill: #ffd166;
+  letter-spacing: 0.06em;
+}
+
+.fly-glass .g-warn {
+  font-size: 26px;
+  font-weight: 700;
+  fill: #ff8a5c;
+  letter-spacing: 0.08em;
+}
+
+.fly-hud__notice {
+  position: absolute;
+  left: 50%;
+  bottom: 86px;
+  margin: 0;
+  padding: 7px 14px;
+  transform: translateX(-50%);
+  border: 1px solid var(--fly-line);
+  border-radius: 999px;
+  background: var(--fly-panel);
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.fly-hud__notice.is-on {
+  opacity: 1;
+}
+
+/* Two automatic top margins would split the free space between them and leave
+   the credit stranded halfway down the screen; only the first one gets it. */
+.fly-hud__credit {
+  margin-top: auto;
+}
+
+/* ------------------------------------------------- the strip you can click
+
+   A throttle, the configuration and the autopilot, usable with a trackpad and
+   nothing else. The keyboard is faster once you know it; this is what makes
+   the first thirty seconds possible. */
+
+.fly-hud__strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: stretch;
+  align-self: flex-start;
+  padding: 6px;
+  border: 1px solid var(--fly-line);
+  border-radius: 10px;
+  background: var(--fly-panel);
+  backdrop-filter: blur(8px);
+}
+
+.fly-hud__strip button.is-on {
+  border-color: var(--fly-accent);
+  background: rgba(94, 200, 242, 0.16);
+  color: var(--fly-accent);
+}
+
+/* Tall enough to be a slider you can actually hit, which is the point of
+   having it at all. */
+.fly-lever {
+  display: flex;
+  gap: 4px;
+  align-items: stretch;
+  height: 62px;
+}
+
+.fly-lever button {
+  width: 30px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.fly-lever__bar {
+  position: relative;
+  cursor: ns-resize;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  overflow: hidden;
+  border: 1px solid var(--fly-line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.fly-lever__bar i {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 0;
+  background: rgba(94, 200, 242, 0.3);
+  transition: height 0.12s linear;
+}
+
+.fly-lever__bar span {
+  position: relative;
+  align-self: start;
+  margin-top: 4px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Held down rather than clicked: steering is not a toggle. */
+.fly-rudder {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas: 'left right' 'label label';
+  align-items: center;
+  justify-items: center;
+  align-items: center;
+  gap: 1px;
+  padding: 2px 4px;
+  border: 1px solid var(--fly-line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.fly-rudder > div {
+  display: flex;
+  gap: 2px;
+}
+
+.fly-rudder button {
+  padding: 3px 9px;
+  background: rgba(255, 255, 255, 0.06);
+  touch-action: none;
+}
+
+.fly-rudder button.is-on {
+  border-color: var(--fly-accent);
+  color: var(--fly-accent);
+}
+
+.fly-rudder [data-action='yaw-left'] {
+  grid-area: left;
+}
+
+.fly-rudder [data-action='yaw-right'] {
+  grid-area: right;
+}
+
+.fly-rudder span {
+  grid-area: label;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--fly-muted);
+}
+
+.fly-rate {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  padding: 0 4px;
+  border: 1px solid var(--fly-line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.fly-rate button {
+  padding: 4px 7px;
+  background: transparent;
+}
+
+.fly-rate span {
+  min-width: 30px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* Asking for more than the simulation will give you near the ground. */
+.fly-rate span.is-capped {
+  color: #ffb08a;
+}
+
+.fly-lever__bar::after {
+  content: 'GAS';
+  position: absolute;
+  bottom: 3px;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--fly-muted);
+}
+
+/* ------------------------------------------------------------ touch flying
+
+   A phone has no keyboard, so without this you can work the throttle and the
+   gear and still not be able to turn. The throttle is a tall strip down the
+   left edge where a left thumb already is, and the buttons are on the right
+   for the other one. Shown only where there is a touch screen. */
+
+.fly-touch {
+  display: none;
+}
+
+.fly-hud__rotate {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .fly-touch {
+    position: fixed;
+    inset: 0;
+    z-index: 12;
+    display: block;
+    pointer-events: none;
+  }
+
+  .fly-touch > * {
+    pointer-events: auto;
+  }
+
+  /* The throttle, its two buttons, and nothing within reach of a screen edge:
+     a drag that starts at the top of an iPhone pulls down Notification Centre
+     instead of reducing power, and the bottom edge is the home indicator. */
+  .fly-touch__power {
+    position: absolute;
+    left: max(10px, env(safe-area-inset-left));
+    top: 92px;
+    bottom: 92px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 76px;
+  }
+
+  .fly-touch__power button {
+    flex: 0 0 52px;
+    border: 1px solid var(--fly-line);
+    border-radius: 12px;
+    background: rgba(16, 18, 21, 0.8);
+    backdrop-filter: blur(8px);
+    color: var(--fly-text);
+    font: inherit;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: none;
+  }
+
+  .fly-touch__throttle {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 60px;
+    overflow: hidden;
+    border: 1px solid var(--fly-line);
+    border-radius: 12px;
+    background: rgba(16, 18, 21, 0.72);
+    backdrop-filter: blur(8px);
+    touch-action: none;
+  }
+
+  .fly-touch__throttle i {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 0;
+    background: rgba(94, 200, 242, 0.32);
+  }
+
+  .fly-touch__throttle span {
+    position: absolute;
+    top: 8px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The right half of the screen is the stick. It sits under the buttons in
+     the stacking order, so a thumb on a button is a button press. */
+  .fly-touch__stick {
+    position: absolute;
+    right: 0;
+    top: 56px;
+    bottom: 86px;
+    left: 46%;
+    touch-action: none;
+  }
+
+  .fly-touch__stick svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+  }
+
+  .fly-touch__stick .g-grip {
+    fill: rgba(255, 255, 255, 0.06);
+    stroke: rgba(255, 209, 102, 0.5);
+    stroke-width: 2;
+  }
+
+  .fly-touch__stick .g-thumb {
+    fill: rgba(255, 209, 102, 0.3);
+    stroke: #ffd166;
+    stroke-width: 3;
+  }
+
+  /* Apple's minimum touch target is 44 px and these were nowhere near it. */
+  .fly-touch__keys,
+  .fly-touch__tiltkeys {
+    position: absolute;
+    left: max(96px, calc(env(safe-area-inset-left) + 88px));
+    display: flex;
+    gap: 10px;
+  }
+
+  .fly-touch__keys {
+    bottom: max(14px, env(safe-area-inset-bottom));
+  }
+
+  .fly-touch__tiltkeys {
+    bottom: max(88px, calc(env(safe-area-inset-bottom) + 74px));
+    display: none;
+  }
+
+  .fly-touch__tiltkeys.is-on {
+    display: flex;
+  }
+
+  /* A failure that scrolls away after two seconds is not a message. */
+  /* Above the tilt row, not across it, and narrow enough to leave the
+     altitude tape readable. */
+  .fly-touch__status {
+    position: absolute;
+    left: max(70px, calc(env(safe-area-inset-left) + 62px));
+    right: 38%;
+    bottom: 160px;
+    margin: 0;
+    display: none;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 176, 138, 0.5);
+    border-radius: 10px;
+    background: rgba(16, 18, 21, 0.92);
+    color: #ffb08a;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .fly-touch__status.is-on {
+    display: block;
+  }
+
+  /* Working, not failing: the same line, without the alarm colours. */
+  .fly-touch__status.is-plain {
+    border-color: var(--fly-line);
+    color: var(--fly-muted);
+    font-size: 11px;
+  }
+
+  .fly-touch__keys button,
+  .fly-touch__tiltkeys button {
+    min-width: 108px;
+    min-height: 62px;
+    padding: 12px 14px;
+    border: 1px solid var(--fly-line);
+    border-radius: 14px;
+    background: rgba(16, 18, 21, 0.86);
+    backdrop-filter: blur(8px);
+    color: var(--fly-text);
+    font: inherit;
+    font-size: 17px;
+    font-weight: 500;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .fly-touch__keys button.is-on,
+  .fly-touch__tiltkeys button.is-on {
+    border-color: var(--fly-accent);
+    color: var(--fly-accent);
+  }
+
+  /* The desktop strip and the key legend are noise on a phone. */
+  .fly-hud__strip,
+  .fly-hud__keys {
+    display: none;
+  }
+
+  /* The glass is one fixed-aspect SVG, so on a short landscape screen it fits
+     by height and sits centred — which leaves exactly the room down each side
+     that the touch controls need. */
+  .fly-glass {
+    inset: 46px max(70px, calc(env(safe-area-inset-right) + 62px)) 84px
+      max(100px, calc(env(safe-area-inset-left) + 92px));
+    width: auto;
+    height: auto;
+  }
+
+  .fly-hud {
+    /* Everything inside the safe area now that the page covers the notch. */
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    font-size: 12px;
+  }
+
+  /* On a phone in landscape the title is only in the way: the start place is
+     already in the picker and the attribution has its own line. With it gone,
+     space-between would push the view buttons to the left, under the throttle. */
+  .fly-hud__title {
+    display: none;
+  }
+
+  .fly-hud__top {
+    justify-content: flex-end;
+  }
+
+  .fly-hud__title strong {
+    font-size: 13px;
+  }
+
+  .fly-hud__title span {
+    display: none;
+  }
+
+  .fly-hud__modes button {
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+
+  .fly-map {
+    right: max(8px, env(safe-area-inset-right));
+    bottom: 44px;
+    width: 116px;
+  }
+
+  /* Crop the square canvas rather than let it set the height. */
+  .fly-map canvas {
+    height: 116px;
+    object-fit: cover;
+  }
+
+  .fly-map__head strong,
+  .fly-map__foot span:last-child {
+    display: none;
+  }
+
+  /* Attribution is a licence condition, so it stays — just out of the way. */
+  .fly-hud__credit {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 0;
+    margin: 0;
+    font-size: 8px;
+    line-height: 1.3;
+    opacity: 0.6;
+  }
+}
+
+/* iOS Safari cannot lock the orientation — the Screen Orientation API's lock
+   needs the Fullscreen API, which it does not have — so the only option is to
+   notice and ask. */
+@media (pointer: coarse) and (orientation: portrait) {
+  .fly-hud__rotate {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: grid;
+    place-content: center;
+    margin: 0;
+    padding: 40px;
+    background: rgba(6, 8, 10, 0.94);
+    text-align: center;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+}
+
+/* ------------------------------------------------------------- moving map
+
+   Bottom right, north up, on the same satellite mosaic as the scene. Big
+   enough to recognise a valley, small enough not to be the view. */
+
+.fly-map {
+  position: fixed;
+  right: 14px;
+  bottom: 58px;
+  z-index: 15;
+  display: none;
+  width: 236px;
+  overflow: hidden;
+  border: 1px solid var(--fly-line);
+  border-radius: 12px;
+  background: var(--fly-panel);
+  backdrop-filter: blur(8px);
+  font-size: 11px;
+}
+
+.fly-map.is-open {
+  display: block;
+}
+
+.fly-map canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: ns-resize;
+}
+
+.fly-map__head,
+.fly-map__foot {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+}
+
+.fly-map__head strong {
+  font-size: 12px;
+}
+
+.fly-map__head span,
+.fly-map__foot span {
+  color: var(--fly-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.fly-map__head span {
+  flex: 1;
+  font-size: 10px;
+}
+
+.fly-map__head button {
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--fly-line);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fly-text);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fly-map__foot {
+  justify-content: space-between;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+/* The scale bar is the line the number sits above. */
+.fly-map__foot span:first-child::before {
+  content: '';
+  display: inline-block;
+  width: 42px;
+  height: 1px;
+  margin-right: 5px;
+  vertical-align: middle;
+  background: var(--fly-muted);
+}
+
+@media (max-width: 860px) {
+  .fly-map {
+    width: 190px;
+    bottom: 76px;
+  }
+}
+
+/* ------------------------------------------------------------ start picker */
+
+.fly-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: none;
+  place-content: center;
+  padding: 24px;
+  background: rgba(6, 8, 10, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.fly-picker.is-open {
+  display: grid;
+}
+
+.fly-picker__sheet {
+  width: min(680px, 100%);
+  max-height: 86vh;
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid var(--fly-line);
+  border-radius: 16px;
+  background: rgba(16, 18, 21, 0.96);
+}
+
+.fly-picker h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
+}
+
+.fly-picker ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.fly-picker li button {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  height: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--fly-line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fly-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fly-picker li button:hover {
+  border-color: var(--fly-accent);
+}
+
+.fly-picker li span {
+  color: var(--fly-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.fly-picker__hits {
+  display: grid;
+  gap: 6px;
+  max-height: 210px;
+  overflow: auto;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.fly-picker__hits:empty {
+  margin: 0;
+}
+
+.fly-picker__hits button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--fly-line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fly-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fly-picker__hits button:hover {
+  border-color: var(--fly-accent);
+}
+
+.fly-picker__hits span {
+  color: var(--fly-muted);
+  font-size: 11px;
+}
+
+.fly-picker [data-el='find'] input {
+  width: 260px;
+}
+
+.fly-picker form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--fly-muted);
+}
+
+.fly-picker input {
+  width: 110px;
+  padding: 7px 9px;
+  border: 1px solid var(--fly-line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fly-text);
+  font: inherit;
+}
+
+.fly-picker form button,
+.fly-picker__close {
+  padding: 7px 12px;
+  border: 1px solid var(--fly-line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--fly-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.fly-picker p {
+  margin: 14px 0;
+  color: var(--fly-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (max-width: 860px) {
+  .fly-glass {
+    inset: 70px 8px 80px;
+    width: calc(100% - 16px);
+  }
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "ams-centraal-sloterdijk",
+    "title": "Amsterdam Centraal → Amsterdam Sloterdijk",
+    "length": 5.24,
+    "stops": 2
+  },
+  {
+    "id": "haarlem-zandvoort",
+    "title": "Haarlem → Zandvoort aan Zee",
+    "length": 8.07,
+    "stops": 3
+  },
+  {
+    "id": "ams-centraal-lelylaan",
+    "title": "Amsterdam Centraal → Amsterdam Lelylaan",
+    "length": 8.79,
+    "stops": 3
+  }
+]

@@ -1,0 +1,28 @@
+{
+  "name": "opengeo-sim",
+  "version": "0.1.0",
+  "description": "Browser simulators that stream national open geodata: a cab ride and a light jet over real terrain",
+  "private": false,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "build:airport": "node scripts/build-airport.mjs",
+    "build:ride": "node scripts/build-ride.mjs",
+    "sync:wasm": "node scripts/sync-wasm.mjs",
+    "predev": "node scripts/sync-wasm.mjs",
+    "prebuild": "node scripts/sync-wasm.mjs",
+    "test:fdm": "node scripts/test-fdm.mjs",
+    "check:deploy": "node scripts/deploy-check.mjs",
+    "build:scenery": "node scripts/build-scenery.mjs",
+    "build:airports": "node scripts/build-airport-index.mjs"
+  },
+  "dependencies": {
+    "@0x62/jsbsim-wasm": "^1.2.4-beta.4",
+    "cesium": "^1.145.0",
+    "vite": "^7.1.12",
+    "vite-plugin-cesium": "^1.2.23"
+  }
+}
