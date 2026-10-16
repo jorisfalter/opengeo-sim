@@ -4,6 +4,7 @@
 // The flying is JSBSim — FlightGear's flight dynamics engine, as WebAssembly,
 // at 120 Hz — on an aircraft model written for this project. You have the
 // controls from the first frame; the autopilot is a button, not the default.
+import { asset } from '../base.js';
 import { Cartesian3, Cartographic, Math as CesiumMath, sampleTerrainMostDetailed } from 'cesium';
 import { createScene } from './scene.js';
 import { addAirport, clipGlobeTo, runwayGround } from './airport.js';
@@ -64,7 +65,7 @@ async function main() {
   const AIRPORT_IDS = ['lflb', 'lflj', 'lsgg', 'lfli', 'lflp', 'lfhm', 'lfkx', 'lfhu', 'lfle'];
   const loaded = Object.fromEntries(
     await Promise.all(
-      AIRPORT_IDS.map(async (id) => [id, await fetch(`/fly/${id}.json`).then((res) => res.json())]),
+      AIRPORT_IDS.map(async (id) => [id, await fetch(asset(`fly/${id}.json`)).then((res) => res.json())]),
     ),
   );
   const [lflb, lflj] = [loaded.lflb, loaded.lflj];

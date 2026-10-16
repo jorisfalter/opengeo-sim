@@ -1,5 +1,6 @@
 // Ride view: drives the camera along a track axis over open Dutch geodata.
 // See docs/cabride-demo-plan.md — this is phase P0 + P1 of that plan.
+import { asset } from '../base.js';
 import { createScene, clipCorridor, clipGlobe } from './scene.js';
 import { buildTrack, corridorPolygon } from './geometry.js';
 import { addTrackFurniture } from './trackfurniture.js';
@@ -28,7 +29,7 @@ const status = (text) => {
 
 async function main() {
   status('Traject laden…');
-  const response = await fetch(`/ride/${rideId}.json`);
+  const response = await fetch(asset(`ride/${rideId}.json`));
   if (!response.ok) throw new Error(`rit "${rideId}" niet gevonden (HTTP ${response.status})`);
   const ride = await response.json();
   document.title = `${ride.title} — TrainConnections`;
@@ -56,7 +57,7 @@ async function main() {
   }
   const run = buildRun(ride);
   // The manifest is written by the builder; a missing one just means no picker.
-  const rides = await fetch('/ride/index.json')
+  const rides = await fetch(asset('ride/index.json'))
     .then((res) => (res.ok ? res.json() : []))
     .catch(() => []);
   const hud = createHud(document.querySelector('#hud'), ride, run, rides);

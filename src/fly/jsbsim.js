@@ -10,6 +10,8 @@
 // The aircraft and engine definitions in public/fdm are our own work, written
 // against published PC-24 figures and checked by scripts/test-fdm.mjs. JSBSim
 // itself is LGPL 2.1 and is loaded as an unmodified library; see ATTRIBUTION.md.
+import { asset } from '../base.js';
+
 import { JSBSimSdk } from '@0x62/jsbsim-wasm';
 
 const DT = 1 / 120; // JSBSim runs at a fixed rate; frames are split into steps.
@@ -27,14 +29,14 @@ const FILES = ['aircraft/pc24/pc24.xml', 'engine/fj44.xml', 'engine/direct.xml']
 export async function createFdm(start, { onStatus } = {}) {
   onStatus?.('JSBSim laden…');
   const sdk = await JSBSimSdk.create({
-    moduleUrl: '/fdm/wasm/jsbsim_wasm.mjs',
-    wasmUrl: '/fdm/wasm/jsbsim_wasm.wasm',
+    moduleUrl: asset('fdm/wasm/jsbsim_wasm.mjs'),
+    wasmUrl: asset('fdm/wasm/jsbsim_wasm.wasm'),
     log: { console: false },
   });
 
   onStatus?.('Vliegtuigmodel laden…');
   const sources = await Promise.all(
-    FILES.map((path) => fetch(`/fdm/${path}`).then((res) => res.text())),
+    FILES.map((path) => fetch(asset(`fdm/${path}`)).then((res) => res.text())),
   );
   FILES.forEach((path, i) => sdk.writeDataFile(path, sources[i]));
   sdk.configurePaths({

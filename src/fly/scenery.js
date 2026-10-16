@@ -8,6 +8,7 @@
 // separate primitives would be two thousand draw calls; one batched primitive
 // is one, and Cesium builds it on a worker thread so the frame rate does not
 // notice it arriving.
+import { asset } from '../base.js';
 import { plantTrees } from './trees.js';
 import { NETHERLANDS, dutchBuildings } from './providers.js';
 import {
@@ -114,7 +115,7 @@ export function createScenery(viewer, { datum, onStatus, trees = true } = {}) {
         if (distance < NEAR && !area.primitive && !area.loading && !area.failed) {
           area.loading = true;
           onStatus?.(`Gebouwen van ${area.id} laden…`);
-          fetch(`/scenery/${area.id}.json`)
+          fetch(asset(`scenery/${area.id}.json`))
             .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
             .then((data) => {
               area.primitive = build(data);

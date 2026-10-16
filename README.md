@@ -41,24 +41,39 @@ node scripts/fly-check.mjs lflb 22        # autopilot: Chambéry to a stop at Co
 node scripts/fly-check.mjs lflb 9 manual  # hand-flown, through the same axes you use
 ```
 
-## Deploy
+## Deploy your own
 
-The built site is static. On the VPS it is served by nginx on loopback 9106
-and reached through the Cloudflare tunnel at `opengeo.ai-tigers.com`:
-
-```bash
-npm run build
-sudo rsync -a --delete dist/ /opt/apps/opengeo-sim/public/
-```
-
-Then check it the way a browser does:
+The built site is static files and nothing else — no server, no database, no
+account, no API key. Every service it talks to answers an anonymous browser,
+so your copy is as complete as the one it was forked from.
 
 ```bash
-npm run check:deploy -- https://opengeo.ai-tigers.com
+npm run build                      # -> dist/, serve it from anywhere
 ```
 
-That script exists because `curl` returning 200 proves nothing. Two MIME
-mistakes got past a green curl and stopped the site dead:
+If it is served from a subdirectory — which is what GitHub Pages hands a fork
+at `yourname.github.io/opengeo-sim/` — tell the build where it will live, and
+the data, scenery and flight model follow:
+
+```bash
+npm run build -- --base=/opengeo-sim/
+```
+
+Then check it the way a browser does, not the way `curl` does:
+
+```bash
+npm run check:deploy -- https://your-host.example
+```
+
+The repository carries a GitHub Actions workflow that does the subdirectory
+build and publishes it to Pages: enable Pages in your fork's settings, then run
+**Actions → Publish to GitHub Pages**. It is manual on purpose, so a fork never
+has a failing build it did not ask for.
+
+The reference deployment runs behind nginx on loopback and a Cloudflare tunnel
+at `opengeo.ai-tigers.com`, with `rsync -a --delete dist/` into the served
+directory. Two MIME traps are worth knowing before you serve this yourself, because both
+got past a green `curl`:
 
 - A `types { application/wasm wasm; }` block in the nginx server **replaces**
   the entire inherited MIME map rather than adding to it, so every file —
@@ -109,9 +124,13 @@ Both views work and neither is finished.
 The flight side is a simulator rather than a demo: you have the controls from
 the first frame, you can begin anywhere in the world, and the autopilot will
 fly the Chambéry–Courchevel valley and land if you ask it to.
-`scripts/fly-check.mjs` verifies both, headless, on the built page. What is
-missing is airports outside Savoie, weather, a cockpit you can look around,
-and a second aeroplane.
+`scripts/fly-check.mjs` verifies both, headless, on the built page. Every
+airfield on earth is a start: 28,338 of them from OurAirports, including the
+thousands whose runway ends were never surveyed and are laid out from the
+runway number. Buildings, trees and aerial photography at 8 to 25 cm cover the
+Alpine valleys and the corridor from Amsterdam to Hasselt. What is missing is
+weather, a cockpit you can look around, a second aeroplane — and multiplayer,
+which is the reason the paths above are relative.
 
 The rail view has no cab interior and no sound. The parts that are genuinely
 solid across both are the data pipeline and the terrain handling — the geoid

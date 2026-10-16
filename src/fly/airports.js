@@ -1,9 +1,11 @@
 // Every airfield in the world you could plausibly land at, from OurAirports.
 //
 // Public domain (Unlicense), so unlike X-Plane's GPL apt.dat it can simply be
-// shipped. 10,903 fields with at least one runway whose ends are known —
-// 1.5 MB, 547 kB over the wire, and only fetched when somebody actually goes
-// looking for somewhere to fly.
+// shipped. 28,338 fields with at least one runway — including the thousands
+// whose ends OurAirports never surveyed, laid out from the runway number and
+// length — and only fetched when somebody goes looking for somewhere to fly.
+import { asset } from '../base.js';
+
 const METERS_PER_DEGREE = 111320;
 const FT = 0.3048;
 
@@ -14,7 +16,7 @@ export function loadAirports() {
   if (index) return Promise.resolve(index);
   loading =
     loading ??
-    fetch('/airports/index.json')
+    fetch(asset('airports/index.json'))
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
       .then((data) => {
         index = data.airports.map(([ident, name, lat, lon, elevationFt, country, runways]) => ({
