@@ -1,0 +1,21 @@
+# The build is the test that matters most here: it is what the browser runs.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # Fly the aeroplane without a browser: take-off, climb, cruise, stall.
+      - run: npm run test:fdm
