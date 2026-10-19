@@ -25,6 +25,11 @@ const noiseSource = (ctx, buffer) => {
   return node;
 };
 
+/** iPhones and iPads mute Web Audio with the hardware switch, silently. */
+const isApple = () =>
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
 export function createSound({ onNotice } = {}) {
   let ctx = null;
   let parts = null;
@@ -130,6 +135,15 @@ export function createSound({ onNotice } = {}) {
       return on;
     },
 
+    /**
+     * What the browser thinks of our audio, in its own words: "suspended"
+     * means it is refusing to play, "running" means the sound is leaving the
+     * graph and anything still silent is the device's own doing.
+     */
+    get state() {
+      return ctx ? ctx.state : 'none';
+    },
+
     /** Must be called from a real tap, or the browser will refuse. */
     async toggle() {
       if (on) {
@@ -144,7 +158,19 @@ export function createSound({ onNotice } = {}) {
       on = true;
       ramp(parts.master.gain, 1.0, 0.25);
       chirp();
-      onNotice?.('Sound on');
+      // Three things can still leave you in silence after this point, and the
+      // only honest thing to do is name them. A context that will not run is
+      // the browser refusing; an iPhone with its ringer switch flicked across
+      // mutes Web Audio entirely and tells nobody; and the chirp is there so
+      // that "I hear the beep but not the engine" is a different report from
+      // "I hear nothing at all".
+      if (ctx.state !== 'running') {
+        onNotice?.('The browser is still blocking sound — tap once more');
+      } else if (isApple()) {
+        onNotice?.('Sound on — silent? check the ringer switch');
+      } else {
+        onNotice?.('Sound on');
+      }
       return true;
     },
 

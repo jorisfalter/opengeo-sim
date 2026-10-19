@@ -330,7 +330,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
       nodes.tiltKeys.classList.toggle('is-on', Boolean(extra.tilting));
       for (const node of [nodes.soundButton, nodes.touchSound]) {
         node.classList.toggle('is-on', Boolean(extra.sound));
-        node.textContent = extra.sound ? 'Sound on' : 'Sound';
+        node.textContent = extra.sound ? 'Sound on' : 'Sound off';
       }
       // Once tilt has been switched on, the facts stay on screen whether it
       // works or not: a count of readings that stays at zero is the answer.
