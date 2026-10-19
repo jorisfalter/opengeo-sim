@@ -136,7 +136,7 @@ export function createSound({ onNotice } = {}) {
         on = false;
         if (parts) ramp(parts.master.gain, 0, 0.1);
         await ctx?.suspend();
-        onNotice?.('Geluid uit');
+        onNotice?.('Sound off');
         return false;
       }
       if (!ctx) build();
@@ -144,7 +144,7 @@ export function createSound({ onNotice } = {}) {
       on = true;
       ramp(parts.master.gain, 1.0, 0.25);
       chirp();
-      onNotice?.('Geluid aan');
+      onNotice?.('Sound on');
       return true;
     },
 

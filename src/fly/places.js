@@ -7,7 +7,7 @@ export const PLACES = [
   {
     id: 'lflb',
     name: 'Chambéry-Savoie',
-    note: 'op baan 36, motoren draaien — de klassieke vertrek',
+    note: 'on runway 36, engines running — the classic departure',
     airport: 'lflb',
     onGround: true,
     speed: 0,
@@ -17,7 +17,7 @@ export const PLACES = [
   {
     id: 'lflj',
     name: 'Courchevel Altiport',
-    note: 'bovenaan de helling, neus bergaf — zoals je daar vertrekt',
+    note: 'top of the slope, nose downhill — the way you leave there',
     airport: 'lflj',
     end: 'high',
     onGround: true,
@@ -28,7 +28,7 @@ export const PLACES = [
   {
     id: 'lsgg',
     name: 'Genève Aéroport',
-    note: '3582 m asfalt — ruimte zat, en de grote broer in de vallei',
+    note: '3,582 m of asphalt — room to spare, and the big brother in the valley',
     airport: 'lsgg',
     onGround: true,
     speed: 0,
@@ -38,7 +38,7 @@ export const PLACES = [
   {
     id: 'lfli',
     name: 'Annemasse',
-    note: '900 m onder de aanvliegroute van Genève',
+    note: '900 m under Geneva’s approach path',
     airport: 'lfli',
     onGround: true,
     speed: 0,
@@ -48,7 +48,7 @@ export const PLACES = [
   {
     id: 'lflp',
     name: 'Annecy-Meythet',
-    note: 'bovenaan het meer, bergen aan drie kanten',
+    note: 'at the head of the lake, mountains on three sides',
     airport: 'lflp',
     onGround: true,
     speed: 0,
@@ -58,7 +58,7 @@ export const PLACES = [
   {
     id: 'lfhm',
     name: 'Megève Altiport',
-    note: 'de andere berghelling: 543 m op 7,5% — neus bergaf',
+    note: 'the other mountain slope: 543 m at 7.5% — nose downhill',
     airport: 'lfhm',
     end: 'high',
     onGround: true,
@@ -69,7 +69,7 @@ export const PLACES = [
   {
     id: 'lfkx',
     name: 'Méribel Altiport',
-    note: '407 m op 6,6% — het dal naast Courchevel, en korter',
+    note: '407 m at 6.6% — the valley next to Courchevel, and shorter',
     airport: 'lfkx',
     end: 'high',
     onGround: true,
@@ -80,7 +80,7 @@ export const PLACES = [
   {
     id: 'lfhu',
     name: "Alpe d'Huez Altiport",
-    note: '445 m op 10,3%, boven de haarspelden',
+    note: '445 m at 10.3%, above the hairpins',
     airport: 'lfhu',
     end: 'high',
     onGround: true,
@@ -91,7 +91,7 @@ export const PLACES = [
   {
     id: 'lfle',
     name: 'Chambéry-Challes-les-Eaux',
-    note: '987 m en vlak — hier landt het zonder hellinggedoe',
+    note: '987 m and flat — landing here involves no slope at all',
     airport: 'lfle',
     onGround: true,
     speed: 0,
@@ -100,8 +100,8 @@ export const PLACES = [
   },
   {
     id: 'final',
-    name: 'Korte finale Courchevel',
-    note: '4 km uit, 2400 m — de aanvliegroute die ertoe doet',
+    name: 'Short final, Courchevel',
+    note: '4 km out at 2,400 m — the approach that matters',
     lat: 45.4325,
     lon: 6.6805,
     msl: 2400,
@@ -114,8 +114,8 @@ export const PLACES = [
   },
   {
     id: 'tarentaise',
-    name: 'Tarentaise, boven Moûtiers',
-    note: 'kruishoogte in de vallei, de route naar Courchevel voor je',
+    name: 'Tarentaise, above Moûtiers',
+    note: 'cruise height in the valley, the route to Courchevel ahead',
     lat: 45.6,
     lon: 6.2,
     msl: 3000,
@@ -127,7 +127,7 @@ export const PLACES = [
   {
     id: 'montblanc',
     name: 'Mont Blanc',
-    note: 'op 5200 m langs de hoogste top van de Alpen',
+    note: 'at 5,200 m past the highest peak in the Alps',
     lat: 45.78,
     lon: 6.75,
     msl: 5200,
@@ -138,7 +138,7 @@ export const PLACES = [
   {
     id: 'matterhorn',
     name: 'Matterhorn, Zermatt',
-    note: 'Zwitserland, en meteen het bewijs dat het terrein wereldwijd is',
+    note: 'Switzerland, and proof that the terrain is worldwide',
     lat: 45.95,
     lon: 7.72,
     msl: 4600,
@@ -149,7 +149,7 @@ export const PLACES = [
   {
     id: 'amsterdam',
     name: 'Amsterdam',
-    note: 'laag over de stad — PDOK levert hier elk gebouw in 3D',
+    note: 'low over the city — PDOK has every building here in 3D',
     lat: 52.37,
     lon: 4.80,
     msl: 450,
@@ -163,31 +163,31 @@ export const PLACES = [
   {
     id: 'ehhv',
     name: 'Hilversum',
-    note: 'graspistes in het Gooi, een kwartier van Amsterdam',
+    note: 'grass strips in het Gooi, fifteen minutes from Amsterdam',
     icao: 'EHHV',
   },
   {
     id: 'eheh',
     name: 'Eindhoven',
-    note: 'halverwege de corridor, 3000 m asfalt',
+    note: 'halfway down the corridor, 3,000 m of asphalt',
     icao: 'EHEH',
   },
   {
     id: 'kiewit',
     name: 'Hasselt-Kiewit',
-    note: 'het Vlaamse eind van de corridor',
+    note: 'the Flemish end of the corridor',
     icao: 'EBZH',
   },
   {
     id: 'eham',
     name: 'Schiphol',
-    note: 'zes banen, en elk gebouw eromheen in 3D',
+    note: 'six runways, and every building around them in 3D',
     icao: 'EHAM',
   },
   {
     id: 'grandcanyon',
     name: 'Grand Canyon',
-    note: 'low pass over de Colorado, 1800 m',
+    note: 'low pass over the Colorado, 1,800 m',
     lat: 36.1,
     lon: -112.1,
     msl: 1800,
@@ -198,7 +198,7 @@ export const PLACES = [
   {
     id: 'fuji',
     name: 'Fuji',
-    note: 'Japan — er zijn geen regio-grenzen in de data',
+    note: 'Japan — there are no regional borders in the data',
     lat: 35.28,
     lon: 138.73,
     msl: 4200,

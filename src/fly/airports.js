@@ -87,7 +87,7 @@ export function startFrom(airport) {
   return {
     id: `oa-${airport.ident}`,
     name: `${airport.ident} · ${airport.name}`,
-    note: `${Math.round(runway.lengthFt * FT)} m ${runway.surface} · baan ${runway.leId || '?'}`,
+    note: `${Math.round(runway.lengthFt * FT)} m ${runway.surface} · runway ${runway.leId || '?'}`,
     lat: runway.leLat + (runway.heLat - runway.leLat) * f,
     lon: runway.leLon + (runway.heLon - runway.leLon) * f,
     heading,

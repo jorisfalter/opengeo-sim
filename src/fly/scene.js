@@ -1,7 +1,7 @@
 // Cesium scene for the flight view: global terrain, satellite base, French
 // orthophoto on top, and the atmosphere turned up because at 3000 m over the
 // Alps the haze is half of what you see.
-import { Ion, JulianDate, Viewer } from 'cesium';
+import { Ion, JulianDate, RequestScheduler, Viewer } from 'cesium';
 import {
   baseLayer,
   dutchAerialLayer,
@@ -41,12 +41,29 @@ export async function createScene(container, { time }) {
   viewer.imageryLayers.add(swissLayer());
   viewer.imageryLayers.add(dutchAerialLayer());
   viewer.imageryLayers.add(flemishLayer());
+  // Cesium limits itself to six requests per host, which is an HTTP/1 rule.
+  // Every service we use speaks HTTP/2, where a dozen streams share a single
+  // connection — so the tiles arrive in half the wall-clock time at no extra
+  // cost to the server. Twelve rather than thirty: these are public services.
+  RequestScheduler.maximumRequestsPerServer = 12;
   scene.globe.depthTestAgainstTerrain = true;
   scene.globe.enableLighting = false;
   scene.globe.showGroundAtmosphere = true;
-  scene.globe.maximumScreenSpaceError = 1.5; // sharper terrain, we are low and fast
+  // Detail is set per frame in main.js: sharp near the ground, relaxed at
+  // height, because the tile count grows with the square of this number and
+  // nobody can see 20 cm orthophotography from eight kilometres up.
+  scene.globe.maximumScreenSpaceError = 1.5;
+  // Flying a circuit should not re-download the field you just took off from.
+  // A tile is a few hundred kB at most; a thousand of them is a fair trade on
+  // a desktop, a quarter of that on a phone.
+  const phone = window.matchMedia('(pointer: coarse)').matches;
+  scene.globe.tileCacheSize = phone ? 250 : 1000;
   scene.fog.enabled = true;
   scene.fog.density = 0.00012;
+  // Distance is where the tile budget goes. Cesium already relaxes detail into
+  // the fog; doubling the factor relaxes it further, and in a cockpit at speed
+  // the far field is a blur of haze anyway.
+  scene.fog.screenSpaceErrorFactor = 4;
   scene.skyAtmosphere.show = true;
   scene.screenSpaceCameraController.enableCollisionDetection = false;
   scene.msaaSamples = 4;

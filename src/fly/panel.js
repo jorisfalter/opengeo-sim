@@ -24,11 +24,11 @@ export function createPanel(root, { title, subtitle, attribution }) {
         <div class="fly-hud__title"><strong>${title}</strong><span>${subtitle}</span></div>
         <div class="fly-hud__modes">
           <button data-view="cockpit" class="is-active">Cockpit</button>
-          <button data-view="chase">Buiten</button>
-          <button data-view="free">Vrij kijken</button>
-          <button data-action="sound" data-el="soundButton">Geluid</button>
-          <button data-action="map">Kaart</button>
-          <button data-action="where">Startplek…</button>
+          <button data-view="chase">Chase</button>
+          <button data-view="free">Free look</button>
+          <button data-action="sound" data-el="soundButton">Sound</button>
+          <button data-action="map">Map</button>
+          <button data-action="where">Start…</button>
         </div>
       </div>
 
@@ -37,23 +37,23 @@ export function createPanel(root, { title, subtitle, attribution }) {
            control. -->
       <div class="fly-hud__strip">
         <div class="fly-lever">
-          <button data-action="thr-down" title="Gas terug (S)">−</button>
-          <div class="fly-lever__bar" data-el="leverTrack" title="Klik om het gas te zetten"><i data-el="leverFill"></i><span data-el="leverText">0%</span></div>
-          <button data-action="thr-up" title="Gas bij (W)">+</button>
+          <button data-action="thr-down" title="Throttle back (S)">−</button>
+          <div class="fly-lever__bar" data-el="leverTrack" title="Click to set the throttle"><i data-el="leverFill"></i><span data-el="leverText">0%</span></div>
+          <button data-action="thr-up" title="Throttle up (W)">+</button>
         </div>
         <div class="fly-rudder">
-          <button data-action="yaw-left" title="Roer links (Q) — stuurt het neuswiel op de grond">◀</button>
+          <button data-action="yaw-left" title="Rudder left (Q) — steers the nosewheel on the ground">◀</button>
           <span>ROER</span>
-          <button data-action="yaw-right" title="Roer rechts (E) — stuurt het neuswiel op de grond">▶</button>
+          <button data-action="yaw-right" title="Rudder right (E) — steers the nosewheel on the ground">▶</button>
         </div>
-        <button data-action="brakes" data-el="brakeButton">Rem</button>
+        <button data-action="brakes" data-el="brakeButton">Brake</button>
         <button data-action="gear" data-el="gearButton">Gear</button>
         <button data-action="flaps" data-el="flapsButton">Flaps 0</button>
-        <button data-action="ap" data-el="apButton">Autopiloot</button>
+        <button data-action="ap" data-el="apButton">Autopilot</button>
         <div class="fly-rate">
-          <button data-action="rate-down" title="Langzamer (1)">«</button>
+          <button data-action="rate-down" title="Slower (1)">«</button>
           <span data-el="rateLabel">1×</span>
-          <button data-action="rate-up" title="Sneller (2)">»</button>
+          <button data-action="rate-up" title="Faster (2)">»</button>
         </div>
       </div>
 
@@ -140,7 +140,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
         </g></g>
         <path d="M976 288 h-108 l-20 22 l20 22 H976 z" class="g-readout"/>
         <text x="872" y="318" class="g-big" data-el="alt">0</text>
-        <text x="904" y="160" class="g-label" text-anchor="middle">VOET</text>
+        <text x="904" y="160" class="g-label" text-anchor="middle">FEET</text>
         <text x="848" y="360" class="g-label" data-el="agl">—</text>
 
         <!-- vertical speed -->
@@ -168,7 +168,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
         <text x="40" y="500" class="g-mid" data-el="power">N1 0%</text>
         <text x="40" y="526" class="g-label" data-el="config">gear · flaps 0</text>
         <text x="40" y="548" class="g-label" data-el="trim">trim 0</text>
-        <text x="40" y="570" class="g-label" data-el="law">geassisteerd</text>
+        <text x="40" y="570" class="g-label" data-el="law">assisted</text>
         <text x="40" y="592" class="g-label" data-el="input">toetsenbord</text>
         <text x="200" y="570" class="g-label" data-el="gload">1.0 g</text>
         <text x="500" y="110" class="g-warn" text-anchor="middle" data-el="warn"></text>
@@ -184,20 +184,20 @@ export function createPanel(root, { title, subtitle, attribution }) {
           <svg viewBox="0 0 400 400" data-el="stickDraw" aria-hidden="true"></svg>
         </div>
         <div class="fly-touch__power">
-          <button data-action="thr-up" title="Gas bij">+</button>
-          <div class="fly-touch__throttle" data-el="touchThrottle" title="Gas">
+          <button data-action="thr-up" title="Throttle up">+</button>
+          <div class="fly-touch__throttle" data-el="touchThrottle" title="Throttle">
             <i data-el="touchFill"></i>
             <span data-el="touchLever">0%</span>
           </div>
-          <button data-action="thr-down" title="Gas terug">−</button>
+          <button data-action="thr-down" title="Throttle back">−</button>
         </div>
         <div class="fly-touch__keys">
-          <button data-action="brakes" data-el="touchBrake">Rem</button>
+          <button data-action="brakes" data-el="touchBrake">Brake</button>
           <button data-action="gear" data-el="touchGear">Gear</button>
           <button data-action="flaps" data-el="touchFlaps">Flaps</button>
           <button data-action="ap" data-el="touchAp">AP</button>
-          <button data-action="tilt" data-el="tiltButton">Kantelen</button>
-          <button data-action="sound" data-el="touchSound">Geluid</button>
+          <button data-action="tilt" data-el="tiltButton">Tilt</button>
+          <button data-action="sound" data-el="touchSound">Sound</button>
         </div>
         <!-- Only worth showing once tilt is actually on. -->
         <p class="fly-touch__status" data-el="tiltStatus"></p>
@@ -206,7 +206,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
           <button data-action="invert" data-el="invertButton">Neus ⇅</button>
         </div>
       </div>
-      <p class="fly-hud__rotate">Draai je toestel dwars — deze simulator vliegt in landscape.</p>
+      <p class="fly-hud__rotate">Turn your device sideways — this simulator flies in landscape.</p>
       <p class="fly-hud__notice" data-el="notice"></p>
       <p class="fly-hud__credit">${attribution}</p>
       <p class="fly-hud__keys">
@@ -330,7 +330,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
       nodes.tiltKeys.classList.toggle('is-on', Boolean(extra.tilting));
       for (const node of [nodes.soundButton, nodes.touchSound]) {
         node.classList.toggle('is-on', Boolean(extra.sound));
-        node.textContent = extra.sound ? 'Geluid aan' : 'Geluid';
+        node.textContent = extra.sound ? 'Sound on' : 'Sound';
       }
       // Once tilt has been switched on, the facts stay on screen whether it
       // works or not: a count of readings that stays at zero is the answer.
@@ -340,20 +340,20 @@ export function createPanel(root, { title, subtitle, attribution }) {
       nodes.tiltStatus.classList.toggle('is-plain', Boolean(extra.tilting) && !extra.tiltStatus);
       // A tick means readings are coming in, not merely that it was switched on.
       nodes.tiltButton.textContent = extra.tiltLive
-        ? 'Kantelen ✓'
+        ? 'Tilt ✓'
         : status
-          ? 'Kantelen ✗'
-          : 'Kantelen';
+          ? 'Tilt ✗'
+          : 'Tilt';
       // A button that does not say which way it is set is a button you have to
       // guess at, so each one carries its own state.
-      nodes.touchBrake.textContent = extra.brakes ? 'Rem AAN' : 'Rem uit';
+      nodes.touchBrake.textContent = extra.brakes ? 'Brake ON' : 'Brake off';
       nodes.touchBrake.classList.toggle('is-on', Boolean(extra.brakes));
-      nodes.touchGear.textContent = a.gear ? 'Gear UIT' : 'Gear in';
+      nodes.touchGear.textContent = a.gear ? 'Gear DOWN' : 'Gear UP';
       nodes.touchGear.classList.toggle('is-on', Boolean(a.gear));
       nodes.touchFlaps.textContent = `Flaps ${a.flaps ?? 0}`;
       nodes.touchFlaps.classList.toggle('is-on', (a.flaps ?? 0) > 0);
       const apOn = Boolean(extra.ap) && !extra.ap.startsWith('GEPAUZEERD');
-      nodes.touchAp.textContent = apOn ? 'AP AAN' : 'AP uit';
+      nodes.touchAp.textContent = apOn ? 'AP ON' : 'AP off';
       nodes.touchAp.classList.toggle('is-on', apOn);
       // Where the thumb went down and where it is now.
       const grip = extra.stick;
@@ -364,19 +364,19 @@ export function createPanel(root, { title, subtitle, attribution }) {
       nodes.stickDraw.style.opacity = grip ? '1' : '0';
       nodes.brakeButton.classList.toggle('is-on', Boolean(extra.brakes));
       // The button says which it is, not just which colour it is.
-      nodes.brakeButton.textContent = extra.brakes ? 'Rem AAN' : 'Rem uit';
+      nodes.brakeButton.textContent = extra.brakes ? 'Brake ON' : 'Brake off';
       nodes.gearButton.classList.toggle('is-on', Boolean(a.gear));
       nodes.flapsButton.textContent = `Flaps ${a.flaps ?? 0}`;
       nodes.flapsButton.classList.toggle('is-on', (a.flaps ?? 0) > 0);
       nodes.apButton.classList.toggle('is-on', Boolean(extra.ap) && !extra.ap.startsWith('GEPAUZEERD'));
       text(
         'config',
-        `${a.gear ? 'gear' : 'clean'} · flaps ${a.flaps ?? 0}${a.onGround ? ' · grond' : ''}` +
-          `${extra.brakes ? ' · rem' : ''}${extra.speedbrake ? ' · remkleppen' : ''}`,
+        `${a.gear ? 'gear' : 'clean'} · flaps ${a.flaps ?? 0}${a.onGround ? ' · ground' : ''}` +
+          `${extra.brakes ? ' · brake' : ''}${extra.speedbrake ? ' · speedbrake' : ''}`,
       );
       text('trim', `trim ${((extra.trim ?? 0) * 100).toFixed(0)}`);
       text('gload', `${(a.gLoad ?? 1).toFixed(1)} g`);
-      text('law', extra.law === 'direct' ? 'direct' : 'geassisteerd');
+      text('law', extra.law === 'direct' ? 'direct' : 'assisted');
       text('input', extra.input ?? '');
       text('ap', extra.ap ?? '');
       // Two numbers only when they differ: what you asked for and what the
@@ -394,9 +394,9 @@ export function createPanel(root, { title, subtitle, attribution }) {
       const warnings = [];
       // Standing on the runway at full thrust and going nowhere is confusing
       // for exactly as long as nobody tells you the brake is on.
-      if (a.onGround && extra.brakes && (a.throttle ?? 0) > 0.25) warnings.push('REM AAN · B of klik');
+      if (a.onGround && extra.brakes && (a.throttle ?? 0) > 0.25) warnings.push('BRAKE ON · B or click');
       if (a.stall) warnings.push('OVERTREKKEN');
-      if (kias > 290) warnings.push('TE SNEL');
+      if (kias > 290) warnings.push('OVERSPEED');
       if ((a.mach ?? 0) > 0.76) warnings.push('MACH');
       if (extra.aglFt !== null && extra.aglFt < 500 && fpm < -1500 && !a.onGround) {
         warnings.push('DALING');
@@ -412,7 +412,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
       const hit = el('warnHit');
       hit.style.cursor = 'pointer';
       hit.addEventListener('click', () => {
-        if (el('warn').textContent.includes('REM AAN')) release();
+        if (el('warn').textContent.includes('BRAKE ON')) release();
       });
     },
 

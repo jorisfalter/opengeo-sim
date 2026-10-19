@@ -27,14 +27,14 @@ const FILES = ['aircraft/pc24/pc24.xml', 'engine/fj44.xml', 'engine/direct.xml']
 
 /** Loads JSBSim and the aeroplane. Resolves once the model is in place. */
 export async function createFdm(start, { onStatus } = {}) {
-  onStatus?.('JSBSim laden…');
+  onStatus?.('Loading JSBSim…');
   const sdk = await JSBSimSdk.create({
     moduleUrl: asset('fdm/wasm/jsbsim_wasm.mjs'),
     wasmUrl: asset('fdm/wasm/jsbsim_wasm.wasm'),
     log: { console: false },
   });
 
-  onStatus?.('Vliegtuigmodel laden…');
+  onStatus?.('Loading the aircraft model…');
   const sources = await Promise.all(
     FILES.map((path) => fetch(asset(`fdm/${path}`)).then((res) => res.text())),
   );
@@ -45,7 +45,7 @@ export async function createFdm(start, { onStatus } = {}) {
     enginePath: 'engine',
     systemsPath: 'systems',
   });
-  if (!sdk.loadModel('pc24')) throw new Error('JSBSim weigerde het vliegtuigmodel');
+  if (!sdk.loadModel('pc24')) throw new Error('JSBSim refused the aircraft model');
   sdk.setDt(DT);
 
   const fdm = new Fdm(sdk);

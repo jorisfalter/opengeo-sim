@@ -28,20 +28,20 @@ const status = (text) => {
 };
 
 async function main() {
-  status('Traject laden…');
+  status('Loading the route…');
   const response = await fetch(asset(`ride/${rideId}.json`));
-  if (!response.ok) throw new Error(`rit "${rideId}" niet gevonden (HTTP ${response.status})`);
+  if (!response.ok) throw new Error(`ride "${rideId}" not found (HTTP ${response.status})`);
   const ride = await response.json();
   document.title = `${ride.title} — TrainConnections`;
 
-  status('Terrein, luchtfoto en 3D-gebouwen van PDOK verbinden…');
+  status('Connecting PDOK terrain, aerial imagery and 3D buildings…');
   const { viewer, scene, terrain, layers } = await createScene(document.querySelector('#scene'), {
     time: SUN_TIME,
   });
 
-  status('Hoogte van de baan bepalen…');
+  status('Working out the height of the track…');
   const track = await buildTrack(ride, terrain);
-  status('Spoor, bovenleiding en perrons bouwen…');
+  status('Building track, catenary and platforms…');
   const furniture = addTrackFurniture(viewer, ride, track);
   clipCorridor(layers.buildings, corridorPolygon(ride));
   clipGlobe(
@@ -50,7 +50,7 @@ async function main() {
   );
   if (track.underpasses.length) {
     console.info(
-      `onderdoorgangen uit het terrein gesneden: ${track.underpasses
+      `underpasses cut out of the terrain: ${track.underpasses
         .map((r) => `${(r.from / 1000).toFixed(2)}-${(r.to / 1000).toFixed(2)} km`)
         .join(', ')}`,
     );
@@ -176,6 +176,6 @@ async function main() {
 
 main().catch((error) => {
   console.error(error);
-  status(`Kon de rit niet laden: ${error.message}`);
+  status(`Could not load the ride: ${error.message}`);
   loading.classList.add('is-error');
 });

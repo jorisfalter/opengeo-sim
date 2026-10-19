@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="nl">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <!-- viewport-fit=cover, or iOS keeps the notch strip clear and draws the
@@ -8,27 +8,42 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
     />
-    <title>PC-24 · vrij vliegen boven de Alpen — opengeo-sim</title>
+    <title>PC-24 · free flight over the Alps — opengeo-sim</title>
     <meta
       name="description"
-      content="Vlieg zelf een PC-24 over de Alpen, Nederland en Vlaanderen, in je
-        browser. Open source, op JSBSim, met terrein en luchtfoto's uit nationale
-        open data. Zonder download of account."
+      content="Fly a PC-24 yourself over the Alps, the Netherlands and Flanders,
+        in your browser. Open source, on JSBSim, with terrain and aerial imagery
+        from national open data. No download and no account."
     />
     <link rel="canonical" href="https://opengeo.ai-tigers.com/fly.html" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://opengeo.ai-tigers.com/fly.html" />
-    <meta property="og:title" content="Vlieg zelf — een open source vluchtsimulator in je browser" />
+    <meta property="og:title" content="Fly it yourself — an open-source flight simulator in your browser" />
     <meta
       property="og:description"
-      content="Een PC-24 op JSBSim, boven echt terrein en echte luchtfoto's. Start op
-        de baan van Chambéry, op de helling van Courchevel, of waar ook ter wereld."
+      content="A PC-24 on JSBSim, over real terrain and real aerial photography.
+        Start on the runway at Chambéry, on the slope at Courchevel, or anywhere on earth."
     />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9C%88%EF%B8%8F</text></svg>"
+    />
+    <!-- The first terrain tile cannot be asked for until DNS, TLS and the
+         connection to its host are done. Starting that while the bundle is
+         still parsing takes a few hundred milliseconds off the first view,
+         and more on a phone network. -->
+    <link rel="preconnect" href="https://terrain.reearth.land" crossorigin />
+    <link rel="preconnect" href="https://data.geopf.fr" crossorigin />
+    <link rel="preconnect" href="https://tiles.maps.eox.at" crossorigin />
+    <link rel="preconnect" href="https://wmts.geo.admin.ch" crossorigin />
+    <link rel="preconnect" href="https://service.pdok.nl" crossorigin />
+    <link rel="preconnect" href="https://api.pdok.nl" crossorigin />
+    <link rel="preconnect" href="https://geo.api.vlaanderen.be" crossorigin />
   </head>
   <body>
     <div id="scene"></div>
     <div id="hud"></div>
-    <div id="loading">Vlucht laden…</div>
+    <div id="loading">Loading flight…</div>
     <script type="module" src="/src/fly/main.js"></script>
   </body>
 </html>

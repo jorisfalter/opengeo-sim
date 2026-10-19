@@ -34,7 +34,7 @@ export function createHud(root, flight) {
         </div>
         <dl class="fly-hud__readout">
           <div><dt>Bestemming</dt><dd data-field="dest">—</dd></div>
-          <div><dt>Hoogte boven veld</dt><dd data-field="agl">—</dd></div>
+          <div><dt>Height above field</dt><dd data-field="agl">—</dd></div>
           <div><dt>Gas</dt><dd data-field="thr">0%</dd></div>
           <div><dt>Config</dt><dd data-field="cfg">—</dd></div>
           <div><dt>Bank</dt><dd data-field="bank">0°</dd></div>
@@ -85,8 +85,8 @@ export function createHud(root, flight) {
     setMode(auto) {
       field('mode').textContent = auto ? 'Autopiloot' : 'Handmatig';
       root.querySelector('[data-action="ap"]').textContent = auto
-        ? 'Autopiloot uit'
-        : 'Autopiloot aan';
+        ? 'Autopilot off'
+        : 'Autopilot on';
     },
     setRate(rate) {
       field('rate').textContent = `${rate}×`;

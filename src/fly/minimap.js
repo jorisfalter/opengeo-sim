@@ -25,9 +25,9 @@ export function createMinimap(root, { places = [], airports = [], onNotice } = {
   root.innerHTML = `
     <div class="fly-map__head">
       <strong>Kaart</strong>
-      <button data-map="out" title="Uitzoomen">−</button>
-      <button data-map="in" title="Inzoomen">+</button>
-      <button data-map="hide" title="Verbergen (N)">×</button>
+      <button data-map="out" title="Zoom out">−</button>
+      <button data-map="in" title="Zoom in">+</button>
+      <button data-map="hide" title="Hide (N)">×</button>
     </div>
     <canvas data-el="canvas" width="460" height="460"></canvas>
     <div class="fly-map__foot">
@@ -242,8 +242,8 @@ export function createMinimap(root, { places = [], airports = [], onNotice } = {
       lastDraw = now;
       draw(aircraft, context);
       el('coords').textContent =
-        `${Math.abs(aircraft.lat).toFixed(2)}${aircraft.lat < 0 ? 'Z' : 'N'} ` +
-        `${Math.abs(aircraft.lon).toFixed(2)}${aircraft.lon < 0 ? 'W' : 'O'} z${zoom}`;
+        `${Math.abs(aircraft.lat).toFixed(2)}${aircraft.lat < 0 ? 'S' : 'N'} ` +
+        `${Math.abs(aircraft.lon).toFixed(2)}${aircraft.lon < 0 ? 'W' : 'E'} z${zoom}`;
       const metres = metresPerPixel(aircraft.lat, zoom) * (canvas.width / 4);
       el('scale').textContent =
         metres > 2000 ? `${Math.round(metres / 1000)} km` : `${Math.round(metres / 10) * 10} m`;
@@ -251,7 +251,7 @@ export function createMinimap(root, { places = [], airports = [], onNotice } = {
     toggle(show) {
       visible = show ?? !visible;
       root.classList.toggle('is-open', visible);
-      onNotice?.(visible ? 'Kaart aan' : 'Kaart uit (N)');
+      onNotice?.(visible ? 'Map on' : 'Map off (N)');
       return visible;
     },
     get visible() {

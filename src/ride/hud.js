@@ -17,12 +17,12 @@ export function createHud(root, ride, run, rides = []) {
               )
               .join('')}
           </select>
-          <span>${ride.line} · ${(ride.length / 1000).toFixed(2)} km · situatie 2026</span>
+          <span>${ride.line} · ${(ride.length / 1000).toFixed(2)} km · as of 2026</span>
         </div>
         <div class="ride-hud__modes">
-          <button data-view="cab" class="is-active">Cabine</button>
-          <button data-view="chase">Achter de trein</button>
-          <button data-view="free">Vrij kijken</button>
+          <button data-view="cab" class="is-active">Cab</button>
+          <button data-view="chase">Behind the train</button>
+          <button data-view="free">Free look</button>
         </div>
       </div>
       <div class="ride-hud__panel">
@@ -31,24 +31,24 @@ export function createHud(root, ride, run, rides = []) {
           <div class="ride-hud__stops"></div>
         </div>
         <div class="ride-hud__bottom">
-        <div class="ride-hud__speed"><span class="ride-hud__value">0</span><span>km/u</span></div>
+        <div class="ride-hud__speed"><span class="ride-hud__value">0</span><span>km/h</span></div>
         <dl class="ride-hud__readout">
-          <div><dt>Volgende</dt><dd data-field="next">—</dd></div>
-          <div><dt>Kilometrering</dt><dd data-field="chainage">0,00 km</dd></div>
-          <div><dt>Rijtijd</dt><dd data-field="clock">00:00</dd></div>
-          <div><dt>Baanvaksnelheid</dt><dd data-field="limit">—</dd></div>
-          <div><dt>Boogradius</dt><dd data-field="radius">—</dd></div>
-          <div><dt>Railhoogte</dt><dd data-field="height">—</dd></div>
+          <div><dt>Next</dt><dd data-field="next">—</dd></div>
+          <div><dt>Chainage</dt><dd data-field="chainage">0.00 km</dd></div>
+          <div><dt>Run time</dt><dd data-field="clock">00:00</dd></div>
+          <div><dt>Line speed</dt><dd data-field="limit">—</dd></div>
+          <div><dt>Curve radius</dt><dd data-field="radius">—</dd></div>
+          <div><dt>Rail height</dt><dd data-field="height">—</dd></div>
         </dl>
         <div class="ride-hud__controls">
-          <button data-action="toggle">Pauze</button>
+          <button data-action="toggle">Pause</button>
           <button data-action="slower">−</button>
           <span data-field="rate">1×</span>
           <button data-action="faster">+</button>
-          <button data-action="restart">Opnieuw</button>
-          <label><input type="checkbox" data-layer="buildings" checked /> Gebouwen</label>
-          <label><input type="checkbox" data-layer="ground" /> BGT-terrein</label>
-          <label><input type="checkbox" data-layer="rails" checked /> Spoor</label>
+          <button data-action="restart">Restart</button>
+          <label><input type="checkbox" data-layer="buildings" checked /> Buildings</label>
+          <label><input type="checkbox" data-layer="ground" /> BGT ground</label>
+          <label><input type="checkbox" data-layer="rails" checked /> Track</label>
           <label><input type="checkbox" data-layer="catenary" checked /> Bovenleiding</label>
         </div>
         </div>
@@ -76,15 +76,15 @@ export function createHud(root, ride, run, rides = []) {
       const remaining = Math.max(0, next.chainage - state.s);
       field('next').textContent =
         state.done && remaining < 5
-          ? 'eindpunt'
+          ? 'terminus'
           : `${next.name} · ${(remaining / 1000).toFixed(2)} km`;
-      field('chainage').textContent = `${(state.s / 1000).toFixed(2).replace('.', ',')} km`;
+      field('chainage').textContent = `${(state.s / 1000).toFixed(2)} km`;
       field('clock').textContent = `${fmtTime(state.t)} / ${fmtTime(run.duration)}`;
-      field('limit').textContent = `${Math.round(pose.speedLimit)} km/u`;
+      field('limit').textContent = `${Math.round(pose.speedLimit)} km/h`;
       const radius = Math.abs(pose.curvature) < 1e-5 ? null : Math.abs(1 / pose.curvature);
-      field('radius').textContent = radius ? `${Math.round(radius)} m` : 'recht';
+      field('radius').textContent = radius ? `${Math.round(radius)} m` : 'straight';
       field('height').textContent = pose.railNap
-        ? `${pose.railNap.toFixed(1)} m NAP${pose.bridge ? ' · kunstwerk' : ''}`
+        ? `${pose.railNap.toFixed(1)} m NAP${pose.bridge ? ' · bridge' : ''}`
         : `${pose.aboveGround.toFixed(1)} m boven maaiveld`;
     },
     setRate(rate) {

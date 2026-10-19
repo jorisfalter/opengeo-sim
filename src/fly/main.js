@@ -15,6 +15,7 @@ import { createTerrainService } from './terrain.js';
 import { createControls } from './controls.js';
 import { createPanel } from './panel.js';
 import { createMinimap } from './minimap.js';
+import { createLookahead } from './lookahead.js';
 import { createScenery } from './scenery.js';
 import { createSound } from './sound.js';
 import { PLACES, findPlace } from './places.js';
@@ -59,7 +60,7 @@ const status = (text) => {
 const clamp = (value, lo, hi) => Math.max(lo, Math.min(hi, value));
 
 async function main() {
-  status('Vliegvelden laden…');
+  status('Loading airfields…');
   // Everything the builder has produced. Two of them are mountain strips and
   // the rest are the valley fields you would actually divert to.
   const AIRPORT_IDS = ['lflb', 'lflj', 'lsgg', 'lfli', 'lflp', 'lfhm', 'lfkx', 'lfhu', 'lfle'];
@@ -70,7 +71,7 @@ async function main() {
   );
   const [lflb, lflj] = [loaded.lflb, loaded.lflj];
 
-  status('Terrein en luchtfoto’s verbinden…');
+  status('Connecting terrain and aerial imagery…');
   const { viewer, scene, terrain } = await createScene(document.querySelector('#scene'), {
     time: SUN_TIME,
   });
@@ -97,7 +98,7 @@ async function main() {
   // the ground there. The absolute altitude is then a little off at Courchevel
   // and the *slope* — the whole reason that airfield is interesting — is
   // exactly as surveyed. That is the right way round.
-  status('Vliegvelden op het terrein inmeten…');
+  status('Surveying the airfields against the terrain…');
   const measureDatum = async (airport) => {
     const centre = airport.runways[0].centre;
     const step = Math.max(1, Math.floor(centre.length / 12));
@@ -163,7 +164,7 @@ async function main() {
     AIRPORT_IDS.map((id) => [id, lift(loaded[id], datums[id])]),
   );
 
-  status('Banen en platforms bouwen…');
+  status('Building runways and aprons…');
   const built = Object.fromEntries(
     AIRPORT_IDS.map((id) => [id, { id, ...addAirport(viewer, airports[id]) }]),
   );
@@ -284,7 +285,7 @@ async function main() {
       : null;
   const startPlace = fromUrl ?? findPlace(params.get('start')) ?? findPlace('lflb');
 
-  status('Vluchtmodel starten…');
+  status('Starting the flight model…');
   const start = resolvePlace(startPlace);
   terrainService.update({ lat: start.lat, lon: start.lon, agl: start.onGround ? 0 : 1500 });
   start.groundHeight = groundHeight(start.lat, start.lon);
@@ -345,7 +346,7 @@ async function main() {
   // ---- the glass ----------------------------------------------------------
   const panel = createPanel(document.querySelector('#hud'), {
     title: 'PC-24 · vrij vliegen',
-    subtitle: `${startPlace.name} · ${sim.name} · IGN, swisstopo en PDOK · de rest wereldwijd`,
+    subtitle: `${startPlace.name} · ${sim.name} · IGN, swisstopo and PDOK · the rest worldwide`,
     attribution: ATTRIBUTION,
   });
 
@@ -397,25 +398,25 @@ async function main() {
   picker.className = 'fly-picker';
   picker.innerHTML = `
     <div class="fly-picker__sheet">
-      <h2>Waar wil je beginnen?</h2>
+      <h2>Where do you want to begin?</h2>
       <ul>${PLACES.map(
         (place) =>
           `<li><button data-place="${place.id}"><strong>${place.name}</strong><span>${place.note}</span></button></li>`,
       ).join('')}</ul>
       <form data-el="find">
-        <label>Elk vliegveld ter wereld:
-          <input name="q" placeholder="ICAO of naam, bijv. LSZS of Samedan" autocomplete="off">
+        <label>Any airfield on earth:
+          <input name="q" placeholder="ICAO or name, e.g. LSZS or Samedan" autocomplete="off">
         </label>
       </form>
       <ul class="fly-picker__hits" data-el="hits"></ul>
       <form data-el="coords">
-        <label>Of ergens anders: <input name="lat" placeholder="breedte" inputmode="decimal"></label>
-        <label><input name="lon" placeholder="lengte" inputmode="decimal"></label>
-        <label><input name="alt" placeholder="m zeeniveau" inputmode="decimal" value="3000"></label>
-        <button type="submit">Daarheen</button>
+        <label>Or anywhere else: <input name="lat" placeholder="latitude" inputmode="decimal"></label>
+        <label><input name="lon" placeholder="longitude" inputmode="decimal"></label>
+        <label><input name="alt" placeholder="m above sea level" inputmode="decimal" value="3000"></label>
+        <button type="submit">Go there</button>
       </form>
-      <p>Het terrein en de satellietbeelden zijn wereldwijd; alleen de twee Alpenvelden hebben een ingemeten baan om op te staan.</p>
-      <button class="fly-picker__close" data-action="close">Sluiten</button>
+      <p>The terrain and the satellite imagery are worldwide; only the two Alpine fields have a surveyed runway to stand on.</p>
+      <button class="fly-picker__close" data-action="close">Close</button>
     </div>`;
   document.body.append(picker);
   const showPicker = (show) => picker.classList.toggle('is-open', show);
@@ -428,7 +429,7 @@ async function main() {
       const found = searchAirports(place.icao, 1)[0];
       const lined = found && startFrom(found);
       if (!lined) {
-        panel.notice(`${place.icao} niet gevonden`);
+        panel.notice(`${place.icao} not found`);
         return;
       }
       await goTo({ ...lined, name: place.name, note: place.note });
@@ -443,7 +444,7 @@ async function main() {
     controls.setTrim(0);
     navState.leg = resolved.route ?? 0;
     autoMode = 'off';
-    panel.notice(`Nu bij ${place.name}`);
+    panel.notice(`Now at ${place.name}`);
     showPicker(false);
   }
 
@@ -473,7 +474,7 @@ async function main() {
   const setBrakes = (on) => {
     brakes = on;
     sim.setBrakes(on);
-    panel.notice(on ? 'Parkeerrem aan' : 'Parkeerrem los');
+    panel.notice(on ? 'Parking brake on' : 'Parking brake off');
   };
 
   const setRate = (index) => {
@@ -482,9 +483,25 @@ async function main() {
     const low = aircraft.onGround || (aircraft.agl ?? 1e9) < LOW_ALTITUDE;
     panel.notice(
       low && wanted > LOW_RATE_CAP
-        ? `${wanted}× gevraagd — laag bij de grond maximaal ${LOW_RATE_CAP}×`
-        : `${wanted}× tijd`,
+        ? `${wanted}× requested — near the ground ${LOW_RATE_CAP}× is the limit`
+        : `${wanted}× time`,
     );
+  };
+
+  const lookahead = createLookahead(viewer, { enabled: params.get('ahead') !== '0' });
+
+  // How much detail is worth asking for.
+  //
+  // The tile count grows with the square of this number, so it is the biggest
+  // single lever on how fast the landscape fills in. On the ground and in the
+  // circuit you are looking at the texture of the runway, so it stays sharp;
+  // at cruise you are looking at a valley from eight kilometres and the extra
+  // detail is bytes nobody sees. The step is gradual so tiles are not thrown
+  // away and re-fetched while you climb through it.
+  const detailFor = (a) => {
+    const agl = a.agl ?? 0;
+    const t = Math.min(1, Math.max(0, (agl - 600) / 4400));
+    scene.globe.maximumScreenSpaceError = 1.5 + t * 1.5;
   };
 
   const vrefFor = () => (aircraft.flaps >= 2 ? 110 : aircraft.flaps === 1 ? 125 : 150);
@@ -495,7 +512,7 @@ async function main() {
       switch (code) {
         case 'KeyG':
           sim.setGear(!aircraft.gear);
-          panel.notice(aircraft.gear ? 'Gear in' : 'Gear uit');
+          panel.notice(aircraft.gear ? 'Gear up' : 'Gear down');
           break;
         case 'KeyF':
           sim.setFlaps((aircraft.flaps + 1) % 3);
@@ -514,7 +531,7 @@ async function main() {
           break;
         case 'Space':
           paused = !paused;
-          panel.notice(paused ? 'Gepauzeerd' : 'Verder');
+          panel.notice(paused ? 'Paused' : 'Running');
           break;
         case 'BracketLeft':
         case 'BracketRight':
@@ -545,13 +562,13 @@ async function main() {
     if (autoMode === 'off') {
       autoMode = 'hold';
       hold = { heading: aircraft.heading, alt: aircraft.alt, speed: aircraft.kias ?? 250 };
-      panel.notice('Autopiloot: koers en hoogte vast');
+      panel.notice('Autopilot: heading and altitude hold');
     } else if (!onRoute) {
       autoMode = 'route';
-      panel.notice('Autopiloot: route naar Courchevel');
+      panel.notice('Autopilot: route to Courchevel');
     } else {
       autoMode = 'off';
-      panel.notice('Autopiloot uit — jij vliegt');
+      panel.notice('Autopilot off — you are flying');
     }
   }
 
@@ -582,7 +599,7 @@ async function main() {
       const nudge = controls.tilting && !controls.stick ? 0.45 : 0.2;
       if (autoMode !== 'off' && (Math.abs(axes.pitch) > nudge || Math.abs(axes.roll) > nudge)) {
         autoMode = 'off';
-        panel.notice('Autopiloot uit — jij vliegt');
+        panel.notice('Autopilot off — you are flying');
       }
 
       let input;
@@ -625,6 +642,8 @@ async function main() {
       lowFlying = (aircraft.agl ?? 1e9) < 150;
       updateClipping(aircraft.lat, aircraft.lon);
       if (!params.has('bare')) scenery.update(aircraft.lat, aircraft.lon);
+      detailFor(aircraft);
+      lookahead.update(aircraft);
       terrainService.update({
         lat: aircraft.lat,
         lon: aircraft.lon,
@@ -860,6 +879,7 @@ async function main() {
   window.__places = PLACES;
   window.__fly = {
     viewer,
+    lookahead,
     scene,
     sim,
     aircraft,
@@ -884,8 +904,8 @@ async function main() {
   // Say, once, that nobody else is flying this.
   panel.notice(
     start.onGround
-      ? 'Jij vliegt. Rem los met B, gas bij met W, optrekken bij 95 kt.'
-      : 'Jij vliegt. Pijltjes sturen, W en S gas, P voor de autopiloot.',
+      ? 'You are flying. Brake off with B, throttle up with W, rotate at 95 kt.'
+      : 'You are flying. Arrows steer, W and S for throttle, P for the autopilot.',
   );
   console.info(
     `${sim.name} · start "${startPlace.id}" · offsets ` +
@@ -898,6 +918,6 @@ async function main() {
 
 main().catch((error) => {
   console.error(error);
-  status(`Kon de vlucht niet laden: ${error.message}`);
+  status(`Could not load the flight: ${error.message}`);
   loading.classList.add('is-error');
 });

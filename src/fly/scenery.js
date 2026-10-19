@@ -114,7 +114,7 @@ export function createScenery(viewer, { datum, onStatus, trees = true } = {}) {
         const distance = distanceTo(area.bbox, lat, lon);
         if (distance < NEAR && !area.primitive && !area.loading && !area.failed) {
           area.loading = true;
-          onStatus?.(`Gebouwen van ${area.id} laden…`);
+          onStatus?.(`Loading buildings for ${area.id}…`);
           fetch(asset(`scenery/${area.id}.json`))
             .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
             .then((data) => {

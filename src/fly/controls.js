@@ -44,7 +44,7 @@ export function createControls(element, { onAction, onNotice } = {}) {
     throttle: 0,
     trim: 0,
     law: 'assist',
-    source: 'toetsenbord',
+    source: 'keyboard',
     yoke: false,
     mouse: { x: 0, y: 0 },
   };
@@ -66,7 +66,7 @@ export function createControls(element, { onAction, onNotice } = {}) {
     state.mouse.x = 0;
     state.mouse.y = 0;
     if (document.pointerLockElement) document.exitPointerLock();
-    onNotice?.('Muisstuur uit');
+    onNotice?.('Mouse yoke off');
   };
   const grabYoke = () => {
     if (state.yoke) return;
@@ -75,8 +75,8 @@ export function createControls(element, { onAction, onNotice } = {}) {
   document.addEventListener('pointerlockchange', () => {
     state.yoke = document.pointerLockElement === element;
     if (state.yoke) {
-      state.source = 'muis';
-      onNotice?.('Muisstuur aan — Esc laat los');
+      state.source = 'mouse';
+      onNotice?.('Mouse yoke on — Esc releases');
     }
   });
   element.addEventListener('mousedown', (event) => {
@@ -93,7 +93,7 @@ export function createControls(element, { onAction, onNotice } = {}) {
     keys.add(event.code);
     if (HELD.has(event.code) || event.code === 'Space') {
       event.preventDefault();
-      state.source = 'toetsenbord';
+      state.source = 'keyboard';
     }
     switch (event.code) {
       case 'Escape':
@@ -101,7 +101,7 @@ export function createControls(element, { onAction, onNotice } = {}) {
         break;
       case 'KeyM':
         state.law = state.law === 'assist' ? 'direct' : 'assist';
-        onNotice?.(state.law === 'assist' ? 'Stuurwet: geassisteerd' : 'Stuurwet: direct');
+        onNotice?.(state.law === 'assist' ? 'Control law: assisted' : 'Control law: direct');
         onAction?.('law', state.law);
         break;
       default:
@@ -175,7 +175,7 @@ export function createControls(element, { onAction, onNotice } = {}) {
     const wantRoll = clamp(dz(rollDeg - tilt.ref.roll) / 30, -1, 1);
     tilt.pitch += (wantPitch - tilt.pitch) * SMOOTH;
     tilt.roll += (wantRoll - tilt.roll) * SMOOTH;
-    state.source = 'kantelen';
+    state.source = 'tilt';
   };
 
   /**
@@ -203,7 +203,7 @@ export function createControls(element, { onAction, onNotice } = {}) {
     const dz = (value) => (Math.abs(value) < DEADZONE ? 0 : value - Math.sign(value) * DEADZONE);
     tilt.pitch += (clamp(dz(pitchDeg - tilt.ref.pitch) / 22, -1, 1) - tilt.pitch) * SMOOTH;
     tilt.roll += (clamp(dz(rollDeg - tilt.ref.roll) / 30, -1, 1) - tilt.roll) * SMOOTH;
-    state.source = 'kantelen';
+    state.source = 'tilt';
   };
 
   /**
@@ -222,8 +222,8 @@ export function createControls(element, { onAction, onNotice } = {}) {
   async function enableTilt() {
     const api = window.DeviceOrientationEvent;
     if (!api) {
-      tilt.status = 'Deze browser kent geen houdingssensor. Stuur met je duim.';
-      onNotice?.('Geen houdingssensor');
+      tilt.status = 'This browser has no orientation sensor. Steer with your thumb.';
+      onNotice?.('No orientation sensor');
       return false;
     }
     // iOS has required a prompt from inside a real tap since iOS 13, and it
@@ -237,8 +237,8 @@ export function createControls(element, { onAction, onNotice } = {}) {
           // A refusal is not the end: some browsers deny the formal permission
           // and still deliver devicemotion, so the listeners go on anyway and
           // the verdict waits for the reading count.
-          tilt.status = `Toestemming geweigerd. ${whereToLook()} Je duim werkt intussen gewoon. ${diagnosis()}`;
-          onNotice?.('Sensor geweigerd — zie de regel onderaan');
+          tilt.status = `Permission denied. ${whereToLook()} Your thumb still works. ${diagnosis()}`;
+          onNotice?.('Sensor denied — see the line at the bottom');
           // Switched on regardless: if readings turn up anyway the aeroplane
           // should use them, and if they do not, nothing is lost.
           listen();
@@ -247,17 +247,17 @@ export function createControls(element, { onAction, onNotice } = {}) {
         }
       } catch (error) {
         tilt.status =
-          `De sensorvraag mislukte (${error?.name ?? 'onbekend'}). Tik nogmaals, ` +
-          `of stuur met je duim. ${diagnosis()}`;
-        onNotice?.('Sensor vragen lukte niet');
+          `The sensor request failed (${error?.name ?? 'unknown'}). Tap again, ` +
+          `or steer with your thumb. ${diagnosis()}`;
+        onNotice?.('Could not ask for the sensor');
         return false;
       }
     }
     listen();
     tilt.on = true;
     tilt.ref = null;
-    state.source = 'kantelen';
-    onNotice?.('Kantelbesturing aan — houd stil en tik Centreren');
+    state.source = 'tilt';
+    onNotice?.('Tilt control on — hold still and tap Centre');
     // A permission that resolves but delivers no readings looks exactly like a
     // broken app, so it is checked and reported.
     tilt.status = '';
@@ -265,8 +265,8 @@ export function createControls(element, { onAction, onNotice } = {}) {
       if (tilt.on && !tilt.raw) {
         // Say what is actually true, with the numbers, so "still broken" and
         // "still the old build" stop looking the same from a distance.
-        tilt.status = `Geen sensormetingen. ${whereToLook()} Je duim werkt hoe dan ook. ${diagnosis()}`;
-        onNotice?.('Sensor geeft niets door');
+        tilt.status = `No sensor readings. ${whereToLook()} Your thumb works regardless. ${diagnosis()}`;
+        onNotice?.('Sensor sends nothing');
       }
     }, 3000);
     return true;
@@ -286,26 +286,25 @@ export function createControls(element, { onAction, onNotice } = {}) {
   const whereToLook = () => {
     if (platform === 'iOS') {
       return (
-        'Zet Instellingen ▸ Safari ▸ Beweging en richting aan. Dat geldt voor heel ' +
-        'Safari, dus een privé-tabblad helpt er niet tegen. Staat die al aan, wis dan ' +
-        'je eerdere antwoord onder Safari ▸ Geavanceerd ▸ Websitegegevens.'
+        'Turn on Settings ▸ Safari ▸ Motion & Orientation Access. It applies to all of ' +
+        'Safari, so a private tab makes no difference. If it is already on, clear your ' +
+        'earlier answer under Safari ▸ Advanced ▸ Website Data.'
       );
     }
     if (isBrave) {
       return (
-        'Brave blokkeert bewegingssensoren standaard via zijn schild. Tik op het ' +
-        'leeuwtje in de adresbalk en zet voor deze site de blokkade van ' +
-        'apparaatherkenning (fingerprinting) uit, of sta sensoren toe bij ' +
-        'Instellingen ▸ Site-instellingen ▸ Bewegingssensoren.'
+        'Brave blocks motion sensors by default through its shield. Tap the lion in ' +
+        'the address bar and turn off fingerprinting protection for this site, or ' +
+        'allow sensors under Settings ▸ Site settings ▸ Motion sensors.'
       );
     }
-    return 'Kijk bij Instellingen ▸ Site-instellingen ▸ Bewegingssensoren van je browser.';
+    return 'Look under Settings ▸ Site settings ▸ Motion sensors in your browser.';
   };
 
   const diagnosis = () =>
-    `[${platform} · sensor ${window.DeviceOrientationEvent ? 'ja' : 'nee'} · ` +
-    `toestemming ${needsPermission ? 'nodig' : 'niet nodig'} · ` +
-    `metingen ${tilt.events} · bron ${tilt.via || '-'} · build ${BUILD}]`;
+    `[${platform} · sensor ${window.DeviceOrientationEvent ? 'yes' : 'no'} · ` +
+    `permission ${needsPermission ? 'needed' : 'not needed'} · ` +
+    `readings ${tilt.events} · source ${tilt.via || '-'} · build ${BUILD}]`;
 
   function disableTilt() {
     window.removeEventListener('deviceorientation', onOrientation);
@@ -315,8 +314,8 @@ export function createControls(element, { onAction, onNotice } = {}) {
     tilt.status = '';
     tilt.pitch = 0;
     tilt.roll = 0;
-    state.source = 'toetsenbord';
-    onNotice?.('Kantelbesturing uit');
+    state.source = 'keyboard';
+    onNotice?.('Tilt control off');
   }
 
   // ---- a thumb on the glass -----------------------------------------------
@@ -349,7 +348,7 @@ export function createControls(element, { onAction, onNotice } = {}) {
       stick.oy = event.clientY;
       stick.x = 0;
       stick.y = 0;
-      state.source = 'duim';
+      state.source = 'thumb';
     });
     element.addEventListener('pointermove', (event) => {
       if (!stick.active || event.pointerId !== stick.id) return;
@@ -482,7 +481,7 @@ export function createControls(element, { onAction, onNotice } = {}) {
       } catch {
         // A browser that will not remember it is not a reason to refuse.
       }
-      onNotice?.(tilt.invert ? 'Neus omgekeerd' : 'Neus normaal');
+      onNotice?.(tilt.invert ? 'Nose inverted' : 'Nose normal');
       return tilt.invert;
     },
 
@@ -491,7 +490,7 @@ export function createControls(element, { onAction, onNotice } = {}) {
       tilt.ref = tilt.raw ? { ...tilt.raw } : null;
       tilt.pitch = 0;
       tilt.roll = 0;
-      onNotice?.('Gecentreerd');
+      onNotice?.('Centred');
     },
     setThrottle(value) {
       state.throttle = clamp(value, 0, 1);
