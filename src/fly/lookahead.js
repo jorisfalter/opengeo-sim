@@ -102,7 +102,15 @@ export function createLookahead(viewer, { enabled = true } = {}) {
           if (!xy) continue;
           if (!take(`i${i}:${z}:${xy.x}:${xy.y}`)) continue;
           // A refusal means the scheduler is full of tiles you can see. Good.
-          if (provider.requestImage(xy.x, xy.y, z, request())) served++;
+          // A rejection means the server said no, or the request was dropped
+          // when the aeroplane turned away — neither is worth a word, but an
+          // unhandled rejection shows up in the console as an error, and an
+          // error that is not one costs the next person half an hour.
+          const image = provider.requestImage(xy.x, xy.y, z, request());
+          if (image) {
+            served++;
+            image.catch?.(() => {});
+          }
         }
         const terrain = viewer.terrainProvider;
         const tScheme = terrain?.tilingScheme;
@@ -112,7 +120,11 @@ export function createLookahead(viewer, { enabled = true } = {}) {
         if (txy && take(`t:${tz}:${txy.x}:${txy.y}`)) {
           try {
             if (terrain.getTileDataAvailable(txy.x, txy.y, tz) !== false) {
-              if (terrain.requestTileGeometry(txy.x, txy.y, tz, request())) served++;
+              const geometry = terrain.requestTileGeometry(txy.x, txy.y, tz, request());
+              if (geometry) {
+                served++;
+                geometry.catch?.(() => {});
+              }
             }
           } catch {
             // A terrain provider that would rather not be asked is no reason
