@@ -28,6 +28,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
           <button data-view="free">Free look</button>
           <button data-action="sound" data-el="soundButton">Sound</button>
           <button data-action="map">Map</button>
+          <button data-action="plan">Plan</button>
           <button data-action="where">Start…</button>
         </div>
       </div>
@@ -213,7 +214,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
         <kbd>↑</kbd><kbd>↓</kbd> pitch · <kbd>←</kbd><kbd>→</kbd> roll · <kbd>Q</kbd><kbd>E</kbd> rudder ·
         <kbd>W</kbd><kbd>S</kbd> throttle · <kbd>[</kbd><kbd>]</kbd> trim · <kbd>G</kbd> gear ·
         <kbd>F</kbd> flaps · <kbd>B</kbd> brakes · <kbd>V</kbd> speedbrake · <kbd>M</kbd> control law ·
-        <kbd>P</kbd> autopilot · <kbd>C</kbd> camera · <kbd>J</kbd> sound · <kbd>N</kbd> map · <kbd>L</kbd> start ·
+        <kbd>P</kbd> autopilot · <kbd>C</kbd> camera · <kbd>J</kbd> sound · <kbd>N</kbd> map · <kbd>L</kbd> start · <kbd>R</kbd> plan ·
         <kbd>space</kbd> pause · <kbd>1</kbd><kbd>2</kbd> time up to 8× ·
         <kbd>click</kbd> mouse yoke, <kbd>Esc</kbd> releases
       </p>
@@ -221,6 +222,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
 
   const el = (name) => root.querySelector(`[data-el="${name}"]`);
   const nodes = {
+    glass: root.querySelector('.fly-glass'),
     ladder: el('ladder'),
     lines: el('ladderLines'),
     bankIndex: el('bankIndex'),
@@ -395,16 +397,21 @@ export function createPanel(root, { title, subtitle, attribution }) {
       // Standing on the runway at full thrust and going nowhere is confusing
       // for exactly as long as nobody tells you the brake is on.
       if (a.onGround && extra.brakes && (a.throttle ?? 0) > 0.25) warnings.push('BRAKE ON · B or click');
-      if (a.stall) warnings.push('OVERTREKKEN');
+      if (a.stall) warnings.push('STALL');
       if (kias > 290) warnings.push('OVERSPEED');
       if ((a.mach ?? 0) > 0.76) warnings.push('MACH');
       if (extra.aglFt !== null && extra.aglFt < 500 && fpm < -1500 && !a.onGround) {
-        warnings.push('DALING');
+        warnings.push('SINK RATE');
       }
       if (!a.gear && extra.aglFt !== null && extra.aglFt < 700 && !a.onGround) {
         warnings.push('GEAR');
       }
       text('warn', warnings.join(' · '));
+      // The invisible rectangle that catches a tap on the warning covers the
+      // top of the screen whether or not anything is written there, and it
+      // was swallowing clicks meant for the buttons behind it. It only exists
+      // while there is a warning to tap.
+      nodes.glass.classList.toggle('has-warning', warnings.length > 0);
     },
 
     /** Lets the warning itself undo what it is warning about. */

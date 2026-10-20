@@ -24,6 +24,7 @@ import { createControls } from './controls.js';
 import { createPanel } from './panel.js';
 import { createMinimap } from './minimap.js';
 import { createLookahead } from './lookahead.js';
+import { createPlan } from './plan.js';
 import { createScenery } from './scenery.js';
 import { createSound } from './sound.js';
 import { PLACES, findPlace } from './places.js';
@@ -60,6 +61,16 @@ const ROUTE = [
 ];
 
 const params = new URLSearchParams(window.location.search);
+
+// Tiles are kept between visits by a worker that only ever touches the tile
+// services — see public/sw.js for why it keeps its hands off our own files.
+if ('serviceWorker' in navigator && window.isSecureContext && params.get('sw') !== '0') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(asset('sw.js')).catch(() => {
+      // No worker is a slower simulator, not a broken one.
+    });
+  });
+}
 const useJsbsim = (params.get('fdm') ?? 'jsbsim') !== 'simple';
 const loading = document.querySelector('#loading');
 const status = (text) => {
@@ -402,6 +413,138 @@ async function main() {
   });
   if (smallScreen) minimap.toggle(false);
 
+  // ---- flight plan --------------------------------------------------------
+  const planSheet = document.createElement('div');
+  planSheet.className = 'fly-picker fly-plan';
+  planSheet.innerHTML = `
+    <div class="fly-picker__sheet">
+      <h2>Flight plan</h2>
+      <ul class="fly-plan__legs" data-el="legs"></ul>
+      <form data-el="planfind">
+        <label>Add an airfield:
+          <input name="q" placeholder="ICAO or name, e.g. LFLJ or Courchevel" autocomplete="off">
+        </label>
+      </form>
+      <ul class="fly-picker__hits" data-el="planhits"></ul>
+      <p>
+        Altitudes are metres above sea level and you can type over them. The
+        autopilot turns early, cuts back onto the line if you drift, and hands
+        the aeroplane back to the height hold at the last waypoint.
+      </p>
+      <div class="fly-plan__actions">
+        <button type="button" data-action="plan-here">Add where I am</button>
+        <button type="button" data-action="plan-clear">Clear</button>
+        <button type="button" data-action="plan-fly">Fly it</button>
+      </div>
+      <button class="fly-picker__close" data-action="plan-close">Close</button>
+    </div>`;
+  document.body.append(planSheet);
+  const planEl = (name) => planSheet.querySelector(`[data-el="${name}"]`);
+
+  function renderPlan() {
+    const legs = planEl('legs');
+    if (!plan.points.length) {
+      legs.innerHTML = '<li class="fly-plan__empty">No waypoints yet.</li>';
+      return;
+    }
+    legs.innerHTML = plan.points
+      .map(
+        (point, i) => `
+        <li${i === plan.index && autoMode === 'nav' ? ' class="is-active"' : ''}>
+          <span class="fly-plan__n">${i + 1}</span>
+          <strong>${point.name}</strong>
+          <input class="fly-plan__alt" data-alt="${i}" inputmode="numeric"
+                 value="${point.alt === null ? '' : Math.round(point.alt)}" placeholder="keep">
+          <button type="button" data-drop="${i}" title="Remove">×</button>
+        </li>`,
+      )
+      .join('');
+  }
+
+  // A height that makes sense without being asked: whatever you are flying at
+  // now, or a couple of thousand metres over the field if you are on it.
+  const defaultAlt = (point) => {
+    const field = (point.elevationFt ?? 0) * FT;
+    return Math.round(Math.max(aircraft.alt ?? 0, field + 2000) / 50) * 50;
+  };
+
+  function addToPlan(point) {
+    plan.add({ ...point, alt: point.alt ?? defaultAlt(point) });
+    renderPlan();
+    panel.notice(`${point.name} added — ${plan.points.length} waypoints`);
+  }
+
+  const showPlan = (open) => {
+    planSheet.classList.toggle('is-open', open);
+    if (open) renderPlan();
+  };
+
+  planSheet.addEventListener('click', (event) => {
+    const action = event.target.closest('button')?.dataset ?? {};
+    if (action.drop !== undefined) {
+      plan.remove(Number(action.drop));
+      renderPlan();
+      return;
+    }
+    switch (action.action) {
+      case 'plan-close':
+        showPlan(false);
+        break;
+      case 'plan-clear':
+        plan.clear();
+        renderPlan();
+        break;
+      case 'plan-here':
+        addToPlan({
+          name: `${aircraft.lat.toFixed(3)}, ${aircraft.lon.toFixed(3)}`,
+          lat: aircraft.lat,
+          lon: aircraft.lon,
+          alt: Math.round(aircraft.alt),
+        });
+        break;
+      case 'plan-fly':
+        showPlan(false);
+        armPlan();
+        renderPlan();
+        break;
+      default:
+        break;
+    }
+  });
+
+  planSheet.addEventListener('change', (event) => {
+    const i = event.target.dataset?.alt;
+    if (i === undefined) return;
+    const value = Number(event.target.value);
+    plan.points[Number(i)].alt = Number.isFinite(value) && event.target.value !== '' ? value : null;
+  });
+
+  planSheet.querySelector('[data-el="planfind"]').addEventListener('submit', (e) => e.preventDefault());
+  planSheet.querySelector('[data-el="planfind"] input').addEventListener('input', async (event) => {
+    const query = event.target.value.trim();
+    const hits = planEl('planhits');
+    if (query.length < 2) {
+      hits.innerHTML = '';
+      return;
+    }
+    await loadAirports();
+    hits.innerHTML = searchAirports(query, 6)
+      .map(
+        (field) =>
+          `<li><button type="button" data-add="${field.ident}"><strong>${field.ident}</strong> ${field.name}</button></li>`,
+      )
+      .join('');
+  });
+  planEl('planhits').addEventListener('click', async (event) => {
+    const ident = event.target.closest('button')?.dataset.add;
+    if (!ident) return;
+    const field = searchAirports(ident, 1)[0];
+    if (!field) return;
+    addToPlan({ name: `${field.ident} ${field.name}`.trim(), lat: field.lat, lon: field.lon, elevationFt: field.elevationFt });
+    planSheet.querySelector('[data-el="planfind"] input').value = '';
+    planEl('planhits').innerHTML = '';
+  });
+
   const picker = document.createElement('div');
   picker.className = 'fly-picker';
   picker.innerHTML = `
@@ -459,7 +602,14 @@ async function main() {
   // ---- state --------------------------------------------------------------
   const navState = { leg: start.route ?? 0 };
   let view = params.get('view') ?? 'cockpit';
-  let autoMode = 'off'; // off | hold | route
+  let autoMode = 'off'; // off | hold | nav | route
+  let navLeg = null;
+  const plan = createPlan({ onNotice: (message) => panel.notice(message) });
+  const clock = (seconds) => {
+    if (!Number.isFinite(seconds)) return '--:--';
+    const whole = Math.max(0, Math.round(seconds));
+    return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+  };
   let hold = null;
   let rateIndex = RATES.indexOf(1);
   let paused = false;
@@ -553,6 +703,9 @@ async function main() {
         case 'KeyL':
           showPicker(!picker.classList.contains('is-open'));
           break;
+        case 'KeyR':
+          showPlan(!planSheet.classList.contains('is-open'));
+          break;
         case 'KeyN':
           minimap.toggle();
           break;
@@ -565,19 +718,32 @@ async function main() {
     },
   });
 
+  // Off, then hold what you have, then your own plan if you made one, then
+  // the scripted valley run, then off again.
   function cycleAutopilot() {
-    const onRoute = autoMode === 'route';
     if (autoMode === 'off') {
       autoMode = 'hold';
       hold = { heading: aircraft.heading, alt: aircraft.alt, speed: aircraft.kias ?? 250 };
       panel.notice('Autopilot: heading and altitude hold');
-    } else if (!onRoute) {
+    } else if (autoMode === 'hold' && plan.points.length) {
+      armPlan();
+    } else if (autoMode !== 'route') {
       autoMode = 'route';
-      panel.notice('Autopilot: route to Courchevel');
+      panel.notice('Autopilot: scripted route to Courchevel');
     } else {
       autoMode = 'off';
       panel.notice('Autopilot off — you are flying');
     }
+  }
+
+  function armPlan() {
+    if (!plan.points.length) {
+      panel.notice('No waypoints yet — open Plan');
+      return;
+    }
+    const first = plan.arm(aircraft);
+    autoMode = 'nav';
+    panel.notice(`Flight plan armed — ${first.name}`);
   }
 
   setView(view);
@@ -618,6 +784,19 @@ async function main() {
             sim.setGear(input.config.gear);
           }
           if (input.config.flaps !== aircraft.flaps) sim.setFlaps(input.config.flaps);
+        }
+      } else if (autoMode === 'nav') {
+        const leg = plan.guide(aircraft);
+        if (leg) {
+          navLeg = leg;
+          input = sim.holdAutopilot({ heading: leg.heading, alt: leg.alt }, delta);
+        } else {
+          // The plan ran out. Hold what you have rather than letting go of an
+          // aeroplane somebody thought was being flown.
+          navLeg = null;
+          autoMode = 'hold';
+          hold = { heading: aircraft.heading, alt: aircraft.alt, speed: aircraft.kias ?? 250 };
+          input = sim.holdAutopilot(hold, delta);
         }
       } else if (autoMode === 'hold') {
         input = sim.holdAutopilot(hold, delta);
@@ -745,18 +924,22 @@ async function main() {
       rate,
       rateWanted: RATES[rateIndex],
       ap:
-        autoMode === 'route'
-          ? `AUTOPILOOT · ${route[navState.leg]?.name ?? ''}`
+        autoMode === 'nav' && navLeg
+          ? `NAV · ${navLeg.name} · ${(navLeg.distance / 1000).toFixed(1)} km · ${clock(navLeg.seconds)}`
+          : autoMode === 'route'
+          ? `AUTOPILOT · ${route[navState.leg]?.name ?? ''}`
           : autoMode === 'hold'
-            ? `AUTOPILOOT · ${Math.round((hold.heading / DEG + 360) % 360)}° · ${Math.round((hold.alt - datum) / FT / 100) * 100} ft`
+            ? `AUTOPILOT · ${Math.round((hold.heading / DEG + 360) % 360)}° · ${Math.round((hold.alt - datum) / FT / 100) * 100} ft`
             : paused
-              ? 'GEPAUZEERD'
+              ? 'PAUSED'
               : '',
     });
     sound.update(aircraft);
+    // Your own plan wins the map whenever you have one; the scripted valley
+    // route only shows while it is the thing being flown.
     minimap.update(aircraft, {
-      route: autoMode === 'route' ? route : [],
-      leg: autoMode === 'route' ? navState.leg : null,
+      route: plan.points.length ? plan.points : autoMode === 'route' ? route : [],
+      leg: plan.points.length ? (autoMode === 'nav' ? plan.index : null) : autoMode === 'route' ? navState.leg : null,
     });
     requestAnimationFrame(frame);
   }
@@ -808,6 +991,9 @@ async function main() {
     switch (action) {
       case 'where':
         showPicker(true);
+        break;
+      case 'plan':
+        showPlan(true);
         break;
       case 'thr-up':
         controls.nudgeThrottle(0.1);
@@ -920,6 +1106,8 @@ async function main() {
   window.__fly = {
     viewer,
     lookahead,
+    plan,
+    armPlan,
     scene,
     sim,
     aircraft,
