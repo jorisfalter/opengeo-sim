@@ -63,6 +63,7 @@ class Fdm {
     this.cmdBank = 0;
     this.trim = 0;
     this.law = 'assist';
+    this.overGuard = 0;
     this.axes = { pitch: 0, roll: 0, yaw: 0, trim: 0 };
     this.ground = 0;
     this.steer = 0;
@@ -133,6 +134,50 @@ class Fdm {
   }
 
   /**
+   * What the assisted law will not let you do.
+   *
+   * The attitude limits stop you rolling past 67 degrees or pointing the nose
+   * somewhere silly, but attitude is not the whole envelope: you can hold a
+   * perfectly reasonable twenty degrees nose-up until the wing stops flying,
+   * or twelve degrees down until you arrive at the red line. So three more
+   * limits, all of which work by moving the commanded attitude rather than by
+   * fighting your hands, because a protection you can feel pulling against
+   * you is worse than none at all.
+   *
+   * Measured on this airframe: the wing breaks at 15.4 degrees clean and 14.0
+   * with gear and flap, so the guard sits at 12. The red line is 290 KIAS and
+   * M0.74, so the guard sits at the operating limits, 282 and M0.72.
+   *
+   * None of this exists in direct law. That is what direct law is for.
+   */
+  protect(a, hand) {
+    const alpha = (a.alpha ?? 0) / DEG;
+    if (alpha > 12) {
+      // Give back exactly the attitude the wing is complaining about. You keep
+      // your turn and your climb; you simply cannot ask for the stall.
+      this.cmdPitch = Math.min(this.cmdPitch, a.pitch - (alpha - 12) * DEG);
+    }
+    // Past the limit the nose comes up and will not go back down until the
+    // speed has. Mach becomes knots of urgency so that one number drives this
+    // at every altitude.
+    //
+    // The first version of this was too polite — four degrees against full
+    // power and full forward stick, which held 297 knots quite happily, past
+    // the red line. It now asks for up to twelve, but walks there at five
+    // degrees a second: a guard that snaps the nose up pulls three and a half
+    // g, and breaking the aeroplane to save it from an overspeed is no trade.
+    const over = Math.max((a.kias ?? 0) - 282, ((a.mach ?? 0) - 0.72) * 350);
+    const wanted = over > 0 ? Math.min(12 * DEG, over * 0.6 * DEG) : 0;
+    const rate = 5 * DEG * hand;
+    this.overGuard += clamp(wanted - this.overGuard, -rate, rate);
+    if (this.overGuard > 0) this.cmdPitch = Math.max(this.cmdPitch, this.overGuard);
+    // Last word: a pull already at the structural limit does not get to grow,
+    // whoever asked for it — the pilot or the guard above.
+    if ((a.gLoad ?? 1) > 2.4) this.cmdPitch = Math.min(this.cmdPitch, a.pitch);
+    else if ((a.gLoad ?? 1) < -0.5) this.cmdPitch = Math.max(this.cmdPitch, a.pitch);
+  }
+
+  /**
    * Advances the model by `dt` seconds of simulated time.
    *
    * `input` arrives in one of three shapes:
@@ -176,6 +221,7 @@ class Fdm {
       if (!input.roll) this.cmdBank *= Math.max(0, 1 - 1.2 * hand);
       this.cmdPitch = clamp(this.cmdPitch + (input.trim ?? 0) * 10 * DEG * hand, -15 * DEG, 20 * DEG);
       this.cmdBank = clamp(this.cmdBank, -67 * DEG, 67 * DEG);
+      this.protect(a, hand);
     }
     // On the ground below rotate speed there is nothing to command but the nose.
     if (a.onGround && this.law === 'assist') this.cmdBank = 0;

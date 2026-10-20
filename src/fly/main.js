@@ -5,7 +5,15 @@
 // at 120 Hz — on an aircraft model written for this project. You have the
 // controls from the first frame; the autopilot is a button, not the default.
 import { asset } from '../base.js';
-import { Cartesian3, Cartographic, Math as CesiumMath, sampleTerrainMostDetailed } from 'cesium';
+import {
+  Cartesian3,
+  Cartographic,
+  HeadingPitchRoll,
+  Math as CesiumMath,
+  Matrix4,
+  Transforms,
+  sampleTerrainMostDetailed,
+} from 'cesium';
 import { createScene } from './scene.js';
 import { addAirport, clipGlobeTo, runwayGround } from './airport.js';
 import { addAircraft } from './aircraft.js';
@@ -377,7 +385,7 @@ async function main() {
   mapRoot.className = 'fly-map';
   document.body.append(mapRoot);
   // On a phone the screen is the scarce thing and the map covers the altitude
-  // tape, so it starts closed there and opens with the Kaart button.
+  // tape, so it starts closed there and opens with the Map button.
   const smallScreen = window.matchMedia('(pointer: coarse)').matches;
   const minimap = createMinimap(mapRoot, {
     places: PLACES.filter((place) => place.lat !== undefined),
@@ -657,7 +665,51 @@ async function main() {
       sim.step(input, delta, groundHeight(aircraft.lat, aircraft.lon));
     }
 
-    // ---- camera -----------------------------------------------------------
+    // The camera that rides behind the aeroplane.
+  //
+  // It used to sit seventy metres due north-of-track and look five degrees
+  // down, which is right only in level flight: climb away and the aeroplane
+  // rises out of the top of the frame, bank and it swings out of the side.
+  // The fix is to stop thinking in latitude and longitude. The offset is
+  // taken in the aeroplane's own frame — so far back, so far up, from the
+  // tail — and the camera aims at a point ahead of the nose rather than at
+  // the aeroplane, which is what lets you see where you are going.
+  //
+  // It follows an attitude of its own: most of the pitch and a third of the
+  // bank. A camera welded to the airframe makes the world roll instead of the
+  // aeroplane, and that is how you lose your bearings and your lunch.
+  const CHASE = { back: 62, up: 11, ahead: 260, follow: 2.8 };
+  let chaseEye = null;
+  const scratch = new Cartesian3();
+
+  function chaseCamera(position, a, dt) {
+    const attitude = new HeadingPitchRoll(a.heading, a.pitch * 0.65, a.bank * 0.3);
+    const frame = Transforms.headingPitchRollToFixedFrame(position, attitude);
+    // x is right, y is forward and z is up in this frame — which is why the
+    // aeroplane mesh had to be rotated into it as well.
+    const wanted = Matrix4.multiplyByPoint(frame, new Cartesian3(0, -CHASE.back, CHASE.up), new Cartesian3());
+    const aim = Matrix4.multiplyByPoint(frame, new Cartesian3(0, CHASE.ahead, 0), new Cartesian3());
+    // A camera that snaps to its ideal point transmits every twitch of the
+    // gear and every gust. This one catches up over about a third of a second,
+    // which reads as a camera being flown rather than bolted on.
+    const lag = 1 - Math.exp(-CHASE.follow * dt);
+    chaseEye = chaseEye
+      ? Cartesian3.lerp(chaseEye, wanted, lag, new Cartesian3())
+      : Cartesian3.clone(wanted);
+    // Teleports, and the first frame after one, must not be flown to.
+    if (Cartesian3.distance(chaseEye, wanted) > 4000) chaseEye = Cartesian3.clone(wanted);
+    const direction = Cartesian3.normalize(
+      Cartesian3.subtract(aim, chaseEye, new Cartesian3()),
+      new Cartesian3(),
+    );
+    const up = Cartesian3.normalize(
+      Matrix4.multiplyByPointAsVector(frame, Cartesian3.UNIT_Z, scratch),
+      new Cartesian3(),
+    );
+    viewer.camera.setView({ destination: chaseEye, orientation: { direction, up } });
+  }
+
+  // ---- camera -----------------------------------------------------------
     const position = Cartesian3.fromDegrees(aircraft.lon, aircraft.lat, aircraft.alt);
     model.update(position, aircraft.heading, aircraft.pitch, aircraft.bank);
     if (view === 'cockpit') {
@@ -670,19 +722,7 @@ async function main() {
         },
       });
     } else if (view === 'chase') {
-      const back = 70;
-      const lat = aircraft.lat - (Math.cos(aircraft.heading) * back) / METERS_PER_DEGREE;
-      const lon =
-        aircraft.lon -
-        (Math.sin(aircraft.heading) * back) / (METERS_PER_DEGREE * Math.cos(aircraft.lat * DEG));
-      viewer.camera.setView({
-        destination: Cartesian3.fromDegrees(lon, lat, aircraft.alt + 14),
-        orientation: {
-          heading: aircraft.heading,
-          pitch: aircraft.pitch - CesiumMath.toRadians(5),
-          roll: aircraft.bank * 0.35,
-        },
-      });
+      chaseCamera(position, aircraft, real);
     }
 
     const ground = groundHeight(aircraft.lat, aircraft.lon);
@@ -691,7 +731,7 @@ async function main() {
       aglFt: aircraft.agl !== undefined ? aircraft.agl / FT : (aircraft.alt - ground) / FT,
       trim: axes.trim,
       law: axes.law,
-      input: axes.yoke ? 'muis' : axes.source,
+      input: axes.yoke ? 'mouse' : axes.source,
       brakes,
       speedbrake: sim.speedbrake,
       vref: vrefFor(),

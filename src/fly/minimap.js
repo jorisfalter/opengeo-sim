@@ -24,7 +24,7 @@ const latToY = (lat, z) => {
 export function createMinimap(root, { places = [], airports = [], onNotice } = {}) {
   root.innerHTML = `
     <div class="fly-map__head">
-      <strong>Kaart</strong>
+      <strong>Map</strong>
       <button data-map="out" title="Zoom out">−</button>
       <button data-map="in" title="Zoom in">+</button>
       <button data-map="hide" title="Hide (N)">×</button>
