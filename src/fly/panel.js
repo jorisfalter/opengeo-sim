@@ -354,7 +354,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
       nodes.touchGear.classList.toggle('is-on', Boolean(a.gear));
       nodes.touchFlaps.textContent = `Flaps ${a.flaps ?? 0}`;
       nodes.touchFlaps.classList.toggle('is-on', (a.flaps ?? 0) > 0);
-      const apOn = Boolean(extra.ap) && !extra.ap.startsWith('GEPAUZEERD');
+      const apOn = Boolean(extra.ap) && !extra.ap.startsWith('PAUSED');
       nodes.touchAp.textContent = apOn ? 'AP ON' : 'AP off';
       nodes.touchAp.classList.toggle('is-on', apOn);
       // Where the thumb went down and where it is now.
@@ -370,7 +370,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
       nodes.gearButton.classList.toggle('is-on', Boolean(a.gear));
       nodes.flapsButton.textContent = `Flaps ${a.flaps ?? 0}`;
       nodes.flapsButton.classList.toggle('is-on', (a.flaps ?? 0) > 0);
-      nodes.apButton.classList.toggle('is-on', Boolean(extra.ap) && !extra.ap.startsWith('GEPAUZEERD'));
+      nodes.apButton.classList.toggle('is-on', Boolean(extra.ap) && !extra.ap.startsWith('PAUSED'));
       text(
         'config',
         `${a.gear ? 'gear' : 'clean'} · flaps ${a.flaps ?? 0}${a.onGround ? ' · ground' : ''}` +
