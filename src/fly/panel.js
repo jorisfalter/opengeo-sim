@@ -43,7 +43,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
         </div>
         <div class="fly-rudder">
           <button data-action="yaw-left" title="Rudder left (Q) — steers the nosewheel on the ground">◀</button>
-          <span>ROER</span>
+          <span>RUDDER</span>
           <button data-action="yaw-right" title="Rudder right (E) — steers the nosewheel on the ground">▶</button>
         </div>
         <button data-action="brakes" data-el="brakeButton">Brake</button>
@@ -169,7 +169,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
         <text x="40" y="526" class="g-label" data-el="config">gear · flaps 0</text>
         <text x="40" y="548" class="g-label" data-el="trim">trim 0</text>
         <text x="40" y="570" class="g-label" data-el="law">assisted</text>
-        <text x="40" y="592" class="g-label" data-el="input">toetsenbord</text>
+        <text x="40" y="592" class="g-label" data-el="input">keyboard</text>
         <text x="200" y="570" class="g-label" data-el="gload">1.0 g</text>
         <text x="500" y="110" class="g-warn" text-anchor="middle" data-el="warn"></text>
         <rect x="300" y="86" width="400" height="34" fill="transparent" data-el="warnHit"/>
@@ -202,20 +202,20 @@ export function createPanel(root, { title, subtitle, attribution }) {
         <!-- Only worth showing once tilt is actually on. -->
         <p class="fly-touch__status" data-el="tiltStatus"></p>
         <div class="fly-touch__tiltkeys" data-el="tiltKeys">
-          <button data-action="centre">Centreren</button>
-          <button data-action="invert" data-el="invertButton">Neus ⇅</button>
+          <button data-action="centre">Centre</button>
+          <button data-action="invert" data-el="invertButton">Nose ⇅</button>
         </div>
       </div>
       <p class="fly-hud__rotate">Turn your device sideways — this simulator flies in landscape.</p>
       <p class="fly-hud__notice" data-el="notice"></p>
       <p class="fly-hud__credit">${attribution}</p>
       <p class="fly-hud__keys">
-        <kbd>↑</kbd><kbd>↓</kbd> neus · <kbd>←</kbd><kbd>→</kbd> rollen · <kbd>Q</kbd><kbd>E</kbd> roer ·
-        <kbd>W</kbd><kbd>S</kbd> gas · <kbd>[</kbd><kbd>]</kbd> trim · <kbd>G</kbd> gear ·
-        <kbd>F</kbd> flaps · <kbd>B</kbd> remmen · <kbd>V</kbd> remkleppen · <kbd>M</kbd> stuurwet ·
-        <kbd>P</kbd> autopiloot · <kbd>C</kbd> camera · <kbd>J</kbd> geluid · <kbd>N</kbd> kaart · <kbd>L</kbd> startplek ·
-        <kbd>spatie</kbd> pauze · <kbd>1</kbd><kbd>2</kbd> tijd tot 8× ·
-        <kbd>klik</kbd> muisstuur, <kbd>Esc</kbd> los
+        <kbd>↑</kbd><kbd>↓</kbd> pitch · <kbd>←</kbd><kbd>→</kbd> roll · <kbd>Q</kbd><kbd>E</kbd> rudder ·
+        <kbd>W</kbd><kbd>S</kbd> throttle · <kbd>[</kbd><kbd>]</kbd> trim · <kbd>G</kbd> gear ·
+        <kbd>F</kbd> flaps · <kbd>B</kbd> brakes · <kbd>V</kbd> speedbrake · <kbd>M</kbd> control law ·
+        <kbd>P</kbd> autopilot · <kbd>C</kbd> camera · <kbd>J</kbd> sound · <kbd>N</kbd> map · <kbd>L</kbd> start ·
+        <kbd>space</kbd> pause · <kbd>1</kbd><kbd>2</kbd> time up to 8× ·
+        <kbd>click</kbd> mouse yoke, <kbd>Esc</kbd> releases
       </p>
     </div>`;
 

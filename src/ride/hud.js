@@ -49,7 +49,7 @@ export function createHud(root, ride, run, rides = []) {
           <label><input type="checkbox" data-layer="buildings" checked /> Buildings</label>
           <label><input type="checkbox" data-layer="ground" /> BGT ground</label>
           <label><input type="checkbox" data-layer="rails" checked /> Track</label>
-          <label><input type="checkbox" data-layer="catenary" checked /> Bovenleiding</label>
+          <label><input type="checkbox" data-layer="catenary" checked /> Catenary</label>
         </div>
         </div>
       </div>

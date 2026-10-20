@@ -13,8 +13,8 @@ export function createHud(root, flight) {
         </div>
         <div class="fly-hud__modes">
           <button data-view="cockpit" class="is-active">Cockpit</button>
-          <button data-view="chase">Buitenaanzicht</button>
-          <button data-view="free">Vrij kijken</button>
+          <button data-view="chase">Chase</button>
+          <button data-view="free">Free look</button>
         </div>
       </div>
 
@@ -30,28 +30,28 @@ export function createHud(root, flight) {
           <div class="fly-gauge"><span data-field="ias">0</span><label>kt IAS</label></div>
           <div class="fly-gauge"><span data-field="alt">0</span><label>ft</label></div>
           <div class="fly-gauge"><span data-field="vs">0</span><label>ft/min</label></div>
-          <div class="fly-gauge"><span data-field="hdg">000</span><label>koers</label></div>
+          <div class="fly-gauge"><span data-field="hdg">000</span><label>heading</label></div>
         </div>
         <dl class="fly-hud__readout">
-          <div><dt>Bestemming</dt><dd data-field="dest">—</dd></div>
+          <div><dt>Destination</dt><dd data-field="dest">—</dd></div>
           <div><dt>Height above field</dt><dd data-field="agl">—</dd></div>
-          <div><dt>Gas</dt><dd data-field="thr">0%</dd></div>
+          <div><dt>Throttle</dt><dd data-field="thr">0%</dd></div>
           <div><dt>Config</dt><dd data-field="cfg">—</dd></div>
           <div><dt>Bank</dt><dd data-field="bank">0°</dd></div>
-          <div><dt>Modus</dt><dd data-field="mode">Autopiloot</dd></div>
+          <div><dt>Mode</dt><dd data-field="mode">Autopilot</dd></div>
         </dl>
         <div class="fly-hud__controls">
-          <button data-action="ap">Autopiloot uit</button>
+          <button data-action="ap">Autopilot off</button>
           <button data-action="gear">Gear</button>
           <button data-action="flaps">Flaps</button>
           <button data-action="slower">−</button>
           <span data-field="rate">1×</span>
           <button data-action="faster">+</button>
-          <button data-action="restart">Opnieuw</button>
+          <button data-action="restart">Restart</button>
         </div>
       </div>
       <p class="fly-hud__credit">${flight.attribution}</p>
-      <p class="fly-hud__keys">pijltjes sturen · <kbd>A</kbd>/<kbd>Z</kbd> gas · <kbd>G</kbd> gear · <kbd>F</kbd> flaps · <kbd>B</kbd> remmen · <kbd>P</kbd> autopiloot · <kbd>C</kbd> camera</p>
+      <p class="fly-hud__keys">arrows steer · <kbd>A</kbd>/<kbd>Z</kbd> throttle · <kbd>G</kbd> gear · <kbd>F</kbd> flaps · <kbd>B</kbd> brakes · <kbd>P</kbd> autopilot · <kbd>C</kbd> camera</p>
     </div>`;
 
   const field = (name) => root.querySelector(`[data-field="${name}"]`);
