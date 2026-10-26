@@ -135,7 +135,12 @@ async function main() {
   );
   // Chambéry's is the one used for altitudes away from an airfield, because it
   // is flat enough for a 30 m DEM to be honest there.
-  const datum = datums.lflb;
+  // The altimeter reads height above sea level, and the terrain is delivered
+  // as height above the ellipsoid; the difference is the geoid, which is 50 m
+  // in Savoie and 44 in Antwerp. It follows the field you are at whenever the
+  // field's own elevation is known, so the altimeter reads what the plate
+  // says rather than what Chambery says.
+  let datum = datums.lflb;
 
   /**
    * A runway is a designed surface, so its profile has to be smooth. The
@@ -302,12 +307,35 @@ async function main() {
           throttle: 0.6,
         }
       : null;
-  const startPlace = fromUrl ?? findPlace(params.get('start')) ?? findPlace('lflb');
+  let startPlace = fromUrl ?? findPlace(params.get('start')) ?? findPlace('lflb');
+
+  // A start place may name an airfield rather than hold a position. The menu
+  // knew how to look one up; booting straight into one did not, so
+  // ?start=kiewit built a place with no coordinates at all — latitude NaN,
+  // altitude NaN, and an aeroplane dropped into a sky it had never been put
+  // in, with the loading screen still up because nothing could finish.
+  if (startPlace.icao) {
+    status('Finding the airfield…');
+    await loadAirports();
+    const found = searchAirports(startPlace.icao, 1)[0];
+    const lined = found && startFrom(found);
+    if (lined) startPlace = { ...lined, name: startPlace.name, note: startPlace.note };
+    else startPlace = findPlace('lflb');
+  }
 
   status('Starting the flight model…');
-  const start = resolvePlace(startPlace);
+  const start = startPlace.terrainStart ? await resolveWorldPlace(startPlace) : resolvePlace(startPlace);
   terrainService.update({ lat: start.lat, lon: start.lon, agl: start.onGround ? 0 : 1500 });
-  start.groundHeight = groundHeight(start.lat, start.lon);
+  // Keep a height that was measured at the spot. The feed below falls back to
+  // the last ground it knew, which at boot is the Alpine runway this file
+  // starts over — and handing JSBSim that for a field in Limburg puts the
+  // aeroplane two hundred metres above its own wheels. goTo has always used
+  // ??; this line did not, which is the whole difference between picking
+  // Kiewit from the menu and starting there.
+  start.groundHeight = start.groundHeight ?? groundHeight(start.lat, start.lon);
+  if (start.elevationFt !== undefined && Number.isFinite(start.groundHeight)) {
+    datum = start.groundHeight - start.elevationFt * FT;
+  }
 
   let sim;
   if (useJsbsim) {
@@ -550,10 +578,18 @@ async function main() {
   picker.innerHTML = `
     <div class="fly-picker__sheet">
       <h2>Where do you want to begin?</h2>
-      <ul>${PLACES.map(
-        (place) =>
-          `<li><button data-place="${place.id}"><strong>${place.name}</strong><span>${place.note}</span></button></li>`,
-      ).join('')}</ul>
+      ${[...new Set(PLACES.map((place) => place.group ?? 'Elsewhere'))]
+        .map(
+          (group) => `
+        <h3 class="fly-picker__group">${group}</h3>
+        <ul>${PLACES.filter((place) => (place.group ?? 'Elsewhere') === group)
+          .map(
+            (place) =>
+              `<li><button data-place="${place.id}"><strong>${place.name}</strong><span>${place.note}</span></button></li>`,
+          )
+          .join('')}</ul>`,
+        )
+        .join('')}
       <form data-el="find">
         <label>Any airfield on earth:
           <input name="q" placeholder="ICAO or name, e.g. LSZS or Samedan" autocomplete="off">
@@ -589,6 +625,9 @@ async function main() {
     const resolved = place.terrainStart ? await resolveWorldPlace(place) : resolvePlace(place);
     terrainService.update({ lat: resolved.lat, lon: resolved.lon, agl: resolved.onGround ? 0 : 1500 });
     resolved.groundHeight = resolved.groundHeight ?? groundHeight(resolved.lat, resolved.lon);
+    if (resolved.elevationFt !== undefined && Number.isFinite(resolved.groundHeight)) {
+      datum = resolved.groundHeight - resolved.elevationFt * FT;
+    }
     lastGround = resolved.groundHeight;
     sim.teleport(resolved);
     controls.setThrottle(resolved.throttle ?? 0);

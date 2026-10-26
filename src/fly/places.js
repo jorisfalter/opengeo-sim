@@ -6,6 +6,7 @@
 export const PLACES = [
   {
     id: 'lflb',
+    group: 'Savoie and the Alps',
     name: 'Chambéry-Savoie',
     note: 'on runway 36, engines running — the classic departure',
     airport: 'lflb',
@@ -16,6 +17,7 @@ export const PLACES = [
   },
   {
     id: 'lflj',
+    group: 'Savoie and the Alps',
     name: 'Courchevel Altiport',
     note: 'top of the slope, nose downhill — the way you leave there',
     airport: 'lflj',
@@ -27,6 +29,7 @@ export const PLACES = [
   },
   {
     id: 'lsgg',
+    group: 'Savoie and the Alps',
     name: 'Genève Aéroport',
     note: '3,582 m of asphalt — room to spare, and the big brother in the valley',
     airport: 'lsgg',
@@ -37,6 +40,7 @@ export const PLACES = [
   },
   {
     id: 'lfli',
+    group: 'Savoie and the Alps',
     name: 'Annemasse',
     note: '900 m under Geneva’s approach path',
     airport: 'lfli',
@@ -47,6 +51,7 @@ export const PLACES = [
   },
   {
     id: 'lflp',
+    group: 'Savoie and the Alps',
     name: 'Annecy-Meythet',
     note: 'at the head of the lake, mountains on three sides',
     airport: 'lflp',
@@ -57,6 +62,7 @@ export const PLACES = [
   },
   {
     id: 'lfhm',
+    group: 'Savoie and the Alps',
     name: 'Megève Altiport',
     note: 'the other mountain slope: 543 m at 7.5% — nose downhill',
     airport: 'lfhm',
@@ -68,6 +74,7 @@ export const PLACES = [
   },
   {
     id: 'lfkx',
+    group: 'Savoie and the Alps',
     name: 'Méribel Altiport',
     note: '407 m at 6.6% — the valley next to Courchevel, and shorter',
     airport: 'lfkx',
@@ -79,6 +86,7 @@ export const PLACES = [
   },
   {
     id: 'lfhu',
+    group: 'Savoie and the Alps',
     name: "Alpe d'Huez Altiport",
     note: '445 m at 10.3%, above the hairpins',
     airport: 'lfhu',
@@ -90,6 +98,7 @@ export const PLACES = [
   },
   {
     id: 'lfle',
+    group: 'Savoie and the Alps',
     name: 'Chambéry-Challes-les-Eaux',
     note: '987 m and flat — landing here involves no slope at all',
     airport: 'lfle',
@@ -100,6 +109,7 @@ export const PLACES = [
   },
   {
     id: 'final',
+    group: 'Savoie and the Alps',
     name: 'Short final, Courchevel',
     note: '4 km out at 2,400 m — the approach that matters',
     lat: 45.4325,
@@ -114,6 +124,7 @@ export const PLACES = [
   },
   {
     id: 'tarentaise',
+    group: 'Savoie and the Alps',
     name: 'Tarentaise, above Moûtiers',
     note: 'cruise height in the valley, the route to Courchevel ahead',
     lat: 45.6,
@@ -126,6 +137,7 @@ export const PLACES = [
   },
   {
     id: 'montblanc',
+    group: 'Savoie and the Alps',
     name: 'Mont Blanc',
     note: 'at 5,200 m past the highest peak in the Alps',
     lat: 45.78,
@@ -137,6 +149,7 @@ export const PLACES = [
   },
   {
     id: 'matterhorn',
+    group: 'Savoie and the Alps',
     name: 'Matterhorn, Zermatt',
     note: 'Switzerland, and proof that the terrain is worldwide',
     lat: 45.95,
@@ -148,6 +161,7 @@ export const PLACES = [
   },
   {
     id: 'amsterdam',
+    group: 'The Low Countries',
     name: 'Amsterdam',
     note: 'low over the city — PDOK has every building here in 3D',
     lat: 52.37,
@@ -162,30 +176,133 @@ export const PLACES = [
   // right spot and heading.
   {
     id: 'ehhv',
+    group: 'The Low Countries',
     name: 'Hilversum',
     note: 'grass strips in het Gooi, fifteen minutes from Amsterdam',
     icao: 'EHHV',
   },
   {
     id: 'eheh',
+    group: 'The Low Countries',
     name: 'Eindhoven',
     note: 'halfway down the corridor, 3,000 m of asphalt',
     icao: 'EHEH',
   },
   {
     id: 'kiewit',
+    group: 'The Low Countries',
     name: 'Hasselt-Kiewit',
     note: 'the Flemish end of the corridor',
     icao: 'EBZH',
   },
   {
     id: 'eham',
+    group: 'The Low Countries',
     name: 'Schiphol',
     note: 'six runways, and every building around them in 3D',
     icao: 'EHAM',
   },
   {
+    id: 'ebaw',
+    group: 'Flanders and Brabant',
+    name: 'Antwerp Deurne',
+    note: '1510 m in the middle of the city',
+    icao: 'EBAW',
+  },
+  {
+    id: 'ebbr',
+    group: 'Flanders and Brabant',
+    name: 'Brussels Zaventem',
+    note: '3638 m, the big one — mind the airliners',
+    icao: 'EBBR',
+  },
+  {
+    id: 'ebgb',
+    group: 'Flanders and Brabant',
+    name: 'Grimbergen',
+    note: 'grass north of Brussels, 614 m',
+    icao: 'EBGB',
+  },
+  {
+    id: 'ebbt',
+    group: 'Flanders and Brabant',
+    name: 'Brasschaat',
+    note: 'military grass strip above Antwerp',
+    icao: 'EBBT',
+  },
+  {
+    id: 'ebzr',
+    group: 'Flanders and Brabant',
+    name: 'Oostmalle',
+    note: 'between Antwerp and Turnhout',
+    icao: 'EBZR',
+  },
+  {
+    id: 'ebwe',
+    group: 'Flanders and Brabant',
+    name: 'Weelde',
+    note: 'old air base at Turnhout, 2980 m of it',
+    icao: 'EBWE',
+  },
+  {
+    id: 'ebzw',
+    group: 'Flanders and Brabant',
+    name: 'Genk-Zwartberg',
+    note: '799 m of asphalt in the Limburg woods',
+    icao: 'EBZW',
+  },
+  {
+    id: 'ebbl',
+    group: 'Flanders and Brabant',
+    name: 'Kleine Brogel',
+    note: '3096 m fighter base in the Kempen',
+    icao: 'EBBL',
+  },
+  {
+    id: 'ebsl',
+    group: 'Flanders and Brabant',
+    name: 'Zutendaal',
+    note: 'reserve base east of Genk',
+    icao: 'EBSL',
+  },
+  {
+    id: 'ebst',
+    group: 'Flanders and Brabant',
+    name: 'Sint-Truiden',
+    note: 'Brustem, 1096 m between the orchards',
+    icao: 'EBST',
+  },
+  {
+    id: 'ebdt',
+    group: 'Flanders and Brabant',
+    name: 'Schaffen',
+    note: 'the grass at Diest, 750 m',
+    icao: 'EBDT',
+  },
+  {
+    id: 'eble',
+    group: 'Flanders and Brabant',
+    name: 'Leopoldsburg',
+    note: 'Beverlo, 600 m hard',
+    icao: 'EBLE',
+  },
+  {
+    id: 'ebkh',
+    group: 'Flanders and Brabant',
+    name: 'Balen-Keiheuvel',
+    note: 'gliders and light aircraft, 690 m',
+    icao: 'EBKH',
+  },
+  {
+    id: 'ebtn',
+    group: 'Flanders and Brabant',
+    name: 'Goetsenhoven',
+    note: 'Tienen, 780 m in the Hageland',
+    icao: 'EBTN',
+  },
+  {
     id: 'grandcanyon',
+    group: 'Further afield',
     name: 'Grand Canyon',
     note: 'low pass over the Colorado, 1,800 m',
     lat: 36.1,
@@ -197,6 +314,7 @@ export const PLACES = [
   },
   {
     id: 'fuji',
+    group: 'Further afield',
     name: 'Fuji',
     note: 'Japan — there are no regional borders in the data',
     lat: 35.28,

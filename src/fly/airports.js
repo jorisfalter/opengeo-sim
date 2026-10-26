@@ -91,6 +91,7 @@ export function startFrom(airport) {
     lat: runway.leLat + (runway.heLat - runway.leLat) * f,
     lon: runway.leLon + (runway.heLon - runway.leLon) * f,
     heading,
+    elevationFt: airport.elevationFt,
     terrainStart: true,
     onGround: true,
     speed: 0,
