@@ -105,6 +105,43 @@ class Fdm {
     this.cmdPitch = this.get('attitude/theta-rad');
     this.cmdBank = 0;
     this.sample();
+    if (start.onGround) this.settle();
+  }
+
+  /**
+   * Stands the aeroplane on its undercarriage before anyone looks at it.
+   *
+   * `ic/h-agl-ft` above is a guess at where the centre of gravity sits when
+   * the aeroplane is parked — and 1.6 m is a third of a metre too low, so the
+   * wheels start underground. The springs answer for that in the first second
+   * of flight: the aeroplane comes up to 2.07 m, sinks back to the 1.90 m it
+   * actually rests at, and what you see on arriving at a field is a small
+   * drop, exactly where a parked aeroplane should be doing nothing at all.
+   *
+   * So that second is spent here instead, with the brakes on and the stick
+   * still, while the loading screen is up — and spent until the aeroplane is
+   * quiet rather than for a fixed count, because the gear rings for a few
+   * seconds and two of them left a centimetre of it to be seen. It runs until
+   * the vertical speed has been under six millimetres a second for half a
+   * second, and gives up after ten. The model then stands wherever its own
+   * gear puts it, which is the point of settling rather than of correcting
+   * the guess: the figure is never written down anywhere.
+   */
+  settle() {
+    this.setBrakes(true);
+    this.set('fcs/elevator-cmd-norm', 0);
+    this.set('fcs/aileron-cmd-norm', 0);
+    this.set('fcs/rudder-cmd-norm', 0);
+    this.set('position/terrain-elevation-asl-ft', this.ground / FT);
+    const limit = Math.round(10 / DT);
+    const needed = Math.round(0.5 / DT);
+    let quiet = 0;
+    for (let i = 0; i < limit && quiet < needed; i += 1) {
+      if (!this.sdk.run()) break;
+      quiet = Math.abs(this.get('velocities/h-dot-fps')) < 0.02 ? quiet + 1 : 0;
+    }
+    this.cmdPitch = this.get('attitude/theta-rad');
+    this.sample();
   }
 
   /** Copies JSBSim's state into the plain object the view code reads. */

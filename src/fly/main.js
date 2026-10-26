@@ -256,6 +256,8 @@ async function main() {
   );
 
   // ---- where to begin -----------------------------------------------------
+  // Ground to the point the flight model is positioned by, wheels down.
+  const GEAR = 1.6;
   const bearingTo = (from, to) => {
     const east = (to.lon - from.lon) * Math.cos(from.lat * DEG);
     return ((Math.atan2(east, to.lat - from.lat) / DEG) + 360) % 360;
@@ -275,7 +277,7 @@ async function main() {
       const aim = centre[Math.max(0, Math.min(centre.length - 1, towards))];
       const east = (aim.lon - point.lon) * Math.cos(point.lat * DEG);
       const heading = ((Math.atan2(east, aim.lat - point.lat) / DEG) + 360) % 360;
-      return { ...place, lat: point.lat, lon: point.lon, alt: point.h + 1.6, heading };
+      return { ...place, lat: point.lat, lon: point.lon, alt: point.h + GEAR, heading };
     }
     return { ...place, alt: place.msl + datum, heading: place.heading ?? bearingTo(place, route[6]) };
   }
@@ -289,7 +291,33 @@ async function main() {
     const probe = [Cartographic.fromDegrees(place.lon, place.lat)];
     await sampleTerrainMostDetailed(terrain, probe);
     const ground = Number.isFinite(probe[0].height) ? probe[0].height : datum;
-    return { ...place, alt: ground + 1.6, groundHeight: ground };
+    return { ...place, alt: ground + GEAR, groundHeight: ground };
+  }
+
+  /**
+   * Puts a field start on the surface the flight model will actually feel.
+   *
+   * The same patch of grass gets measured twice. The place is resolved against
+   * the terrain at its exact spot, while the model is fed from the patch that
+   * follows the aeroplane — sampled every fifty metres, and read as the
+   * highest of the four corners around it whenever the ground is close. Over
+   * the ten Flemish fields the two differ by 0 to 0.27 m, the patch reading
+   * high, so the model's own floor moved under a parked aeroplane; and which
+   * way it moved depended on whether the patch had arrived yet, because the
+   * feed falls back to the last ground it knew.
+   *
+   * So the patch is filled first, here, and then gets the last word: whatever
+   * it says is the ground is the ground, and the wheels are put on it. The
+   * built airports are not in this — their feed is the runway survey, the same
+   * source `resolvePlace` lines them up with.
+   */
+  async function placeOnFeed(place) {
+    if (!place.onGround || !place.terrainStart) return place;
+    status('Measuring the ground…');
+    // Read it the way the first frame will: low, and conservatively.
+    const feed = await terrainService.prime(place.lat, place.lon, true);
+    if (!Number.isFinite(feed)) return place;
+    return { ...place, groundHeight: feed, alt: feed + GEAR };
   }
 
   // A place can also come straight out of the URL, which is the whole point of
@@ -324,7 +352,9 @@ async function main() {
   }
 
   status('Starting the flight model…');
-  const start = startPlace.terrainStart ? await resolveWorldPlace(startPlace) : resolvePlace(startPlace);
+  const start = await placeOnFeed(
+    startPlace.terrainStart ? await resolveWorldPlace(startPlace) : resolvePlace(startPlace),
+  );
   terrainService.update({ lat: start.lat, lon: start.lon, agl: start.onGround ? 0 : 1500 });
   // Keep a height that was measured at the spot. The feed below falls back to
   // the last ground it knew, which at boot is the Alpine runway this file
@@ -622,7 +652,9 @@ async function main() {
       await goTo({ ...lined, name: place.name, note: place.note });
       return;
     }
-    const resolved = place.terrainStart ? await resolveWorldPlace(place) : resolvePlace(place);
+    const resolved = await placeOnFeed(
+      place.terrainStart ? await resolveWorldPlace(place) : resolvePlace(place),
+    );
     terrainService.update({ lat: resolved.lat, lon: resolved.lon, agl: resolved.onGround ? 0 : 1500 });
     resolved.groundHeight = resolved.groundHeight ?? groundHeight(resolved.lat, resolved.lon);
     if (resolved.elevationFt !== undefined && Number.isFinite(resolved.groundHeight)) {

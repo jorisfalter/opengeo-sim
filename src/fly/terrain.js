@@ -15,6 +15,41 @@ import { Cartographic, sampleTerrainMostDetailed } from 'cesium';
 const METERS_PER_DEGREE = 111320;
 const SIDE = 33; // grid is SIDE × SIDE samples, 1089 points a request
 
+/**
+ * Height in metres above the ellipsoid at a point in a patch, or null when
+ * the patch has nothing to say there.
+ *
+ * `conservative` returns the highest of the four surrounding samples instead
+ * of interpolating between them. The patch is sampled every few tens of
+ * metres and the rendered terrain is finer than that, so in a steep valley
+ * the interpolated value can sit well below the hillside you can see — and
+ * the aeroplane then flies into it and ends up inside the ground, looking at
+ * the black underside of the world. Biasing upward close to the ground trades
+ * a slightly early touchdown on rough terrain for not being swallowed by it.
+ */
+function readFrom(grid, lat, lon, conservative) {
+  if (!grid) return null;
+  const x = (lon - grid.lon0) / grid.dLon;
+  const y = (lat - grid.lat0) / grid.dLat;
+  if (x < 0 || y < 0 || x > SIDE - 1 || y > SIDE - 1) return null;
+  const col = Math.min(SIDE - 2, Math.floor(x));
+  const row = Math.min(SIDE - 2, Math.floor(y));
+  const fx = x - col;
+  const fy = y - row;
+  const at = (r, c) => grid.heights[r * SIDE + c];
+  const a = at(row, col);
+  const b = at(row, col + 1);
+  const c = at(row + 1, col);
+  const d = at(row + 1, col + 1);
+  if (Number.isNaN(a) || Number.isNaN(b) || Number.isNaN(c) || Number.isNaN(d)) {
+    // On the edge of a hole, take the nearest sample that is real.
+    for (const value of [a, b, c, d]) if (!Number.isNaN(value)) return value;
+    return null;
+  }
+  if (conservative) return Math.max(a, b, c, d);
+  return a * (1 - fx) * (1 - fy) + b * fx * (1 - fy) + c * (1 - fx) * fy + d * fx * fy;
+}
+
 export function createTerrainService(terrain, { onError } = {}) {
   let grid = null; // { lat0, lon0, dLat, dLon, span, heights: Float64Array }
   let pending = false;
@@ -61,15 +96,16 @@ export function createTerrainService(terrain, { onError } = {}) {
       if (usable > points.length * 0.5) {
         grid = { lat0, lon0, dLat, dLon, span, heights };
         failures = 0;
-      } else {
-        failures += 1;
+        return grid;
       }
+      failures += 1;
     } catch (error) {
       failures += 1;
       onError?.(error);
     } finally {
       pending = false;
     }
+    return null;
   }
 
   return {
@@ -104,41 +140,33 @@ export function createTerrainService(terrain, { onError } = {}) {
       if (offLat > 0.22 || offLon > 0.22 || wrongSize) resample(aheadLat, aheadLon, want);
     },
 
-    /**
-     * Height in metres above the ellipsoid, or null when outside the patch.
-     *
-     * `conservative` returns the highest of the four surrounding samples
-     * instead of interpolating between them. The patch is sampled every fifty
-     * metres or so and the rendered terrain is finer than that, so in a steep
-     * valley the interpolated value can sit well below the hillside you can
-     * see — and the aeroplane then flies into it and ends up inside the
-     * ground, looking at the black underside of the world. Biasing upward
-     * close to the ground trades a slightly early touchdown on rough terrain
-     * for not being swallowed by it.
-     */
+    /** Height under a point from the current patch; see `readFrom`. */
     heightAt(lat, lon, conservative = false) {
-      if (!grid) return null;
-      const x = (lon - grid.lon0) / grid.dLon;
-      const y = (lat - grid.lat0) / grid.dLat;
-      if (x < 0 || y < 0 || x > SIDE - 1 || y > SIDE - 1) return null;
-      const col = Math.min(SIDE - 2, Math.floor(x));
-      const row = Math.min(SIDE - 2, Math.floor(y));
-      const fx = x - col;
-      const fy = y - row;
-      const at = (r, c) => grid.heights[r * SIDE + c];
-      const a = at(row, col);
-      const b = at(row, col + 1);
-      const c = at(row + 1, col);
-      const d = at(row + 1, col + 1);
-      if (Number.isNaN(a) || Number.isNaN(b) || Number.isNaN(c) || Number.isNaN(d)) {
-        // On the edge of a hole, take the nearest sample that is real.
-        for (const value of [a, b, c, d]) if (!Number.isNaN(value)) return value;
-        return null;
-      }
-      if (conservative) return Math.max(a, b, c, d);
-      return (
-        a * (1 - fx) * (1 - fy) + b * fx * (1 - fy) + c * (1 - fx) * fy + d * fx * fy
-      );
+      return readFrom(grid, lat, lon, conservative);
+    },
+
+    /**
+     * Fills the patch at one spot, waits for it, and answers for that spot.
+     *
+     * The frame loop's `update` fires a resample and returns, which is right
+     * in flight and wrong at a standing start: the first frame then reads the
+     * ground from whatever the service knew before, and the flight model is
+     * handed a surface that is not the one the aeroplane was placed on.
+     *
+     * The patch is centred on the point and sampled at half the span a
+     * stationary aeroplane asks for — as fine as it can be without `update`
+     * discarding it on the first frame, which keeps a patch down to 0.45 of
+     * what it wants. Twenty-five metres between samples instead of fifty, so
+     * the conservative read close to the ground sits nearer the spot the
+     * aeroplane is actually on.
+     */
+    async prime(lat, lon, conservative = true) {
+      failures = 0;
+      // Read back out of the patch this built, not out of whatever `grid`
+      // holds by then: the frame loop may be resampling for a position the
+      // aeroplane is about to leave, and whichever request lands second wins.
+      const fresh = await resample(lat, lon, spanFor(0, 0) / 2);
+      return readFrom(fresh, lat, lon, conservative);
     },
 
     get ready() {

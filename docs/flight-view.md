@@ -266,6 +266,21 @@ The landing roll is on the short side of the book figure, which quotes a
 distance from fifty feet with a delay before the brakes come on. The model
 measures a pure ground roll with everything applied at once.
 
+**It stands on its own undercarriage.** A ground start puts the centre of
+gravity at a height written into `reset`, and that height was a guess: 1.6 m,
+where the aeroplane actually rests at 1.90. The wheels therefore began a third
+of a metre underground, the springs answered in the first second of flight, and
+what you saw on arriving anywhere was the aeroplane coming up to 2.07 m and
+sinking back — a small drop, exactly where a parked aeroplane should be doing
+nothing at all. `Fdm.settle` now spends that second before the loading screen
+comes down, with the brakes on and the stick still, running until the vertical
+speed has been under six millimetres a second for half a second. Measured at
+the first frame, against the 1.90 m it settles to: Brussels 2.07 → 1.89,
+Eindhoven 2.08 → 1.92, Kiewit 2.12 → 1.90 and dead still, Chambéry 1.90 and
+dead still. Zwartberg is the one that still moves, 2.08 → 2.02 with a tenth of
+a metre of ringing afterwards; the aeroplane there appears not to come to rest
+at all, which is a slope and a locked wheel and not this.
+
 ### Two control laws
 
 A real flight model is not keyboard-flyable with raw surface commands, so there
@@ -427,7 +442,7 @@ it, `heightAt` returned nothing, the ground fell back to the last height it had
 1.8 km short of the runway. A stale number is worse than a coarse one, so the
 last resort is now the globe, with a sanity check, and not the last answer.
 
-Three more things had to be right:
+Six more things had to be right:
 
 1. **The property is `position/terrain-elevation-asl-ft`.** Writing
    `position/terrain-elevation-ft` at runtime reads back fine and changes
@@ -449,6 +464,17 @@ Three more things had to be right:
    centreline, which at Courchevel — a shelf cut into a mountain — is a step of
    a hundred metres. It now fades into the terrain between 45 m and 160 m, so
    running off the edge is a slope rather than a cliff.
+6. **A standing start is placed by the feed, not beside it.** Starting at a
+   streamed airfield measured the ground twice. The place was resolved against
+   the terrain at its exact spot, and the flight model was then fed from the
+   patch, which samples every fifty metres and takes the highest of the four
+   corners around the aeroplane whenever the ground is close. Measured over
+   ten Flemish fields the two disagree by 0 to 0.27 m — small, but it is the
+   model's own floor moving under a parked aeroplane, and it also depended on
+   whether the patch had arrived yet. `terrainService.prime` now fills the
+   patch before the model is built, at half the usual span so the samples are
+   25 m apart, and reads the start height out of it the way the first frame
+   will. The two cannot disagree any more, because they are one measurement.
 
 Checked away from the Alps by flying two minutes at each of several places and
 watching the ground: Mont Blanc 2209 m, the Matterhorn 3453 m, the Grand Canyon
