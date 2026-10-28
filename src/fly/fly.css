@@ -774,7 +774,12 @@ body {
   display: block;
   width: 100%;
   height: auto;
-  cursor: ns-resize;
+  cursor: grab;
+  touch-action: none;
+}
+
+.fly-map canvas:active {
+  cursor: grabbing;
 }
 
 .fly-map__head,

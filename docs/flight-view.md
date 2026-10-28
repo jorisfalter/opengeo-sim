@@ -266,6 +266,21 @@ The landing roll is on the short side of the book figure, which quotes a
 distance from fifty feet with a delay before the brakes come on. The model
 measures a pure ground roll with everything applied at once.
 
+**Power first, then attitude.** The high-speed protection used to do one
+thing — bring the nose up — and it did it from the operating limit, 282 KIAS.
+At full thrust that is a losing fight: measured, it settled into a 4000 fpm
+climb at 294 knots, over the red line, with the stick fully forward and
+nothing on the glass saying why. There are now two limits doing two jobs. From
+282 the protection takes the *throttle* off, closing a loop rather than
+guessing a gain, which is visible on the gauge in a way a pitch protection
+quietly fighting your hand is not. Only past the red line at 290 does it touch
+the stick. Measured again on the same test — full thrust, stick held fully
+forward from 9900 ft — the aeroplane descends at 3000 to 7500 fpm with the
+speed parked between 286 and 292 instead of climbing away, and the attitude
+protection stays out of it. The glass now says which protection has the stick,
+because a limit you cannot see is indistinguishable from an aeroplane that has
+stopped answering. `M` for direct law still turns all of it off.
+
 **It stands on its own undercarriage.** A ground start puts the centre of
 gravity at a height written into `reset`, and that height was a guess: 1.6 m,
 where the aeroplane actually rests at 1.90. The wheels therefore began a third
@@ -442,7 +457,7 @@ it, `heightAt` returned nothing, the ground fell back to the last height it had
 1.8 km short of the runway. A stale number is worse than a coarse one, so the
 last resort is now the globe, with a sanity check, and not the last answer.
 
-Six more things had to be right:
+Seven more things had to be right:
 
 1. **The property is `position/terrain-elevation-asl-ft`.** Writing
    `position/terrain-elevation-ft` at runtime reads back fine and changes
@@ -475,6 +490,21 @@ Six more things had to be right:
    patch before the model is built, at half the usual span so the samples are
    25 m apart, and reads the start height out of it the way the first frame
    will. The two cannot disagree any more, because they are one measurement.
+7. **Every field gets a flat runway.** The six built airports have a surveyed
+   platform; everywhere else the wheels are on the global terrain model, and
+   along a runway that model has waviness in it — flat ground sampled from
+   space and interpolated. Measured down Deurne's runway: 30 cm of it over
+   380 m, in steps of up to 15 cm between samples 20 m apart, which at
+   touchdown speed is 15 cm in a third of a second, over and over. You cannot
+   see it and you can certainly feel it. `src/fly/strip.js` now lays a paper
+   runway at whichever indexed field the aeroplane is near and low: the
+   terrain is sampled along each centreline, a straight line is fitted through
+   those heights, and that line is the ground inside the strip, handing back
+   to the terrain within sixty metres of it. Same probe as the built airports,
+   same skirt; the only difference is that the centreline's heights are a fit
+   to the terrain rather than a survey, so it meets the ground at the ends and
+   introduces no step. Down the same runway afterwards: 0 cm of waviness, 8 mm
+   of worst step. It costs one terrain sample per field.
 
 Checked away from the Alps by flying two minutes at each of several places and
 watching the ground: Mont Blanc 2209 m, the Matterhorn 3453 m, the Grand Canyon
@@ -517,10 +547,26 @@ scene already uses, so there is no second source and no second licence, and
 the mosaic reads at every zoom from the continents down to one valley.
 
 On it: the aeroplane and its heading, a breadcrumb trail of the last five
-minutes, the places from `places.js` as landmarks, and the route with its
-waypoint names when the route autopilot is flying. It redraws ten times a
-second rather than every frame, because it is not flight data and the scene
-needs the budget more.
+minutes, the places from `places.js` as landmarks, the route with its waypoint
+names when the route autopilot is flying, and **every airfield under the map**
+— drawn as the runway itself, a dark casing and a bright core with a tick at
+each threshold, so it reads as somewhere to land and not as a scratch on the
+photograph. The fields come from the same index the start menu searches, so
+the map has them anywhere in the world; which ones are drawn follows the zoom
+(a runway shorter than six pixels at that scale is left out, or the Low
+Countries are a wall of labels), except the nearest field, which is always
+worth a line. The index is 28,000 entries, so the list is asked for again only
+when the map has moved a fifth of its width or been zoomed.
+
+**Drag it to look around**, and ⌖ or a double-click brings it back to the
+aeroplane. Pan and it stays where you put it, while the simulator runs or
+while it is paused. Changing the start point clears the trail and recentres
+it: a teleport is not a leg, and the breadcrumbs used to join Chambéry to a
+field in Limburg with a straight line across France that looked exactly like a
+route.
+
+It redraws ten times a second rather than every frame, because it is not
+flight data and the scene needs the budget more.
 
 ### The glass
 

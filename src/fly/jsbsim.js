@@ -67,6 +67,8 @@ class Fdm {
     this.axes = { pitch: 0, roll: 0, yaw: 0, trim: 0 };
     this.ground = 0;
     this.steer = 0;
+    // How much of the throttle the overspeed limit is letting through.
+    this.thrustCap = 1;
     this.aircraft = {};
   }
 
@@ -203,11 +205,34 @@ class Fdm {
     // the red line. It now asks for up to twelve, but walks there at five
     // degrees a second: a guard that snaps the nose up pulls three and a half
     // g, and breaking the aeroplane to save it from an overspeed is no trade.
+    // Two limits, and they do different jobs. The operating limit takes the
+    // power off; the red line, eight knots further on, is the only thing that
+    // gets to touch the stick. Sharing one threshold made them fight: the
+    // throttle came off, the nose came up, the speed fell under the limit,
+    // both let go, and the aeroplane porpoised through five degrees every
+    // three seconds. Power first, then attitude, is also the order a pilot
+    // would do it in.
     const over = Math.max((a.kias ?? 0) - 282, ((a.mach ?? 0) - 0.72) * 350);
-    const wanted = over > 0 ? Math.min(12 * DEG, over * 0.6 * DEG) : 0;
+    const past = Math.max((a.kias ?? 0) - 290, ((a.mach ?? 0) - 0.74) * 350);
+    // Take the power off before taking the aeroplane. Pitch alone could stop
+    // the descent but not the overspeed: at full thrust it settled into a
+    // 4000 fpm climb at 294 knots, still over the line, with the stick fully
+    // forward and nothing saying why. So the limit now eats the throttle
+    // first — a hand asking for more than the airframe will take gets as much
+    // as it will take — and that is visible on the gauge, where a pitch
+    // protection quietly fighting your hand is not. It closes the loop rather
+    // than guessing a gain: off while over the limit, back on while under,
+    // full travel in two seconds either way.
+    this.thrustCap = clamp(this.thrustCap + (over > 0 ? -0.5 : 0.5) * hand, 0.15, 1);
+    const wanted = past > 0 ? Math.min(12 * DEG, past * 0.6 * DEG) : 0;
     const rate = 5 * DEG * hand;
     this.overGuard += clamp(wanted - this.overGuard, -rate, rate);
     if (this.overGuard > 0) this.cmdPitch = Math.max(this.cmdPitch, this.overGuard);
+    // Say which protection has the stick. A limit you cannot see is
+    // indistinguishable from an aeroplane that has stopped answering: at full
+    // thrust down low this one holds the nose up and nothing on the glass
+    // said so, or why.
+    a.guard = this.overGuard > 1 * DEG ? 'speed' : alpha > 12 ? 'alpha' : null;
     // Last word: a pull already at the structural limit does not get to grow,
     // whoever asked for it — the pilot or the guard above.
     if ((a.gLoad ?? 1) > 2.4) this.cmdPitch = Math.min(this.cmdPitch, a.pitch);
@@ -265,8 +290,14 @@ class Fdm {
     // The rudder pedals steer the nosewheel on the ground and yaw in the air.
     this.steer = clamp(input.yaw ?? 0, -1, 1);
 
-    this.set('fcs/throttle-cmd-norm[0]', input.throttle);
-    this.set('fcs/throttle-cmd-norm[1]', input.throttle);
+    // The overspeed limit holds the throttle back in the assisted law; direct
+    // law is direct, and the autopilot flies its own autothrottle.
+    const throttle =
+      this.law === 'assist' && !input.attitude
+        ? Math.min(input.throttle, this.thrustCap)
+        : input.throttle;
+    this.set('fcs/throttle-cmd-norm[0]', throttle);
+    this.set('fcs/throttle-cmd-norm[1]', throttle);
     // It has to be the -asl- property. Writing position/terrain-elevation-ft at
     // runtime reads back fine and changes nothing: the aeroplane keeps touching
     // down on the height it was initialised with, which on a mountain approach

@@ -70,6 +70,27 @@ export function nearestAirports(lat, lon, count = 8, withinKm = 60) {
 }
 
 /**
+ * Where a field lies, for drawing it: the longest runway's bearing and length.
+ * The map wants the same two numbers the start lines up on, so both take them
+ * from here rather than working them out twice.
+ */
+export function runwayMark(airport) {
+  const runway = airport.runways[0];
+  if (!runway) return null;
+  const scale = Math.cos((airport.lat * Math.PI) / 180);
+  const dNorth = runway.heLat - runway.leLat;
+  const dEast = (runway.heLon - runway.leLon) * scale;
+  return {
+    icao: airport.ident,
+    name: airport.name,
+    lat: airport.lat,
+    lon: airport.lon,
+    heading: ((Math.atan2(dEast, dNorth) * 180) / Math.PI + 360) % 360,
+    length: runway.lengthFt * FT,
+  };
+}
+
+/**
  * A place to start, lined up on the longest runway. The altitude is left to
  * the caller to take from the terrain: OurAirports gives an elevation above
  * sea level and this viewer works above the ellipsoid, and the difference
@@ -77,11 +98,9 @@ export function nearestAirports(lat, lon, count = 8, withinKm = 60) {
  */
 export function startFrom(airport) {
   const runway = airport.runways[0];
-  if (!runway) return null;
-  const scale = Math.cos((airport.lat * Math.PI) / 180);
-  const dNorth = runway.heLat - runway.leLat;
-  const dEast = (runway.heLon - runway.leLon) * scale;
-  const heading = ((Math.atan2(dEast, dNorth) * 180) / Math.PI + 360) % 360;
+  const mark = runwayMark(airport);
+  if (!mark) return null;
+  const heading = mark.heading;
   // A little way in from the threshold, so the wheels are on the strip.
   const f = Math.min(0.08, 60 / Math.max(60, runway.lengthFt * FT));
   return {

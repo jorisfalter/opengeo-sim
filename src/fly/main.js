@@ -26,9 +26,17 @@ import { createMinimap } from './minimap.js';
 import { createLookahead } from './lookahead.js';
 import { createPlan } from './plan.js';
 import { createScenery } from './scenery.js';
+import { buildStrip } from './strip.js';
 import { createSound } from './sound.js';
 import { PLACES, findPlace } from './places.js';
-import { loadAirports, nearestAirports, searchAirports, startFrom } from './airports.js';
+import {
+  airportsReady,
+  loadAirports,
+  nearestAirports,
+  runwayMark,
+  searchAirports,
+  startFrom,
+} from './airports.js';
 import { ATTRIBUTION } from './providers.js';
 import './fly.css';
 
@@ -193,6 +201,33 @@ async function main() {
     AIRPORT_IDS.map((id) => [id, { id, ...addAirport(viewer, airports[id]) }]),
   );
   const runwayProbes = AIRPORT_IDS.map((id) => runwayGround(airports[id]));
+  // The built airports' surveys, plus a paper runway for whichever field in
+  // the index the aeroplane is near; see strip.js. Rebuilt into one array
+  // rather than spread on every call, because this is read every frame.
+  let probes = runwayProbes;
+  let strip = null;
+  let stripWanted = null;
+  /**
+   * Lays a flat strip over the nearest field. Cheap to ask for often: it does
+   * nothing unless the field has changed, and one terrain sample when it has.
+   */
+  async function wantStrip(lat, lon) {
+    if (!airportsReady()) return;
+    const near = nearestAirports(lat, lon, 1, 5)[0];
+    if (!near || near.ident === strip?.ident || near.ident === stripWanted) return;
+    stripWanted = near.ident;
+    try {
+      const probe = await buildStrip(terrain, near);
+      if (probe && stripWanted === near.ident) {
+        strip = { ident: near.ident, probe };
+        probes = [...runwayProbes, probe];
+      }
+    } catch (error) {
+      console.warn('baan', error);
+    } finally {
+      if (stripWanted === near.ident) stripWanted = null;
+    }
+  }
 
   // Only one airport's hole may be in the globe at a time; see clipGlobeTo.
   // Whichever is within fifteen kilometres gets it, and otherwise none does.
@@ -226,7 +261,7 @@ async function main() {
   let lowFlying = false;
   const groundHeight = (lat, lon) => {
     const sampled = terrainService.heightAt(lat, lon, lowFlying);
-    for (const probe of runwayProbes) {
+    for (const probe of probes) {
       const survey = probe(lat, lon);
       if (!survey) continue;
       // On the pavement the survey wins outright; across the skirt it hands
@@ -314,8 +349,13 @@ async function main() {
   async function placeOnFeed(place) {
     if (!place.onGround || !place.terrainStart) return place;
     status('Measuring the ground…');
-    // Read it the way the first frame will: low, and conservatively.
-    const feed = await terrainService.prime(place.lat, place.lon, true);
+    await terrainService.prime(place.lat, place.lon, true);
+    await wantStrip(place.lat, place.lon);
+    // Read it the way the first frame will: low, conservatively, and through
+    // the whole feed rather than the terrain patch alone — the field may have
+    // a flat strip over it by now, and that is what the wheels will touch.
+    lowFlying = true;
+    const feed = groundHeight(place.lat, place.lon);
     if (!Number.isFinite(feed)) return place;
     return { ...place, groundHeight: feed, alt: feed + GEAR };
   }
@@ -422,7 +462,7 @@ async function main() {
 
   // ---- the glass ----------------------------------------------------------
   const panel = createPanel(document.querySelector('#hud'), {
-    title: 'PC-24 · vrij vliegen',
+    title: 'PC-24 · free flight',
     subtitle: `${startPlace.name} · ${sim.name} · IGN, swisstopo and PDOK · the rest worldwide`,
     attribution: ATTRIBUTION,
   });
@@ -457,6 +497,17 @@ async function main() {
   // tape, so it starts closed there and opens with the Map button.
   const smallScreen = window.matchMedia('(pointer: coarse)').matches;
   const minimap = createMinimap(mapRoot, {
+    // Every field in the index that is under the map, so the moving map shows
+    // somewhere to land wherever you are and not only around the Alps.
+    fieldsNear: (lat, lon, radiusKm, minLength) =>
+      (airportsReady() ? nearestAirports(lat, lon, 60, radiusKm) : [])
+        .map(runwayMark)
+        .filter(Boolean)
+        // Too short to draw at this scale and it is left out — except the
+        // nearest, because the field you are standing on is always worth a
+        // line, and at a wide zoom a 1,100 m strip is under the threshold.
+        .filter((mark, i) => i === 0 || mark.length >= minLength)
+        .slice(0, 16),
     places: PLACES.filter((place) => place.lat !== undefined),
     airports: AIRPORT_IDS.map((id) => ({
       id,
@@ -662,6 +713,8 @@ async function main() {
     }
     lastGround = resolved.groundHeight;
     sim.teleport(resolved);
+    // The map's breadcrumbs do not survive being somewhere else.
+    minimap.clear();
     controls.setThrottle(resolved.throttle ?? 0);
     controls.setTrim(0);
     navState.leg = resolved.route ?? 0;
@@ -902,6 +955,8 @@ async function main() {
       if (!params.has('bare')) scenery.update(aircraft.lat, aircraft.lon);
       detailFor(aircraft);
       lookahead.update(aircraft);
+      // Below five thousand feet there is a field worth having a runway at.
+      if ((aircraft.agl ?? 1e9) < 1500) wantStrip(aircraft.lat, aircraft.lon);
       terrainService.update({
         lat: aircraft.lat,
         lon: aircraft.lon,
