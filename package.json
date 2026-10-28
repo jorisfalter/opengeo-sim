@@ -17,7 +17,9 @@
     "test:fdm": "node scripts/test-fdm.mjs",
     "check:deploy": "node scripts/deploy-check.mjs",
     "build:scenery": "node scripts/build-scenery.mjs",
-    "build:airports": "node scripts/build-airport-index.mjs"
+    "build:airports": "node scripts/build-airport-index.mjs",
+    "build:routes": "node scripts/build-routes.mjs",
+    "build:model": "node scripts/build-traffic-model.mjs"
   },
   "dependencies": {
     "@0x62/jsbsim-wasm": "^1.2.4-beta.4",

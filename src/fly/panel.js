@@ -28,6 +28,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
           <button data-view="free">Free look</button>
           <button data-action="sound" data-el="soundButton">Sound</button>
           <button data-action="map">Map</button>
+          <button data-action="traffic" data-el="trafficButton">Traffic</button>
           <button data-action="plan">Plan</button>
           <button data-action="where">Start…</button>
         </div>
@@ -214,7 +215,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
         <kbd>↑</kbd><kbd>↓</kbd> pitch · <kbd>←</kbd><kbd>→</kbd> roll · <kbd>Q</kbd><kbd>E</kbd> rudder ·
         <kbd>W</kbd><kbd>S</kbd> throttle · <kbd>[</kbd><kbd>]</kbd> trim · <kbd>G</kbd> gear ·
         <kbd>F</kbd> flaps · <kbd>B</kbd> brakes · <kbd>V</kbd> speedbrake · <kbd>M</kbd> control law ·
-        <kbd>P</kbd> autopilot · <kbd>C</kbd> camera · <kbd>J</kbd> sound · <kbd>N</kbd> map · <kbd>L</kbd> start · <kbd>R</kbd> plan ·
+        <kbd>P</kbd> autopilot · <kbd>C</kbd> camera · <kbd>J</kbd> sound · <kbd>N</kbd> map · <kbd>T</kbd> traffic · <kbd>L</kbd> start · <kbd>R</kbd> plan ·
         <kbd>space</kbd> pause · <kbd>1</kbd><kbd>2</kbd> time up to 8× ·
         <kbd>click</kbd> mouse yoke, <kbd>Esc</kbd> releases
       </p>
@@ -236,6 +237,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
     leverFill: el('leverFill'),
     leverText: el('leverText'),
     brakeButton: el('brakeButton'),
+    trafficButton: el('trafficButton'),
     touchBrake: el('touchBrake'),
     touchGear: el('touchGear'),
     touchFlaps: el('touchFlaps'),
@@ -333,6 +335,12 @@ export function createPanel(root, { title, subtitle, attribution }) {
       for (const node of [nodes.soundButton, nodes.touchSound]) {
         node.classList.toggle('is-on', Boolean(extra.sound));
         node.textContent = extra.sound ? 'Sound on' : 'Sound off';
+      }
+      if (extra.traffic !== undefined) {
+        nodes.trafficButton.classList.toggle('is-on', Boolean(extra.traffic));
+        nodes.trafficButton.textContent = extra.traffic
+          ? `Traffic ${extra.trafficCount ?? 0}`
+          : 'Traffic off';
       }
       // Once tilt has been switched on, the facts stay on screen whether it
       // works or not: a count of readings that stays at zero is the answer.

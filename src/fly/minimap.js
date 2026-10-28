@@ -86,7 +86,7 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
   const metresPerPixel = (lat, z) =>
     (156543.03392 * Math.cos(lat * DEG)) / 2 ** z;
 
-  function draw(aircraft, { route = [], leg = null } = {}) {
+  function draw(aircraft, { route = [], leg = null, traffic = [] } = {}) {
     if (!visible) return;
     const { width: w, height: h } = canvas;
     const cx = w / 2;
@@ -234,6 +234,41 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
       // "Tarentaise, boven Moûtiers" is a start-point description, not a map
       // label; the map wants the name and nothing after the comma.
       label(place.name.split(',')[0], x + 7, y + 4, 'rgba(255, 255, 255, 0.8)');
+    }
+
+    // The traffic, the way a collision warning draws it: a diamond, and how
+    // far above or below you it is in hundreds of feet. Filled when it is
+    // within a thousand feet of your level, which is the one that matters.
+    ctx.font = '600 11px ui-monospace, monospace';
+    for (const other of traffic) {
+      const [x, y] = project(other.lat, other.lon);
+      if (x < 4 || y < 4 || x > w - 4 || y > h - 4) continue;
+      const near = Math.abs(other.relativeFt) < 1000;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 5);
+      ctx.lineTo(x + 5, y);
+      ctx.lineTo(x, y + 5);
+      ctx.lineTo(x - 5, y);
+      ctx.closePath();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+      ctx.stroke();
+      ctx.fillStyle = near ? '#ff8a6a' : 'rgba(230, 255, 240, 0.9)';
+      if (near) ctx.fill();
+      else {
+        ctx.strokeStyle = 'rgba(230, 255, 240, 0.9)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      const hundreds = Math.round(other.relativeFt / 100);
+      if (Math.abs(hundreds) >= 1) {
+        label(
+          `${hundreds > 0 ? '+' : ''}${hundreds}`,
+          x + 8,
+          y + 4,
+          near ? '#ff8a6a' : 'rgba(230, 255, 240, 0.8)',
+        );
+      }
     }
 
     // The aeroplane, pointing where it is going — at its place on the map,

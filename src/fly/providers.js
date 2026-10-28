@@ -27,7 +27,8 @@ const SWISSIMAGE =
 export const ATTRIBUTION =
   '© Re:Earth Terrain (Copernicus/NASADEM) · © IGN BD ORTHO & RGE ALTI, Géoplateforme · ' +
   '© swisstopo SWISSIMAGE · © Kadaster/PDOK CC BY 4.0 · ' +
-  '© EOX Sentinel-2 cloudless CC BY 4.0 · © OpenStreetMap contributors ODbL';
+  '© EOX Sentinel-2 cloudless CC BY 4.0 · © OpenStreetMap contributors ODbL · ' +
+  '© OpenFlights routes and airlines ODbL';
 
 // Mainland France. It is a rectangle and France is not, so the layer is also
 // requested over Switzerland, Italy and Belgium — and outside its coverage IGN

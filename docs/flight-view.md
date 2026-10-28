@@ -281,6 +281,15 @@ protection stays out of it. The glass now says which protection has the stick,
 because a limit you cannot see is indistinguishable from an aeroplane that has
 stopped answering. `M` for direct law still turns all of it off.
 
+**A parked aeroplane is not stalling.** Angle of attack is worked out from
+the velocity vector, so an aeroplane standing still with the brakes on — doing
+a millimetre a second of settling onto its gear, and nothing forward — is
+flying straight down at 127 degrees alpha. That lit STALL on the glass on the
+runway and, worse, handed the stick to the alpha protection before the
+take-off roll had begun. Alpha is now only believed above 40 KIAS, which is
+well under any stall this wing has (98 clean, 80 with gear and flap), so
+nothing real is lost.
+
 **It stands on its own undercarriage.** A ground start puts the centre of
 gravity at a height written into `reset`, and that height was a guess: 1.6 m,
 where the aeroplane actually rests at 1.90. The wheels therefore began a third
@@ -567,6 +576,70 @@ route.
 
 It redraws ten times a second rather than every frame, because it is not
 flight data and the scene needs the budget more.
+
+### Other people's aeroplanes
+
+`T`, or the Traffic button. Real airlines on real city pairs, flown by nobody.
+
+`scripts/build-routes.mjs` joins **OpenFlights**' route and airline databases
+to OurAirports' positions and writes 48,753 routes, 445 airlines and 2,804
+airports into `public/airports/routes.json` — a megabyte, fetched the first
+time traffic is switched on. The data is ODbL and says so; it is also not
+current, having been curated around 2014, so Germanwings and Jet Airways still
+fly out of Brussels. For something you see from three miles away that is the
+right trade, and `docs/licensing.md` says it plainly rather than implying the
+network is live.
+
+**Nothing is exchanged and nothing is fetched.** A flight's existence, its
+departure time and its flight number all come out of a hash of the route, so
+two people flying the same minute over the same country see the same traffic
+with no server between them — which is also why this is the right thing to
+build before multiplayer rather than after it: other players are more of this.
+
+How often a pair is flown scales with how far it is: short-haul several times
+a day, long-haul once or twice. That is both how airlines work and what keeps
+the sky honest. Every route flying every hour or two put 358 aeroplanes inside
+130 km of Brussels, about three times the real thing on a busy afternoon; it
+is now 124 there, 64 over Chambéry, 33 over New York and 1 over the Sahara.
+
+The flying is a point walked along a great circle with a climb, a cruise at a
+level chosen by distance, and a descent — not a flight model, and it does not
+pretend to be one. A flight is only drawn between the first and last fiftieth
+of its route, because the ground track is walked at a steady rate and an
+aeroplane at progress zero would be sitting on its departure airport doing 460
+knots across the grass.
+
+Three cadences keep it free:
+
+- Which of the 48,753 routes could come near you: every 20 seconds or 15 km.
+  A latitude test throws most of the world out before any trigonometry.
+- **When** each surviving route is in range, as a window on its own progress,
+  computed once in the same pass. This is what makes the rest cheap: a route
+  is a fixed line and you are a fixed point, so the stretch that comes within
+  range is one arc and can be found once instead of per flight per frame.
+  Half the routes that pass the first test never actually come near, and they
+  are dropped here.
+- Who is airborne inside that window: twice a second, arithmetic only. Where
+  the forty being drawn have got to: every frame, and forty is nothing.
+
+They are drawn as `public/fly/airliner.glb` — 144 triangles of this project's
+own, written by `scripts/build-traffic-model.mjs`, because every aircraft model
+worth downloading carries a licence of its own. There is one airframe and it is
+a narrowbody, so the IATA type code picks a scale: a Dash 8 is two thirds of it
+and a 747 half again, which is all the resolution three miles of air gives you.
+The entity's colour is tinted per airline from a hash, which is a livery after
+a fashion and honest about being one.
+
+Two things cost an afternoon between writing that model and seeing it. A glTF
+chunk is padded to four bytes, and the specification says the JSON chunk is
+padded with **spaces** — padding it with zero bytes writes a file of the right
+length that parses nowhere, and Cesium's answer to that is to draw nothing and
+say nothing. And the model has to face the way Cesium thinks forward is: nose
+along -Z in the glTF, which lands on +Y of the heading/pitch/roll frame, whose
+axes are x right, y forward, z up. `aircraft.js` has a comment about learning
+that the hard way. So does this now. On the moving map they are collision-warning diamonds with their
+height relative to yours in hundreds of feet, filled when they are within a
+thousand feet of your level.
 
 ### The glass
 

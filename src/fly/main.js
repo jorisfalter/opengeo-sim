@@ -27,6 +27,7 @@ import { createLookahead } from './lookahead.js';
 import { createPlan } from './plan.js';
 import { createScenery } from './scenery.js';
 import { buildStrip } from './strip.js';
+import { createTraffic } from './traffic.js';
 import { createSound } from './sound.js';
 import { PLACES, findPlace } from './places.js';
 import {
@@ -496,6 +497,17 @@ async function main() {
   // On a phone the screen is the scarce thing and the map covers the altitude
   // tape, so it starts closed there and opens with the Map button.
   const smallScreen = window.matchMedia('(pointer: coarse)').matches;
+  // Other people's aeroplanes. The clock they fly on starts at the real time
+  // of day, so everyone's sky agrees, and then runs at whatever rate the
+  // simulator's own time is running at — speed time up and the traffic speeds
+  // up with it rather than hanging in the air.
+  const traffic = createTraffic(viewer, {
+    onNotice: (message) => panel.notice(message),
+    max: smallScreen ? 14 : 40,
+  });
+  let trafficClock = Date.now() / 1000;
+  traffic.load();
+
   const minimap = createMinimap(mapRoot, {
     // Every field in the index that is under the map, so the moving map shows
     // somewhere to land wherever you are and not only around the Alps.
@@ -836,6 +848,9 @@ async function main() {
         case 'KeyJ':
           sound.toggle();
           break;
+        case 'KeyT':
+          traffic.toggle();
+          break;
         default:
           break;
       }
@@ -1047,6 +1062,8 @@ async function main() {
       tiltLive: controls.tiltLive,
       stick: controls.stick,
       sound: sound.enabled,
+      traffic: traffic.enabled,
+      trafficCount: traffic.list.length,
       rate,
       rateWanted: RATES[rateIndex],
       ap:
@@ -1061,9 +1078,12 @@ async function main() {
               : '',
     });
     sound.update(aircraft);
+    trafficClock += delta;
+    traffic.update(aircraft, trafficClock);
     // Your own plan wins the map whenever you have one; the scripted valley
     // route only shows while it is the thing being flown.
     minimap.update(aircraft, {
+      traffic: traffic.list,
       route: plan.points.length ? plan.points : autoMode === 'route' ? route : [],
       leg: plan.points.length ? (autoMode === 'nav' ? plan.index : null) : autoMode === 'route' ? navState.leg : null,
     });
@@ -1150,6 +1170,9 @@ async function main() {
         break;
       case 'map':
         minimap.toggle();
+        break;
+      case 'traffic':
+        traffic.toggle();
         break;
       case 'sound':
         sound.toggle();
@@ -1245,6 +1268,7 @@ async function main() {
     terrainService,
     scenery,
     sound,
+    traffic,
     goTo,
     places: PLACES,
     pause: (value) => {

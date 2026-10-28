@@ -168,7 +168,13 @@ class Fdm {
     a.brakes = this.get('fcs/left-brake-cmd-norm') > 0.5;
     a.onGround = this.get('gear/unit/WOW') > 0.5 || this.get('gear/unit[1]/WOW') > 0.5;
     a.thrust = this.get('propulsion/engine/thrust-lbs') + this.get('propulsion/engine[1]/thrust-lbs');
-    a.stall = a.alpha > 14 * DEG;
+    // Angle of attack means nothing without air going over the wing. JSBSim
+    // works it out from the velocity vector, so a parked aeroplane settling a
+    // millimetre onto its gear is flying straight down at 127 degrees alpha —
+    // which lit the stall warning on the glass and handed the stick to the
+    // alpha protection, on the runway, with the brakes on.
+    a.flying = (a.kias ?? 0) > 40;
+    a.stall = a.flying && a.alpha > 14 * DEG;
     return a;
   }
 
@@ -190,7 +196,7 @@ class Fdm {
    * None of this exists in direct law. That is what direct law is for.
    */
   protect(a, hand) {
-    const alpha = (a.alpha ?? 0) / DEG;
+    const alpha = a.flying ? (a.alpha ?? 0) / DEG : 0;
     if (alpha > 12) {
       // Give back exactly the attitude the wing is complaining about. You keep
       // your turn and your climb; you simply cannot ask for the stall.
