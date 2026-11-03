@@ -1291,6 +1291,16 @@ async function main() {
       ' m · ' +
       `Courchevel ${airports.lflj.runways[0].length} m @ ${airports.lflj.runways[0].slope}%`,
   );
+  // The world index in the background, for the map rather than for the search
+  // box. It used to be fetched only when somebody searched or when the start
+  // place named an ICAO — so taking off from Chambéry or Geneva, which are
+  // built fields and name no ICAO, left `airportsReady()` false and the
+  // moving map drew no airfields at all, anywhere. Half a megabyte, after the
+  // aeroplane is already flying, and the map is told to look again once it
+  // lands.
+  loadAirports()
+    .then(() => minimap.refreshFields())
+    .catch((error) => console.warn('velden', error));
   requestAnimationFrame(frame);
 }
 

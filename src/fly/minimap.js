@@ -419,6 +419,14 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
       fieldsAt = null;
       recentre();
     },
+    /**
+     * Ask for the fields again. The world index arrives after the first
+     * frames, and until this the map kept answering out of a cache it filled
+     * while there was nothing to find.
+     */
+    refreshFields() {
+      fieldsAt = null;
+    },
     toggle(show) {
       visible = show ?? !visible;
       root.classList.toggle('is-open', visible);

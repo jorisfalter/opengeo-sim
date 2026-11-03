@@ -67,8 +67,11 @@ class Fdm {
     this.axes = { pitch: 0, roll: 0, yaw: 0, trim: 0 };
     this.ground = 0;
     this.steer = 0;
-    // How much of the throttle the overspeed limit is letting through.
+    // How much of the throttle the overspeed limit is letting through, and
+    // how far over the limit it was last frame, which is what lets the limit
+    // lead the speed rather than chase it.
     this.thrustCap = 1;
+    this.lastOver = 0;
     this.aircraft = {};
   }
 
@@ -190,8 +193,8 @@ class Fdm {
    * you is worse than none at all.
    *
    * Measured on this airframe: the wing breaks at 15.4 degrees clean and 14.0
-   * with gear and flap, so the guard sits at 12. The red line is 290 KIAS and
-   * M0.74, so the guard sits at the operating limits, 282 and M0.72.
+   * with gear and flap, so the guard sits at 12. The speed limits are the
+   * aeroplane's own: VMO 290 KIAS, MMO M0.74.
    *
    * None of this exists in direct law. That is what direct law is for.
    */
@@ -211,25 +214,44 @@ class Fdm {
     // the red line. It now asks for up to twelve, but walks there at five
     // degrees a second: a guard that snaps the nose up pulls three and a half
     // g, and breaking the aeroplane to save it from an overspeed is no trade.
-    // Two limits, and they do different jobs. The operating limit takes the
-    // power off; the red line, eight knots further on, is the only thing that
-    // gets to touch the stick. Sharing one threshold made them fight: the
-    // throttle came off, the nose came up, the speed fell under the limit,
-    // both let go, and the aeroplane porpoised through five degrees every
-    // three seconds. Power first, then attitude, is also the order a pilot
-    // would do it in.
-    const over = Math.max((a.kias ?? 0) - 282, ((a.mach ?? 0) - 0.72) * 350);
-    const past = Math.max((a.kias ?? 0) - 290, ((a.mach ?? 0) - 0.74) * 350);
+    // Two limits, and they do different jobs. VMO and MMO take the power off;
+    // six knots further on, the stick. Sharing one threshold made them fight:
+    // the throttle came off, the nose came up, the speed fell under the
+    // limit, both let go, and the aeroplane porpoised through five degrees
+    // every three seconds. Power first, then attitude, is also the order a
+    // pilot would do it in.
+    //
+    // Both of these used to sit eight knots low, at 282 and M0.72, on the
+    // theory that a margin is free. It is not: MMO is M0.74 and this
+    // aeroplane cruises at M0.72 to M0.74, so the limit was inside the
+    // cruise. Hold full thrust at FL350 and it would reach M0.728, the cap
+    // would shut to its floor, and the throttle would sit at 15% for a
+    // minute while the speed bled off — with the autopilot off and nothing
+    // on the glass saying why. The limits are now the aeroplane's own.
+    const over = Math.max((a.kias ?? 0) - 290, ((a.mach ?? 0) - 0.74) * 350);
+    const past = Math.max((a.kias ?? 0) - 296, ((a.mach ?? 0) - 0.755) * 350);
     // Take the power off before taking the aeroplane. Pitch alone could stop
     // the descent but not the overspeed: at full thrust it settled into a
     // 4000 fpm climb at 294 knots, still over the line, with the stick fully
-    // forward and nothing saying why. So the limit now eats the throttle
-    // first — a hand asking for more than the airframe will take gets as much
-    // as it will take — and that is visible on the gauge, where a pitch
-    // protection quietly fighting your hand is not. It closes the loop rather
-    // than guessing a gain: off while over the limit, back on while under,
-    // full travel in two seconds either way.
-    this.thrustCap = clamp(this.thrustCap + (over > 0 ? -0.5 : 0.5) * hand, 0.15, 1);
+    // forward and nothing saying why. So the limit eats the throttle first —
+    // a hand asking for more than the airframe will take gets as much as it
+    // will take — and that is visible on the gauge, where a pitch protection
+    // quietly fighting your hand is not.
+    //
+    // How it moves matters as much as when. The first version switched: full
+    // travel off while over, full travel on while under. That is a bang-bang
+    // controller on a loop with a long lag — engines spool, an aeroplane at
+    // altitude sheds a knot every few seconds — so it did not regulate, it
+    // slammed to the floor and waited. Now the cap moves at a rate set by how
+    // far over the limit the speed is *going to be*: the exceedance plus
+    // three seconds of its own trend. Far over, it comes off quickly; near
+    // the limit it barely moves, so it comes to rest holding VMO instead of
+    // hunting around it, and it creeps back on at a quarter of the speed it
+    // came off.
+    const trend = hand > 0 ? (over - this.lastOver) / hand : 0;
+    this.lastOver = over;
+    const error = over + clamp(trend * 3, -10, 10);
+    this.thrustCap = clamp(this.thrustCap + clamp(-error / 8, -0.6, 0.25) * hand, 0.15, 1);
     const wanted = past > 0 ? Math.min(12 * DEG, past * 0.6 * DEG) : 0;
     const rate = 5 * DEG * hand;
     this.overGuard += clamp(wanted - this.overGuard, -rate, rate);
@@ -238,7 +260,12 @@ class Fdm {
     // indistinguishable from an aeroplane that has stopped answering: at full
     // thrust down low this one holds the nose up and nothing on the glass
     // said so, or why.
-    a.guard = this.overGuard > 1 * DEG ? 'speed' : alpha > 12 ? 'alpha' : null;
+    // A tenth of a degree, not a whole one. The guard does not nudge the nose
+    // up by its own size, it puts a floor under the commanded attitude — so
+    // the first tenth of a degree it asks for already cancels a thirteen
+    // degree dive, and reporting from one degree meant the stick moved with
+    // nothing on the glass.
+    a.guard = this.overGuard > 0.1 * DEG ? 'speed' : alpha > 12 ? 'alpha' : null;
     // Last word: a pull already at the structural limit does not get to grow,
     // whoever asked for it — the pilot or the guard above.
     if ((a.gLoad ?? 1) > 2.4) this.cmdPitch = Math.min(this.cmdPitch, a.pitch);
@@ -298,10 +325,12 @@ class Fdm {
 
     // The overspeed limit holds the throttle back in the assisted law; direct
     // law is direct, and the autopilot flies its own autothrottle.
-    const throttle =
-      this.law === 'assist' && !input.attitude
-        ? Math.min(input.throttle, this.thrustCap)
-        : input.throttle;
+    const capped = this.law === 'assist' && !input.attitude;
+    const throttle = capped ? Math.min(input.throttle, this.thrustCap) : input.throttle;
+    // Say so when the limit is taking thrust the pilot asked for, rather than
+    // only when it has the stick. A lever that moves by itself and a lever
+    // that is simply where you left it look the same on the gauge.
+    a.thrustLimited = capped && this.thrustCap < input.throttle - 0.02;
     this.set('fcs/throttle-cmd-norm[0]', throttle);
     this.set('fcs/throttle-cmd-norm[1]', throttle);
     // It has to be the -asl- property. Writing position/terrain-elevation-ft at
@@ -528,8 +557,12 @@ export function autopilot(fdm, route, state, dt = 1 / 60) {
  * does not live on the red line.
  */
 function limitKias(a) {
-  const VMO = 282; // red line 290
-  const MMO = 0.72; // red line 0.74
+  // The autopilot's own ceiling, deliberately under the airframe's: VMO is
+  // 290 and MMO M0.74, and an autothrottle that cruises on the limit spends
+  // its life setting off the overspeed protection. A hand on the lever may
+  // fly to the limit; the machine keeps eight knots in hand.
+  const VMO = 282;
+  const MMO = 0.72;
   const byMach = (a.mach ?? 0) > 0.15 ? (a.kias * MMO) / a.mach : Infinity;
   return Math.min(VMO, byMach);
 }

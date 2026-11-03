@@ -133,6 +133,13 @@ fields that have at least one runway with both ends known, from 86,000 entries.
 Open the start picker, type an ICAO or a name, and you are lined up on the
 longest runway.
 
+The index is fetched in the background as soon as the aeroplane is flying,
+not only when somebody searches. That was a real bug rather than a nicety:
+the fetch used to be triggered by the search box or by a start place that
+names an ICAO code, and the built fields — Chambéry, Courchevel, Geneva —
+name none. Take off from one of those and the index never loaded, so the
+moving map drew no airfields at all, anywhere.
+
 Its elevation comes from the terrain rather than from the data. OurAirports
 gives a height above sea level, this viewer works above the ellipsoid, and the
 difference between the two is a different number in every part of the world —
@@ -270,19 +277,44 @@ distance from fifty feet with a delay before the brakes come on. The model
 measures a pure ground roll with everything applied at once.
 
 **Power first, then attitude.** The high-speed protection used to do one
-thing — bring the nose up — and it did it from the operating limit, 282 KIAS.
-At full thrust that is a losing fight: measured, it settled into a 4000 fpm
-climb at 294 knots, over the red line, with the stick fully forward and
-nothing on the glass saying why. There are now two limits doing two jobs. From
-282 the protection takes the *throttle* off, closing a loop rather than
-guessing a gain, which is visible on the gauge in a way a pitch protection
-quietly fighting your hand is not. Only past the red line at 290 does it touch
-the stick. Measured again on the same test — full thrust, stick held fully
-forward from 9900 ft — the aeroplane descends at 3000 to 7500 fpm with the
-speed parked between 286 and 292 instead of climbing away, and the attitude
-protection stays out of it. The glass now says which protection has the stick,
-because a limit you cannot see is indistinguishable from an aeroplane that has
-stopped answering. `M` for direct law still turns all of it off.
+thing — bring the nose up — and at full thrust that is a losing fight:
+measured, it settled into a 4000 fpm climb at 294 knots, over the red line,
+with the stick fully forward and nothing on the glass saying why. There are
+now two limits doing two jobs. At VMO and MMO the protection takes the
+*throttle* off, closing a loop rather than guessing a gain, which is visible
+on the gauge in a way a pitch protection quietly fighting your hand is not.
+Only six knots further on does it touch the stick. The glass says which
+protection has the stick, because a limit you cannot see is indistinguishable
+from an aeroplane that has stopped answering. `M` for direct law still turns
+all of it off.
+
+**Where the limit sits, and how it moves.** Both of the above were wrong
+twice over in the first version, and only flying it showed how. The limits
+were set eight knots under the airframe's, at 282 KIAS and M0.72, on the
+theory that a margin is free. It is not: MMO is M0.74 and this aeroplane
+cruises between M0.72 and M0.74, so the limit lay inside the cruise. And the
+thrust cap was a switch — full travel off while over, full travel on while
+under — which on a loop this slow does not regulate at all. Measured at
+FL350 with the throttle against the stop: the aeroplane reached M0.728, the
+cap slammed to its 15% floor, and it sat there for over a minute while the
+speed bled off, with the autopilot off and nothing saying why. From the
+cockpit that is a throttle that keeps pulling itself back.
+
+The limits are now the aeroplane's own, VMO 290 and MMO M0.74 for the
+throttle, 296 and M0.755 for the stick. And the cap moves at a rate set by
+how far over the limit the speed is *going to be* — the exceedance plus three
+seconds of its own trend — so it comes off quickly when far over, barely
+moves near the limit, and creeps back on at a quarter of the speed it came
+off. Measured again:
+
+| Test | Before | After |
+| --- | --- | --- |
+| FL350, throttle at the stop | M0.728, thrust pinned at the 15% floor | settles at M0.740 with the thrust at 84–88%, steady |
+| 7000 m, 13° dive at full power | — | thrust eased 95→62% through VMO, floor at 291 kt, pitch guard takes the stick at 296 and the speed comes back |
+
+The dive is the ordering working: power first, all of it, and only when idle
+thrust in a thirteen-degree dive still is not enough does the stick move.
+`VMO · THRUST HELD BACK` says so on the glass while it happens.
 
 **A parked aeroplane is not stalling.** Angle of attack is worked out from
 the velocity vector, so an aeroplane standing still with the brakes on — doing

@@ -406,9 +406,13 @@ export function createPanel(root, { title, subtitle, attribution }) {
       // for exactly as long as nobody tells you the brake is on.
       if (a.onGround && extra.brakes && (a.throttle ?? 0) > 0.25) warnings.push('BRAKE ON · B or click');
       if (a.stall) warnings.push('STALL');
-      if (kias > 290) warnings.push('OVERSPEED');
+      // Two knots of slack over VMO: the thrust limit settles the aeroplane
+      // on 290, and a warning that flickers at the speed you are being held
+      // at is noise rather than information.
+      if (kias > 292) warnings.push('OVERSPEED');
       // The protections, while they have the stick; see jsbsim.js protect().
       else if (a.guard === 'speed') warnings.push('VMO · NOSE HELD UP');
+      else if (a.thrustLimited) warnings.push('VMO · THRUST HELD BACK');
       if (a.guard === 'alpha' && !a.stall) warnings.push('ALPHA LIMIT');
       if ((a.mach ?? 0) > 0.76) warnings.push('MACH');
       if (extra.aglFt !== null && extra.aglFt < 500 && fpm < -1500 && !a.onGround) {
