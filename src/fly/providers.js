@@ -23,10 +23,20 @@ const PDOK_WMTS = 'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0';
 const VL_WMTS = 'https://geo.api.vlaanderen.be/OMW/wmts';
 const SWISSIMAGE =
   'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg';
+const SOUTH_TYROL =
+  'https://geoservices.buergernetz.bz.it/mapproxy/p_bz-Orthoimagery/wmts' +
+  '/Aerial-2023-RGB/EPSG_3857/{z}/{x}/{y}.png';
+// basemap.at numbers its tiles row before column, so this is {z}/{y}/{x} and
+// not the {z}/{x}/{y} every other service here uses. Asking the usual way
+// answers 404 on every tile, which looks exactly like no coverage at all.
+const BASEMAP_AT =
+  'https://maps.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/{z}/{y}/{x}.jpeg';
 
 export const ATTRIBUTION =
   '© Re:Earth Terrain (Copernicus/NASADEM) · © IGN BD ORTHO & RGE ALTI, Géoplateforme · ' +
   '© swisstopo SWISSIMAGE · © Kadaster/PDOK CC BY 4.0 · ' +
+  '© Autonome Provinz Bozen – Südtirol, Orthofoto 2023 CC BY 4.0 · ' +
+  'Data source: basemap.at CC BY 4.0 · ' +
   '© EOX Sentinel-2 cloudless CC BY 4.0 · © OpenStreetMap contributors ODbL · ' +
   '© OpenFlights routes and airlines ODbL';
 
@@ -50,8 +60,26 @@ const NL_RECTANGLE = Rectangle.fromDegrees(3.1, 50.6, 7.4, 53.7);
 // rectangle stops where the coverage does and Cesium never asks for a tile the
 // service answers with an error.
 const VL_RECTANGLE = Rectangle.fromDegrees(2.53, 50.685, 5.92, 51.52);
+// South Tyrol, with a little margin on a province that is 10.38–12.48 E and
+// 46.22–47.10 N. Beyond it the service answers with a 334-byte transparent
+// PNG rather than a grey slab, so nothing has to be keyed out: the layer
+// simply stops where the province does.
+const SOUTH_TYROL_RECTANGLE = Rectangle.fromDegrees(10.3, 46.15, 12.55, 47.15);
+// Austria, likewise with a margin. Outside its coverage basemap.at answers
+// 404, which Cesium treats as no tile once the error event is swallowed — so
+// this one needs no colour keying either.
+const AT_RECTANGLE = Rectangle.fromDegrees(9.4, 46.3, 17.2, 49.1);
 const IGN_NODATA = Color.fromBytes(215, 216, 214);
 const SWISS_NODATA = Color.fromBytes(160, 161, 162);
+// basemap.at does the same thing in white: beyond its coverage, and at the
+// coarse levels you see from altitude, it answers with a sheet of 253,253,253
+// flecked with 255. Keying it out is only safe if real snow never lands
+// there, so that was measured rather than assumed: over the Pasterze, the
+// Hintertux, the Dachstein and the Ötztal at 30 cm, 0.02% of pixels at most
+// come within ±6 of it, and three of the four never exceed 254 in any
+// channel. The threshold below is ±3.
+const AT_NODATA = Color.fromBytes(254, 254, 254);
+const AT_THRESHOLD = 0.012;
 const NODATA_THRESHOLD = 0.015;
 
 export const terrainProvider = () =>
@@ -171,6 +199,51 @@ export const dutchBuildings = () =>
     skipLevelOfDetail: true,
     preferLeaves: true,
   });
+
+/**
+ * South Tyrol at 20 cm, from the province's own 2023 orthomosaic — the one
+ * layer that makes Bolzano, the Dolomites and the Vinschgau read as ground
+ * rather than as 10 m satellite mush. CC BY 4.0 per the dataset's own
+ * metadata record, and CORS is answered for our origin.
+ *
+ * The URL ends in .png because that is the path MapProxy publishes, but a
+ * tile with imagery on it comes back as JPEG. Cesium goes by the content
+ * type, so both are fine.
+ */
+export function southTyrolLayer() {
+  const provider = new UrlTemplateImageryProvider({
+    url: SOUTH_TYROL,
+    maximumLevel: 19,
+    rectangle: SOUTH_TYROL_RECTANGLE,
+    credit: 'Orthofoto Südtirol 2023',
+  });
+  provider.errorEvent.addEventListener(() => {});
+  const layer = new ImageryLayer(provider);
+  layer.brightness = 1.03;
+  layer.saturation = 1.04;
+  return layer;
+}
+
+/**
+ * Austria at 30 cm, from basemap.at — Innsbruck in its valley, Zell am See,
+ * Salzburg. Open Government Data Austria, CC BY 4.0, which is why the
+ * attribution carries their wording verbatim ("Data source: basemap.at").
+ */
+export function austrianLayer() {
+  const provider = new UrlTemplateImageryProvider({
+    url: BASEMAP_AT,
+    maximumLevel: 19,
+    rectangle: AT_RECTANGLE,
+    credit: 'Data source: basemap.at',
+  });
+  provider.errorEvent.addEventListener(() => {});
+  const layer = new ImageryLayer(provider);
+  layer.colorToAlpha = AT_NODATA;
+  layer.colorToAlphaThreshold = AT_THRESHOLD;
+  layer.brightness = 1.03;
+  layer.saturation = 1.04;
+  return layer;
+}
 
 /**
  * SWISSIMAGE, 10 cm, over Switzerland. It goes on top of the IGN layer for two

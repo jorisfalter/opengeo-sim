@@ -190,13 +190,16 @@ backs off and retries rather than giving up.
 | Base imagery | EOX Sentinel-2 cloudless, 10 m | CC BY 4.0 |
 | France imagery | IGN BD ORTHO, 20 cm, via the Géoplateforme WMTS | open licence |
 | Switzerland imagery | swisstopo SWISSIMAGE, 10 cm | open, keyless |
+| South Tyrol imagery | Orthofoto Südtirol 2023, 20 cm | CC BY 4.0 |
+| Austria imagery | basemap.at Orthofoto, 30 cm | CC BY 4.0 |
 | Netherlands imagery | PDOK luchtfoto, 8 cm | CC BY 4.0 |
 | Netherlands buildings | PDOK 3D Basisvoorziening, LoD 2.2 as 3D Tiles | CC BY 4.0 |
 | Runway heights | IGN RGE ALTI (1 m) via the Géoplateforme elevation API | open licence |
 | Airport geometry | OpenStreetMap `aeroway=*` | ODbL |
 
-No keys and no accounts: every service answers with
-`Access-Control-Allow-Origin: *`, so the browser streams all of it directly.
+No keys and no accounts: the browser streams all of it directly. Almost every
+service answers with `Access-Control-Allow-Origin: *`; South Tyrol's echoes
+the requesting origin instead, which works the same way from a browser.
 
 ## Why the airports are built rather than streamed
 
@@ -440,6 +443,38 @@ those, with a tight threshold so real concrete and snow survive.
 
 Switzerland then gets SWISSIMAGE on top at 10 cm, which is both better than the
 fallback and the reason the Geneva basin now reads properly.
+
+### The same trick, twice more, for the eastern Alps
+
+Geneva is not where the Alps stop, and east of it the ground used to be
+Sentinel-2 at 10 m — fine from six kilometres up, mush on short final. Two
+more services fix that, and both were checked the same way before being
+trusted:
+
+- **South Tyrol** publishes its own 20 cm orthomosaic through MapProxy
+  (`geoservices.buergernetz.bz.it`). It is the best-behaved service in the
+  stack: beyond the province it answers with a 334-byte fully transparent PNG,
+  so nothing has to be keyed out at all. Inside, a tile comes back as JPEG —
+  the URL says `.png`, the content type says otherwise, and Cesium goes by the
+  content type. That is Bolzano, the Dolomites and the Vinschgau.
+- **basemap.at** covers Austria at 30 cm, so Innsbruck sits in its valley
+  rather than on a smear. It behaves like PDOK: beyond its coverage it answers
+  with a blank sheet, in this case `rgb(253,253,253)` flecked with pure white.
+
+That white sheet is why the first Bolzano screenshot had a white slab lying
+across the Adige valley behind the mountains: basemap.at's rectangle reaches
+deep into Italy, and at the coarse zoom levels you see from altitude it
+answers there rather than 404s. Keying white out is riskier than keying grey,
+because the Alps are full of real snow — so this was measured rather than
+assumed. Over the Pasterze, the Hintertux, the Dachstein and the Ötztal at
+30 cm, at most **0.02%** of pixels come within ±6 of the no-data colour, and
+three of the four never exceed 254 in any channel. The threshold is ±3, which
+removes the sheet and leaves the glaciers.
+
+One more thing that cost a round of head-scratching: **basemap.at numbers its
+tiles row before column**. The URL is `{z}/{y}/{x}`, not the `{z}/{x}/{y}`
+every other service here uses, and asking the usual way answers 404 on every
+single tile — which looks exactly like a country with no coverage.
 
 ### Feeding it the ground, anywhere
 

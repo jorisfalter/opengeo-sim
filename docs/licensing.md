@@ -75,6 +75,20 @@ CC BY 4.0, IGN's French imagery and elevations under the open licence with no
 fee, swisstopo free including commercial use, Sentinel-2 cloudless under
 CC BY 4.0, and Natural Earth in the public domain with no conditions at all.
 
+Two more joined them for the eastern Alps, and both were read in their own
+words rather than in a summary of them, because that is where openAIP failed:
+
+- **South Tyrol's Orthofoto 2023**, 20 cm, served from the province's own
+  MapProxy. The dataset's metadata record states it plainly: *"L'utilizzo dei
+  dati è vincolato dal rispetto delle condizioni di cui al modello di licenza
+  Creative Commons BY 4.0"*. Attribution-only, commercial use allowed. The
+  province publishes most of its geodata under CC0, but this layer is not one
+  of those, so the credit line names it.
+- **basemap.at**, 30 cm over Austria, under the Open Government Data Licence
+  Austria / CC BY 4.0. They ask for a specific wording — *"Data source:
+  basemap.at"* — so the attribution string carries exactly that rather than a
+  paraphrase.
+
 ## What had to be changed before publishing
 
 **Esri basemap tiles had to go.** The ArcGIS World Shaded Relief and boundary

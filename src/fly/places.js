@@ -159,6 +159,45 @@ export const PLACES = [
     speed: 260,
     throttle: 0.65,
   },
+  // The eastern Alps, from the same index — no survey of our own, so the
+  // wheels go on the terrain at the surveyed spot and heading. What makes
+  // these worth flying is the imagery underneath: SWISSIMAGE at 10 cm,
+  // South Tyrol's own orthophoto at 20 cm, basemap.at at 30 cm.
+  {
+    id: 'lsgs',
+    group: 'Switzerland and the Tyrol',
+    name: 'Sion',
+    note: '2,000 m along the Rhône, four-thousanders on both sides',
+    icao: 'LSGS',
+  },
+  {
+    id: 'lszs',
+    group: 'Switzerland and the Tyrol',
+    name: 'Samedan, Engadin',
+    note: 'Europe’s highest airport: 1,707 m up, and 1,800 m of asphalt',
+    icao: 'LSZS',
+  },
+  {
+    id: 'lowi',
+    group: 'Switzerland and the Tyrol',
+    name: 'Innsbruck',
+    note: '2,000 m between the Nordkette and the Patscherkofel',
+    icao: 'LOWI',
+  },
+  {
+    id: 'lipb',
+    group: 'Switzerland and the Tyrol',
+    name: 'Bolzano',
+    note: '1,740 m where three valleys meet, 20 cm imagery underfoot',
+    icao: 'LIPB',
+  },
+  {
+    id: 'limw',
+    group: 'Switzerland and the Tyrol',
+    name: 'Aosta',
+    note: '1,246 m under Mont Blanc’s Italian side',
+    icao: 'LIMW',
+  },
   {
     id: 'amsterdam',
     group: 'The Low Countries',

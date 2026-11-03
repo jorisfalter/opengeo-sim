@@ -39,6 +39,11 @@ they are MIT too, and why they were written from scratch rather than copied.
 | **IGN Géoplateforme** BD ORTHO, RGE ALTI | French imagery and runway elevations | Open licence, no fee ([CGU](https://cartes.gouv.fr/cgu)) | Attribution |
 | **Re:Earth Terrain** (Copernicus GLO-30, NASADEM, EGM2008) | Global terrain mesh for the flight view | Open, see provider | Attribution |
 | **Terrarium elevation tiles** (AWS Open Data) | Elevation profiles for the African corridors | [Mixed per source](https://github.com/tilezen/joerd/blob/master/docs/attribution.md) — SRTM public domain, Copernicus DEM with attribution | Attribution per source |
+| **swisstopo SWISSIMAGE** | Swiss imagery in the flight view | Free, commercial use allowed | Attribution |
+| **Autonome Provinz Bozen – Südtirol**, Orthofoto 2023 | South Tyrol imagery in the flight view | CC BY 4.0 | Attribution |
+| **basemap.at** Orthofoto | Austrian imagery in the flight view | Open Government Data Austria / CC BY 4.0 | Attribution, wording fixed as "Data source: basemap.at" |
+| **OurAirports** | The world airfield index and runway ends | Public domain (Unlicense) | Nothing |
+| **OpenFlights** routes and airlines | The robot traffic's airlines and city pairs | ODbL 1.0 | Attribution, **and share-alike on derived databases** |
 | **EOX Sentinel-2 cloudless** | Global base imagery in the flight view | CC BY 4.0 | Attribution |
 | **Natural Earth** (vectors and populated places) | Africa base map, rivers, city populations | Public domain | Nothing |
 

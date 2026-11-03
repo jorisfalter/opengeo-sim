@@ -3,10 +3,12 @@
 // Alps the haze is half of what you see.
 import { Ion, JulianDate, RequestScheduler, Viewer } from 'cesium';
 import {
+  austrianLayer,
   baseLayer,
   dutchAerialLayer,
   flemishLayer,
   orthoLayer,
+  southTyrolLayer,
   swissLayer,
   terrainProvider,
 } from './providers.js';
@@ -37,7 +39,12 @@ export async function createScene(container, { time }) {
   });
 
   const { scene } = viewer;
+  // Order is coarse to fine, because the one on top wins where two overlap:
+  // basemap.at's 30 cm first, then South Tyrol's 20 cm over the Brenner
+  // ridge, then SWISSIMAGE's 10 cm over the Engadin and Val Müstair.
   viewer.imageryLayers.add(orthoLayer());
+  viewer.imageryLayers.add(austrianLayer());
+  viewer.imageryLayers.add(southTyrolLayer());
   viewer.imageryLayers.add(swissLayer());
   viewer.imageryLayers.add(dutchAerialLayer());
   viewer.imageryLayers.add(flemishLayer());
