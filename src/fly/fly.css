@@ -262,6 +262,12 @@ body {
   font-size: 23px;
 }
 
+/* N1 while the overspeed limit is holding thrust back. Amber, not red: this is
+   the limit doing its job, not something going wrong. */
+.fly-glass .g-mid.is-limited {
+  fill: #ffb08a;
+}
+
 .fly-glass .g-big {
   font-size: 34px;
   font-weight: 600;
@@ -365,6 +371,17 @@ body {
   height: 0;
   background: rgba(94, 200, 242, 0.3);
   transition: height 0.12s linear;
+}
+
+/* Where the overspeed limit stands. A line across the lever, so a limit reads
+   as a limit instead of as a lever moving by itself. */
+.fly-lever__bar b {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #ffb08a;
+  box-shadow: 0 0 6px rgba(255, 176, 138, 0.7);
 }
 
 .fly-lever__bar span {
@@ -1106,4 +1123,81 @@ body {
 
 .fly-picker__group:first-of-type {
   margin-top: 4px;
+}
+
+/* ------------------------------------------------------- choosing a start
+   The menu that goes up before the aeroplane is placed. It borrows the
+   in-flight picker's sheet wholesale and adds three things that picker never
+   needed: regions as tabs, a pair of dice, and a line reporting the load
+   that is still running behind it. */
+.fly-start__regions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 14px;
+}
+
+.fly-start__regions button {
+  padding: 7px 11px;
+  border: 1px solid var(--fly-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fly-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.fly-start__regions button:hover {
+  border-color: var(--fly-accent);
+  color: var(--fly-text);
+}
+
+.fly-start__regions button.is-on {
+  border-color: var(--fly-accent);
+  background: rgba(94, 200, 242, 0.14);
+  color: var(--fly-text);
+}
+
+.fly-start__dice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.fly-start__dice button {
+  flex: 1 1 220px;
+  padding: 10px 12px;
+  border: 1px dashed var(--fly-line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--fly-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.fly-start__dice button:hover {
+  border-color: var(--fly-accent);
+}
+
+.fly-start__dice button[disabled] {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+/* The load keeps reporting under the menu: a menu over a frozen screen looks
+   like a menu over a simulator that has stopped. */
+.fly-start__status {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--fly-line);
+  color: #7f8c96;
+  font-size: 11px;
+}
+
+.fly-start__lead {
+  margin: -8px 0 14px;
+  color: var(--fly-muted);
+  font-size: 12px;
 }

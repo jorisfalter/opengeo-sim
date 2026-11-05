@@ -40,7 +40,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
       <div class="fly-hud__strip">
         <div class="fly-lever">
           <button data-action="thr-down" title="Throttle back (S)">−</button>
-          <div class="fly-lever__bar" data-el="leverTrack" title="Click to set the throttle"><i data-el="leverFill"></i><span data-el="leverText">0%</span></div>
+          <div class="fly-lever__bar" data-el="leverTrack" title="Click to set the throttle"><i data-el="leverFill"></i><b data-el="leverCap" hidden></b><span data-el="leverText">0%</span></div>
           <button data-action="thr-up" title="Throttle up (W)">+</button>
         </div>
         <div class="fly-rudder">
@@ -234,7 +234,13 @@ export function createPanel(root, { title, subtitle, attribution }) {
     vsPointer: el('vsPointer'),
     vref: el('vref'),
     notice: el('notice'),
+    // `text()` looks elements up by name on its own, so most of the glass
+    // never needs an entry here. These three do, because they are changed by
+    // something other than their text: the N1 figure goes amber, and the lever
+    // carries a fill and a limit mark.
+    power: el('power'),
     leverFill: el('leverFill'),
+    leverCap: el('leverCap'),
     leverText: el('leverText'),
     brakeButton: el('brakeButton'),
     trafficButton: el('trafficButton'),
@@ -323,10 +329,21 @@ export function createPanel(root, { title, subtitle, attribution }) {
       const fpm = ((a.vs ?? 0) / 0.3048) * 60;
       nodes.vsPointer.setAttribute('transform', `translate(0 ${310 - clamp(fpm, -4800, 4800) / 40})`);
       text('vs', `${fpm > 0 ? '+' : ''}${Math.round(fpm / 50) * 50}`);
-      text('power', `N1 ${Math.round((a.throttle ?? 0) * 100)}%`);
-      const lever = Math.round((a.throttle ?? 0) * 100);
+      // The lever shows where your hand left it; N1 shows what the engines are
+      // actually getting. Those are the same number until the overspeed limit
+      // steps between them, and then they must not be: a lever drawn from the
+      // delivered thrust slides back on its own, which is indistinguishable
+      // from an aeroplane taking the throttle out of your hand. So the limit is
+      // drawn as a line across the lever, with the N1 figure saying why.
+      const n1 = Math.round((a.throttle ?? 0) * 100);
+      const limited = Boolean(a.thrustLimited);
+      text('power', limited ? `N1 ${n1}% · VMO LIMIT` : `N1 ${n1}%`);
+      nodes.power.classList.toggle('is-limited', limited);
+      const lever = Math.round((extra.lever ?? a.throttle ?? 0) * 100);
       nodes.leverFill.style.height = `${lever}%`;
       nodes.leverText.textContent = `${lever}%`;
+      nodes.leverCap.hidden = !limited;
+      nodes.leverCap.style.bottom = `${Math.round((a.thrustCap ?? 1) * 100)}%`;
       nodes.touchFill.style.height = `${lever}%`;
       nodes.touchLever.textContent = `${lever}%`;
       nodes.tiltButton.classList.toggle('is-on', Boolean(extra.tilting));
@@ -412,7 +429,11 @@ export function createPanel(root, { title, subtitle, attribution }) {
       if (kias > 292) warnings.push('OVERSPEED');
       // The protections, while they have the stick; see jsbsim.js protect().
       else if (a.guard === 'speed') warnings.push('VMO · NOSE HELD UP');
-      else if (a.thrustLimited) warnings.push('VMO · THRUST HELD BACK');
+      // The thrust limit used to be a warning here. It is not one: hold the
+      // lever at the stop in the cruise and the limit holds MMO for as long as
+      // you leave it there, which lit the warning line permanently and taught
+      // you to read past it. It belongs on the lever and the N1 figure, where
+      // it is a reading rather than an alarm.
       if (a.guard === 'alpha' && !a.stall) warnings.push('ALPHA LIMIT');
       if ((a.mach ?? 0) > 0.76) warnings.push('MACH');
       if (extra.aglFt !== null && extra.aglFt < 500 && fpm < -1500 && !a.onGround) {

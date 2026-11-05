@@ -30,6 +30,7 @@ import { buildStrip } from './strip.js';
 import { createTraffic } from './traffic.js';
 import { createSound } from './sound.js';
 import { PLACES, findPlace } from './places.js';
+import { askWhereToStart } from './start.js';
 import {
   airportsReady,
   loadAirports,
@@ -82,8 +83,13 @@ if ('serviceWorker' in navigator && window.isSecureContext && params.get('sw') !
 }
 const useJsbsim = (params.get('fdm') ?? 'jsbsim') !== 'simple';
 const loading = document.querySelector('#loading');
+// The menu goes up first and reports the loading underneath itself, so the two
+// run at once: by the time the regions have been read the aeroplane is ready
+// to be put somewhere. A URL that already names a start gets no menu.
+const startMenu = askWhereToStart(params);
 const status = (text) => {
   loading.textContent = text;
+  startMenu.status(text);
 };
 const clamp = (value, lo, hi) => Math.max(lo, Math.min(hi, value));
 
@@ -376,7 +382,21 @@ async function main() {
           throttle: 0.6,
         }
       : null;
-  let startPlace = fromUrl ?? findPlace(params.get('start')) ?? findPlace('lflb');
+  // Whatever the menu was answered with, if it was shown at all. It has had
+  // the whole load to be answered in, and it writes its answer into the URL,
+  // so a reload lands where you chose instead of back at the menu.
+  const picked = await startMenu.chosen;
+  const wanted = picked ?? params.get('start');
+  let startPlace =
+    fromUrl ??
+    findPlace(wanted) ??
+    // Not one of the curated places. If it reads like an ident, the world
+    // index has it — which is what makes ?start=EHAM work from a link, and
+    // what the search box and the dice in the menu hand back.
+    (/^[a-z0-9]{3,4}$/i.test(wanted ?? '')
+      ? { id: wanted.toLowerCase(), name: wanted.toUpperCase(), note: 'from the world index', icao: wanted }
+      : null) ??
+    findPlace('lflb');
 
   // A start place may name an airfield rather than hold a position. The menu
   // knew how to look one up; booting straight into one did not, so
@@ -1051,6 +1071,9 @@ async function main() {
       aglFt: aircraft.agl !== undefined ? aircraft.agl / FT : (aircraft.alt - ground) / FT,
       trim: axes.trim,
       law: axes.law,
+      // Where the hand left the lever, which is not what the engines are
+      // getting whenever the overspeed limit is between the two.
+      lever: axes.throttle,
       input: axes.yoke ? 'mouse' : axes.source,
       brakes,
       speedbrake: sim.speedbrake,
@@ -1306,6 +1329,9 @@ async function main() {
 
 main().catch((error) => {
   console.error(error);
+  // Take the menu down first, or the failure is reported on a screen nobody
+  // can see: the sheet sits over the loading line that carries the message.
+  startMenu.dismiss();
   status(`Could not load the flight: ${error.message}`);
   loading.classList.add('is-error');
 });

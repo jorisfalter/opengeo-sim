@@ -72,6 +72,7 @@ class Fdm {
     // lead the speed rather than chase it.
     this.thrustCap = 1;
     this.lastOver = 0;
+    this.overTrend = 0;
     this.aircraft = {};
   }
 
@@ -165,6 +166,10 @@ class Fdm {
     a.mach = this.get('velocities/mach');
     a.vs = this.get('velocities/h-dot-fps') * FT;
     a.gLoad = this.get('accelerations/Nz');
+    // What the engines are getting. This is the *delivered* throttle, which is
+    // not the same thing as the lever: the overspeed limit sits between them,
+    // and the glass has to show both or a limit looks like a lever moving by
+    // itself. thrustCap is where that limit currently stands.
     a.throttle = this.get('fcs/throttle-cmd-norm[0]');
     a.gear = this.get('gear/gear-cmd-norm') > 0.5;
     a.flaps = Math.round((this.get('fcs/flap-cmd-norm') * 2 * 10) / 10);
@@ -248,9 +253,18 @@ class Fdm {
     // the limit it barely moves, so it comes to rest holding VMO instead of
     // hunting around it, and it creeps back on at a quarter of the speed it
     // came off.
-    const trend = hand > 0 ? (over - this.lastOver) / hand : 0;
+    //
+    // The trend has to be smoothed, and that is not a refinement. Differences
+    // taken frame to frame are divided by a sixtieth of a second, so a tenth
+    // of a knot of numerical noise reads as six knots a second of trend, and
+    // three seconds of that is the whole error term. Measured raw, the speed
+    // sat dead on 290 while the thrust swung between 48% and 79% — the limit
+    // was regulating against its own arithmetic. Averaged over about a
+    // second it keeps the lead and loses the noise.
+    const raw = hand > 0 ? (over - this.lastOver) / hand : 0;
     this.lastOver = over;
-    const error = over + clamp(trend * 3, -10, 10);
+    this.overTrend += (raw - this.overTrend) * Math.min(1, hand / 0.8);
+    const error = over + clamp(this.overTrend * 3, -10, 10);
     this.thrustCap = clamp(this.thrustCap + clamp(-error / 8, -0.6, 0.25) * hand, 0.15, 1);
     const wanted = past > 0 ? Math.min(12 * DEG, past * 0.6 * DEG) : 0;
     const rate = 5 * DEG * hand;
@@ -331,6 +345,9 @@ class Fdm {
     // only when it has the stick. A lever that moves by itself and a lever
     // that is simply where you left it look the same on the gauge.
     a.thrustLimited = capped && this.thrustCap < input.throttle - 0.02;
+    // Where the limit stands, for the mark on the lever. Outside the assisted
+    // law there is no limit, and a mark for one would be a lie.
+    a.thrustCap = capped ? this.thrustCap : 1;
     this.set('fcs/throttle-cmd-norm[0]', throttle);
     this.set('fcs/throttle-cmd-norm[1]', throttle);
     // It has to be the -asl- property. Writing position/terrain-elevation-ft at

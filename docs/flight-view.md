@@ -4,10 +4,11 @@ A light jet **you fly yourself**, over real terrain streamed from open data.
 Same stack as the ride view — CesiumJS, open geodata, a builder that prepares
 the geometry — but the vehicle flies and nobody else is holding the controls.
 
-Start on the runway at Chambéry-Savoie, on the 18.6% slope at Courchevel
-Altiport, on short final into it, or anywhere on earth: the terrain and the
-satellite imagery are global, and the picker takes coordinates. The autopilot
-is a button, not the default.
+It asks where to begin before it puts you anywhere: a region, one of 28,000
+airfields by name or code, or a field at random. The runway at Chambéry-Savoie,
+the 18.6% slope at Courchevel Altiport, short final into it, or anywhere on
+earth — the terrain and the satellite imagery are global, and the menu takes
+coordinates too. The autopilot is a button, not the default.
 
 Entry point: `fly.html` → `src/fly/main.js`.
 
@@ -21,7 +22,7 @@ npm run dev   # then open /fly.html
 
 | Parameter | Meaning |
 | --- | --- |
-| `start` | a place from `src/fly/places.js` — the six airfields `lflb` `lflj` `lsgg` `lfli` `lflp` `lfhm`, or `final`, `tarentaise`, `montblanc`, `matterhorn`, `amsterdam`, `grandcanyon`, `fuji` |
+| `start` | a place from `src/fly/places.js` — the six airfields `lflb` `lflj` `lsgg` `lfli` `lflp` `lfhm`, or `final`, `tarentaise`, `montblanc`, `matterhorn`, `amsterdam`, `grandcanyon`, `fuji` — **or any ICAO code in the world index**, such as `eham` or `lszs`. Giving it at all skips the start menu, which is what makes a shared link land where it says |
 | `lat`, `lon`, `alt`, `hdg`, `speed` | start anywhere instead; `alt` is metres above sea level |
 | `view` | `cockpit`, `chase` or `free` |
 | `fdm` | `jsbsim` (the default) or `simple` for the point-mass model, which has no atmosphere and so reports true airspeed as indicated |
@@ -124,6 +125,45 @@ spruce is a triangle and a trunk, the Alps are full of them, and drawing it
 means there is no asset to ship and no licence to honour. They fade in around
 two kilometres and are gone by five, and a phone plants a sixth as many as a
 desktop because it has a fraction of the fill rate.
+
+## Asking where to begin
+
+Opening `fly.html` used to put you on runway 36 at Chambéry whether that was
+where you wanted to be or not. The picker that could take you somewhere else
+existed only once you were already flying — the wrong way round, because
+choosing where to go is the first thing you want to do and was the last thing
+offered.
+
+`src/fly/start.js` now asks first, and it asks over the load rather than before
+it. The menu goes up immediately; the airfield JSON, the terrain, the imagery
+and JSBSim carry on behind it, with the loading line reporting at the foot of
+the sheet; the answer is awaited only at the moment the aeroplane has to be put
+somewhere. Choosing therefore costs nothing — by the time most people have read
+the regions the model is ready. A menu over a frozen screen looks like a menu
+over a broken simulator, which is why the status line is there at all.
+
+Three ways to answer, which is the shape of the question:
+
+- **A region** — the five groups in `places.js` as tabs, opening a list of
+  hand-picked fields with a sentence each. Closed to begin with: opened, a
+  region's thirteen fields push the other two ways off the bottom of the sheet,
+  so the menu would offer three and show one.
+- **Any airfield on earth** — the same search as in flight, over the 28,000
+  field index, with runway length and surface on each hit.
+- **A field at random**, on two dice. One draws from the whole world; the other
+  only from inside the aerial photography — France, Switzerland, South Tyrol,
+  Austria, the Netherlands and Flanders — because a random field in the middle
+  of Kazakhstan is a grey Sentinel-2 smear with a runway drawn on it. Both ask
+  for a paved runway of at least a thousand metres and for a field the
+  simulator can actually line up on, so the dice cannot hand you somewhere it
+  will then fail to place you.
+
+The answer is written into the URL with `history.replaceState`, so a reload
+lands where you chose instead of back at the menu, and the link is shareable.
+A URL that already names `start`, or `lat`/`lon`, skips the menu entirely —
+every link that worked before still works and lands where it says. `start` now
+also takes any ICAO code in the index, not only the curated ids, which is what
+the search box and the dice hand back.
 
 ## Any airfield in the world
 
@@ -314,7 +354,48 @@ off. Measured again:
 
 The dive is the ordering working: power first, all of it, and only when idle
 thrust in a thirteen-degree dive still is not enough does the stick move.
-`VMO · THRUST HELD BACK` says so on the glass while it happens.
+
+**The lever is not the thrust.** The fix above was right and still looked
+wrong, because the glass drew the throttle lever from the delivered thrust.
+Hold the lever at the stop at three thousand feet and the limit holds 290
+knots on 58% — so the lever slid down to 58% under your hand, which from the
+cockpit is indistinguishable from an aeroplane taking the throttle off you.
+The lever now shows where your hand left it, the N1 figure shows what the
+engines are getting, and the limit is drawn as a line across the lever with
+`N1 58% · VMO LIMIT` beside it in amber. Same two numbers, in the two places
+they belong.
+
+That also took the limit out of the warning line. `VMO · THRUST HELD BACK`
+was lit for as long as you left the lever at the stop in the cruise, which is
+indefinitely — a warning that never goes out is a warning you learn to read
+past. The stick guard, `VMO · NOSE HELD UP`, stays there, because that one is
+the aeroplane overriding you rather than declining to go faster.
+
+**It was regulating against its own arithmetic.** Three seconds of trend is
+the lead that keeps the cap from chasing the speed, but the trend was a
+frame-to-frame difference divided by a sixtieth of a second: a tenth of a knot
+of numerical noise reads as six knots a second, and three times that is the
+whole error term. The speed was held perfectly — dead on 290 — while the
+thrust swung between 48% and 79% doing it. Averaging the trend over about a
+second keeps the lead and loses the noise: same 290 knots, thrust steady
+between 58% and 63%.
+
+| Level flight, lever at the stop | Speed held | Thrust |
+| --- | --- | --- |
+| 3,000 ft | 290 KIAS, the limit | 58%, steady within five points |
+| FL250 | 290 KIAS, the limit | 71%, wandering up to 100% |
+| FL350 | M0.739, the limit | 86%, wandering up to 100% |
+
+Which answers the question the fix raised: holding thrust back is not a fault
+down low, it is the only way to stay under VMO with the lever at the stop. Up
+high there is less to hold back and, as the table says, the cap still wanders
+while it holds — the speed is right, the thrust figure under it is restless.
+The loop is an integrator with three seconds of lead against a plant whose
+time constant at FL350 is nearer a minute, which is not enough phase margin;
+down low, where the aeroplane answers the throttle in seconds, it is. The
+honest fix is proportional feedback on the exceedance on top of the
+integrator, so the cap answers at once and the integrator only finds where it
+has to rest. Not yet done.
 
 **A parked aeroplane is not stalling.** Angle of attack is worked out from
 the velocity vector, so an aeroplane standing still with the brakes on — doing
@@ -720,7 +801,10 @@ Each tape is a fixed ladder of marks that slides by the remainder and relabels
 itself, so forty thousand feet needs no more geometry than four hundred knots.
 Warnings come up for the stall, Vmo, Mmo, a high sink rate low down, a missing
 gear — and for the parking brake, because standing on the runway at full
-thrust going nowhere is confusing for exactly as long as nobody tells you.
+thrust going nowhere is confusing for exactly as long as nobody tells you. The
+throttle lever carries the one reading the warning line is the wrong place for:
+your hand's position as the fill, the overspeed limit as a line across it, and
+the delivered N1 beside it — see *The lever is not the thrust* above.
 
 ## Known limitations
 
