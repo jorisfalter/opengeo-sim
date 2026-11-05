@@ -256,12 +256,22 @@
         </product>
       </function>
       <function name="aero/coefficient/CLspeedbrake">
-        <description>Lift dump from the speedbrake</description>
+        <!--
+          Lift dump from the speedbrake. This was -0.35, which is not a
+          speedbrake: the whole wing makes about CL 0.29 in the cruise, so
+          deploying it removed more lift than the aeroplane had. Measured
+          hands-off and level at 3,000 m and 260 KIAS, pulling it gave an
+          instant bunt to 3,100 fpm down, settling at 2,300 fpm with alpha
+          driven from 0.5 to 4.7 degrees — the aeroplane falling out from
+          under you rather than slowing down. A speedbrake costs perhaps a
+          fifth of cruise lift while roughly doubling the drag, and the drag
+          below is already right.
+        -->
         <product>
           <property>aero/qbar-psf</property>
           <property>metrics/Sw-sqft</property>
           <property>fcs/speedbrake-pos-norm</property>
-          <value>-0.35</value>
+          <value>-0.06</value>
         </product>
       </function>
       <function name="aero/coefficient/CLflap">

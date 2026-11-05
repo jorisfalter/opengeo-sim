@@ -144,9 +144,83 @@ body {
 .fly-hud__credit,
 .fly-hud__keys {
   margin: 0;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* The foot of the screen: one button, and the panel it folds out.
+   Both carry their own background, because the thing behind them is
+   sometimes a snowfield and sometimes a thunderstorm. */
+.fly-hud__foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.fly-hud__legendkey {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--fly-line);
+  border-radius: 999px;
+  background: rgba(16, 18, 21, 0.78);
+  backdrop-filter: blur(6px);
+  color: rgba(255, 255, 255, 0.68);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.fly-hud__legendkey:hover {
+  border-color: var(--fly-accent);
+  color: var(--fly-text);
+}
+
+/* The circled-i drawn rather than typed: U+24D8 is missing from enough font
+   stacks that it renders as a box, and a legend button that opens with a
+   tofu glyph is not an invitation. */
+.fly-hud__legendkey span {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 9px;
+  font-style: italic;
+  line-height: 1;
+  transform: translateY(2px);
+}
+
+.fly-hud__legend {
+  max-width: min(860px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border: 1px solid var(--fly-line);
+  border-radius: 12px;
+  background: rgba(16, 18, 21, 0.94);
+  backdrop-filter: blur(8px);
+}
+
+.fly-hud__legend h3 {
+  margin: 0 0 5px;
+  color: #7f8c96;
   font-size: 10px;
-  line-height: 1.5;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fly-hud__legend h3 + p {
+  margin-bottom: 12px;
+}
+
+.fly-hud__legend p:last-child {
+  margin-bottom: 0;
 }
 
 .fly-hud__keys kbd {
@@ -309,9 +383,6 @@ body {
 
 /* Two automatic top margins would split the free space between them and leave
    the credit stranded halfway down the screen; only the first one gets it. */
-.fly-hud__credit {
-  margin-top: auto;
-}
 
 /* ------------------------------------------------- the strip you can click
 
@@ -667,9 +738,11 @@ body {
     color: var(--fly-accent);
   }
 
-  /* The desktop strip and the key legend are noise on a phone. */
+  /* The desktop strip and the key legend are noise on a phone — there is no
+     keyboard to press. The heading goes with the list it headed. */
   .fly-hud__strip,
-  .fly-hud__keys {
+  .fly-hud__keys,
+  .fly-hud__legend h3:first-child {
     display: none;
   }
 
@@ -731,16 +804,18 @@ body {
     display: none;
   }
 
-  /* Attribution is a licence condition, so it stays — just out of the way. */
+  /* Attribution is a licence condition, so it stays. It used to be pinned to
+     the bottom edge at eight pixels and 60% opacity, which on a phone over a
+     snowfield is a licence condition nobody can read. It now travels with the
+     panel that holds it, and the button keeps the short form on screen. */
   .fly-hud__credit {
-    position: absolute;
-    left: 8px;
-    right: 8px;
-    bottom: 0;
-    margin: 0;
-    font-size: 8px;
-    line-height: 1.3;
-    opacity: 0.6;
+    font-size: 10px;
+    line-height: 1.45;
+  }
+
+  .fly-hud__legend {
+    max-height: 46vh;
+    overflow: auto;
   }
 }
 

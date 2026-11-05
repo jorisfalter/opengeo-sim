@@ -144,10 +144,21 @@ over a broken simulator, which is why the status line is there at all.
 
 Three ways to answer, which is the shape of the question:
 
-- **A region** — the five groups in `places.js` as tabs, opening a list of
+- **A region** — the groups in `places.js` as tabs, opening a list of
   hand-picked fields with a sentence each. Closed to begin with: opened, a
   region's thirteen fields push the other two ways off the bottom of the sheet,
   so the menu would offer three and show one.
+
+  One of them, **Altiports**, is a group a place can belong to *as well as* its
+  own region, which is why `places.js` grew an `also` field and a `groupsOf`
+  helper. Courchevel belongs in Savoie and among the altiports both, and asking
+  people to guess which of the two lists it was filed under is asking them to
+  guess. Eight fields: the four built Savoie altiports, plus La Motte-Chalancon
+  in the Drôme, Peyresourde-Balestas at 1,584 m in the Pyrenees, Lukla, and Ua
+  Pou in the Marquesas. The last four come out of the index, so they have the
+  right strip on the right heading and **no surveyed slope** — Lukla's 11.7% is
+  not there. That is the one thing an altiport is about, so they are a place to
+  fly from, not the real approach.
 - **Any airfield on earth** — the same search as in flight, over the 28,000
   field index, with runway length and surface on each hit.
 - **A field at random**, on two dice. One draws from the whole world; the other
@@ -267,6 +278,40 @@ Measured against the published figures: Chambéry comes out at 774 ft against a
 published 779, and Courchevel's steepest section at 19.6% against a published
 18.6% maximum.
 
+**The pavement has to be the colour of pavement.** The slab replaces the
+photograph rather than sitting on it, because the globe is cut away
+underneath; so a colour that is not the real one reads as a hole in the world,
+and `#3d3c3a` read as a black one. Over Brittany, where nothing is built,
+there is only the photograph and the contrast is obvious. The colours are now
+sampled from the IGN orthophoto over all nine built runways — median of each
+strip with the markings filtered out — and the median of those nine is what
+one colour for nine fields can honestly be:
+
+| | Measured | Was | Is |
+| --- | --- | --- | --- |
+| Runway | (178,179,176) median of nine; Chambéry is light concrete at (208,206,194), Megève dark at (124,127,136) | #3d3c3a | #b2b3b0 |
+| Taxiways and aprons | (158,158,157), median of eighteen of them at seven fields — nine tenths of the runway, not three quarters | #4a4846 | #9e9e9d |
+| Skirt | the grass beside the strip, (148,139,122) | #6b6355 | #948b7a |
+| Markings | unchanged — 1.3× the runway now, where they were 3.8× | #e8e6df | #e8e6df |
+
+The lighting was checked rather than assumed: the slab photographs at
+luminance 60 for a colour of 61, so `flat: false` costs nothing on a
+horizontal surface at this sun angle and what is written is what appears. It
+is kept on because it is what makes Courchevel's slope read as a slope — and
+because it is doing visible work elsewhere, the skirt's vertical kerb coming
+out at 109 for a colour of 136, which is the four-fifths a lambert term gives
+a vertical face.
+
+Photographed from 700 m straight down over Chambéry, before and after: the
+runway slab went from luminance 60 to 178 against a photograph reading 143 to
+212 beside it, and the aprons from 72 to 158 against 179 to 212. A quarter of
+their surroundings, to four fifths of them.
+
+The real answer is not a colour at all — it is to texture the slab with the
+orthophoto, which is 20 cm a pixel and already contains the markings. The
+builder samples IGN heights along the same polygons, so it could cut the
+imagery with them and write a PNG beside the geometry. Not done.
+
 ## Heights, again
 
 The same datum problem as the ride view, one step worse. IGN heights are above
@@ -310,11 +355,23 @@ how the numbers below were tuned. Against Pilatus' figures:
 | Mmo | M0.74 | drag rise holds it at M0.75 |
 | Stall, clean | ~95 KIAS | 98 KIAS |
 | Stall, landing | ~85 KIAS | still flying at 80 KIAS |
-| Landing roll | ~600 m light, dry | 352 m from 102 KIAS, flat |
+| Landing roll | ~600 m light, dry | 384 m from 102 KIAS, flat |
 
 The landing roll is on the short side of the book figure, which quotes a
 distance from fifty feet with a delay before the brakes come on. The model
 measures a pure ground roll with everything applied at once.
+
+**The speedbrake was turning the wing off.** Its lift dump was written as
+ΔCL −0.35 against a wing that makes about CL 0.29 in the cruise, so pulling
+it removed more lift than the aeroplane had. Measured hands off and level at
+3,000 m and 260 KIAS: an instant bunt to 3,100 fpm down, settling at 2,300,
+with alpha driven from 0.5° to 4.7° — the aeroplane falling out from under
+you rather than slowing down. At −0.06, about a fifth of cruise lift, it
+behaves like a speedbrake: 800 fpm down and 32 knots off in twenty seconds at
+part power, and a steady 450 fpm at 284 knots with the levers at the stop.
+The drag term was already right at ΔCD +0.030, which is more than the whole
+clean airframe's 0.023. The cost is thirty-two metres of landing roll, since
+the same term is what pins the aeroplane down after touchdown.
 
 **Power first, then attitude.** The high-speed protection used to do one
 thing — bring the nose up — and at full thrust that is a losing fight:
@@ -805,6 +862,16 @@ thrust going nowhere is confusing for exactly as long as nobody tells you. The
 throttle lever carries the one reading the warning line is the wrong place for:
 your hand's position as the fill, the overspeed limit as a line across it, and
 the delivered N1 beside it — see *The lever is not the thrust* above.
+
+**The credits and the keys fold away.** They used to be two lines of 45% white
+laid straight on the scene. Over a forest that reads; over a snowfield, a
+cloud deck or the white edge of an imagery coverage it is invisible, and the
+credit line wrapped underneath the moving map so that it appeared to run
+twice. They are one panel now, behind a button at the foot of the screen that
+carries its own background and so reads over anything. The button keeps a
+short credit on it — *© IGN, swisstopo, PDOK, basemap.at and others* — because
+attribution is a licence condition for most of this imagery and not a detail;
+the full list is one click under it, which is what every map on the web does.
 
 ## Known limitations
 

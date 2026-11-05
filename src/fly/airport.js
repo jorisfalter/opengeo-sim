@@ -27,10 +27,36 @@ export const SKIRT_OVERRUN = 45; // platform carries on past both runway ends
 const SKIRT_BELOW = 0.9; // platform top below the asphalt, a visible kerb rather
 // than a coplanar surface: half a metre was not enough to win the depth test
 const CLIP_MARGIN = 16; // hole in the globe, kept inside the platform
-const ASPHALT = Color.fromCssColorString('#3d3c3a');
-const SKIRT = Color.fromCssColorString('#6b6355');
+// Measured, not chosen. These slabs replace the aerial photograph rather than
+// sitting on it — the globe is cut away underneath — so any colour that is not
+// the colour of the real pavement reads as a hole in the world, and #3d3c3a
+// read as a black one. Sampled from the IGN orthophoto over all nine built
+// runways, median of each strip with the markings filtered out: Chambéry
+// (208,206,194) light concrete, Courchevel (191,193,180), Geneva (178,178,176),
+// Annecy (193,197,190), Méribel (183,181,168), Alpe d'Huez (176,179,182),
+// Challes (160,157,154), Annemasse (131,135,145), Megève (124,127,136). The
+// median of the nine is what one colour for all nine can honestly be.
+//
+// Checked against the render rather than assumed: the slab photographs at
+// luminance 60 for a colour of 61, so `flat: false` costs nothing on a
+// horizontal surface at this sun angle and what is written here is what
+// appears. The lighting is kept because it is what makes Courchevel's 18.6%
+// visible as a slope rather than a stripe.
+const ASPHALT = Color.fromCssColorString('#b2b3b0');
+// Taxiways and aprons photograph a little darker than the runway they serve,
+// but only a little: the median over eighteen of them at seven fields is 158
+// against the runway's 178, about nine tenths. Guessed at three quarters from
+// a single narrow taxiway at Chambéry, they came out as grey islands in a
+// light apron — visibly a different surface from the one underneath them.
+const TAXI = Color.fromCssColorString('#9e9e9d');
+// The skirt is not pavement. It is the platform that hides the seam where the
+// surveyed runway meets the streamed terrain, so it has to read as the ground
+// beside the strip: the grass at Chambéry measures (148,139,122).
+const SKIRT = Color.fromCssColorString('#948b7a');
+// Markings stay where they were. Against a 178 runway they are 1.3 times its
+// brightness, which is about what fresh paint on concrete looks like; against
+// the old 61 they were nearly four times it, which is why they glowed.
 const PAINT = Color.fromCssColorString('#e8e6df');
-const TAXI = Color.fromCssColorString('#4a4846');
 
 // A polyline volume is extruded with the bottom of its cross section sitting on
 // the line, not centred on it — measured, because getting it wrong buries the

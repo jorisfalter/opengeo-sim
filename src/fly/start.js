@@ -12,7 +12,7 @@
 // by the time most people have read the regions the aeroplane is ready to be
 // placed. A URL that already names a start skips the menu entirely, so every
 // link that worked before still works and lands where it says.
-import { PLACES } from './places.js';
+import { GROUPS, PLACES, groupsOf } from './places.js';
 import { loadAirports, searchAirports, startFrom } from './airports.js';
 
 // Where the aerial photography is centimetres a pixel instead of Sentinel-2's
@@ -54,7 +54,6 @@ function randomField(index, covered) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-const GROUPS = [...new Set(PLACES.map((place) => place.group ?? 'Elsewhere'))];
 // No region is open to begin with, and that is deliberate. Opening one puts
 // thirteen fields between the regions and everything else, and the dice and
 // the search box fall off the bottom of the sheet — so the menu would offer
@@ -108,7 +107,7 @@ export function askWhereToStart(params) {
     for (const button of menu.querySelectorAll('[data-region]')) {
       button.classList.toggle('is-on', button.dataset.region === group);
     }
-    el('fields').innerHTML = PLACES.filter((place) => (place.group ?? 'Elsewhere') === group)
+    el('fields').innerHTML = PLACES.filter((place) => groupsOf(place).includes(group))
       .map(
         (place) =>
           `<li><button type="button" data-place="${escape(place.id)}"><strong>${escape(

@@ -18,6 +18,7 @@ export const PLACES = [
   {
     id: 'lflj',
     group: 'Savoie and the Alps',
+    also: 'Altiports',
     name: 'Courchevel Altiport',
     note: 'top of the slope, nose downhill — the way you leave there',
     airport: 'lflj',
@@ -63,6 +64,7 @@ export const PLACES = [
   {
     id: 'lfhm',
     group: 'Savoie and the Alps',
+    also: 'Altiports',
     name: 'Megève Altiport',
     note: 'the other mountain slope: 543 m at 7.5% — nose downhill',
     airport: 'lfhm',
@@ -75,6 +77,7 @@ export const PLACES = [
   {
     id: 'lfkx',
     group: 'Savoie and the Alps',
+    also: 'Altiports',
     name: 'Méribel Altiport',
     note: '407 m at 6.6% — the valley next to Courchevel, and shorter',
     airport: 'lfkx',
@@ -87,6 +90,7 @@ export const PLACES = [
   {
     id: 'lfhu',
     group: 'Savoie and the Alps',
+    also: 'Altiports',
     name: "Alpe d'Huez Altiport",
     note: '445 m at 10.3%, above the hairpins',
     airport: 'lfhu',
@@ -363,6 +367,52 @@ export const PLACES = [
     speed: 260,
     throttle: 0.65,
   },
+  // The rest of the world's altiports, from the index rather than from a
+  // survey. Four of them are in Savoie above and carry `also: 'Altiports'`;
+  // these are the ones that are nowhere near it. What they do *not* have is a
+  // measured slope: outside the built fields the aeroplane stands on the
+  // terrain mesh at the right place and heading, and at an altiport the slope
+  // is the whole point. Lukla's 11.7% is not there. Treat them as the right
+  // strip in the right valley, not as the real approach.
+  {
+    id: 'lfje',
+    group: 'Altiports',
+    name: 'La Motte-Chalancon',
+    note: '534 m of unpaved Drôme at 882 m — the one nobody has heard of',
+    icao: 'LFJE',
+  },
+  {
+    id: 'lfip',
+    group: 'Altiports',
+    name: 'Peyresourde-Balestas',
+    note: '470 m at 1,584 m in the Pyrenees — the highest in France',
+    icao: 'LFIP',
+  },
+  {
+    id: 'vnlk',
+    group: 'Altiports',
+    name: 'Lukla, Tenzing-Hillary',
+    note: '527 m at 2,861 m, the way into Everest — but flat here, see the docs',
+    icao: 'VNLK',
+  },
+  {
+    id: 'ntmp',
+    group: 'Altiports',
+    name: 'Ua Pou, Marquesas',
+    note: '830 m between the basalt spires, 3,000 km from anywhere',
+    icao: 'NTMP',
+  },
 ];
 
 export const findPlace = (id) => PLACES.find((place) => place.id === id);
+
+/**
+ * The groups a place belongs to. Most belong to one; an altiport in Savoie
+ * belongs to its valley and to the altiports both, and asking people to find
+ * Courchevel in only one of those two lists is asking them to guess which.
+ */
+export const groupsOf = (place) =>
+  place.also ? [place.group ?? 'Elsewhere', place.also] : [place.group ?? 'Elsewhere'];
+
+/** Every group, in the order the places first mention them. */
+export const GROUPS = [...new Set(PLACES.flatMap(groupsOf))];

@@ -29,7 +29,7 @@ import { createScenery } from './scenery.js';
 import { buildStrip } from './strip.js';
 import { createTraffic } from './traffic.js';
 import { createSound } from './sound.js';
-import { PLACES, findPlace } from './places.js';
+import { GROUPS, PLACES, findPlace, groupsOf } from './places.js';
 import { askWhereToStart } from './start.js';
 import {
   airportsReady,
@@ -691,11 +691,11 @@ async function main() {
   picker.innerHTML = `
     <div class="fly-picker__sheet">
       <h2>Where do you want to begin?</h2>
-      ${[...new Set(PLACES.map((place) => place.group ?? 'Elsewhere'))]
+      ${GROUPS
         .map(
           (group) => `
         <h3 class="fly-picker__group">${group}</h3>
-        <ul>${PLACES.filter((place) => (place.group ?? 'Elsewhere') === group)
+        <ul>${PLACES.filter((place) => groupsOf(place).includes(group))
           .map(
             (place) =>
               `<li><button data-place="${place.id}"><strong>${place.name}</strong><span>${place.note}</span></button></li>`,
@@ -1161,6 +1161,13 @@ async function main() {
       case 'where':
         showPicker(true);
         break;
+      case 'legend': {
+        const sheet = document.querySelector('[data-el="legend"]');
+        const key = document.querySelector('[data-el="legendButton"]');
+        sheet.hidden = !sheet.hidden;
+        key.setAttribute('aria-expanded', String(!sheet.hidden));
+        break;
+      }
       case 'plan':
         showPlan(true);
         break;

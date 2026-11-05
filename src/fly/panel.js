@@ -210,15 +210,35 @@ export function createPanel(root, { title, subtitle, attribution }) {
       </div>
       <p class="fly-hud__rotate">Turn your device sideways — this simulator flies in landscape.</p>
       <p class="fly-hud__notice" data-el="notice"></p>
-      <p class="fly-hud__credit">${attribution}</p>
-      <p class="fly-hud__keys">
-        <kbd>↑</kbd><kbd>↓</kbd> pitch · <kbd>←</kbd><kbd>→</kbd> roll · <kbd>Q</kbd><kbd>E</kbd> rudder ·
-        <kbd>W</kbd><kbd>S</kbd> throttle · <kbd>[</kbd><kbd>]</kbd> trim · <kbd>G</kbd> gear ·
-        <kbd>F</kbd> flaps · <kbd>B</kbd> brakes · <kbd>V</kbd> speedbrake · <kbd>M</kbd> control law ·
-        <kbd>P</kbd> autopilot · <kbd>C</kbd> camera · <kbd>J</kbd> sound · <kbd>N</kbd> map · <kbd>T</kbd> traffic · <kbd>L</kbd> start · <kbd>R</kbd> plan ·
-        <kbd>space</kbd> pause · <kbd>1</kbd><kbd>2</kbd> time up to 8× ·
-        <kbd>click</kbd> mouse yoke, <kbd>Esc</kbd> releases
-      </p>
+      <!--
+        The keys and the data credits used to be two lines of 45% white laid
+        straight on the scene. Over a forest that reads; over a snowfield, a
+        cloud deck or the white no-data of an imagery edge it is invisible,
+        and it wrapped under the moving map so the credits appeared to run
+        twice. They are one panel now, folded away behind a button that
+        carries its own background and so reads over anything. A short credit
+        stays on the button, because attribution is a licence condition and
+        not a detail — the full list is one click under it, which is how every
+        map on the web does this.
+      -->
+      <div class="fly-hud__foot">
+        <button class="fly-hud__legendkey" data-action="legend" aria-expanded="false" data-el="legendButton">
+          <span aria-hidden="true">i</span> © IGN, swisstopo, PDOK, basemap.at and others · keys
+        </button>
+        <div class="fly-hud__legend" data-el="legend" hidden>
+          <h3>Keys</h3>
+          <p class="fly-hud__keys">
+            <kbd>↑</kbd><kbd>↓</kbd> pitch · <kbd>←</kbd><kbd>→</kbd> roll · <kbd>Q</kbd><kbd>E</kbd> rudder ·
+            <kbd>W</kbd><kbd>S</kbd> throttle · <kbd>[</kbd><kbd>]</kbd> trim · <kbd>G</kbd> gear ·
+            <kbd>F</kbd> flaps · <kbd>B</kbd> brakes · <kbd>V</kbd> speedbrake · <kbd>M</kbd> control law ·
+            <kbd>P</kbd> autopilot · <kbd>C</kbd> camera · <kbd>J</kbd> sound · <kbd>N</kbd> map · <kbd>T</kbd> traffic · <kbd>L</kbd> start · <kbd>R</kbd> plan ·
+            <kbd>space</kbd> pause · <kbd>1</kbd><kbd>2</kbd> time up to 8× ·
+            <kbd>click</kbd> mouse yoke, <kbd>Esc</kbd> releases
+          </p>
+          <h3>Data</h3>
+          <p class="fly-hud__credit">${attribution}</p>
+        </div>
+      </div>
     </div>`;
 
   const el = (name) => root.querySelector(`[data-el="${name}"]`);
