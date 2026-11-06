@@ -178,11 +178,10 @@ the search box and the dice hand back.
 
 ## Any airfield in the world
 
-`npm run build:airports` turns **OurAirports** into a 1.5 MB index — 547 kB
-over the wire, and only fetched when somebody types in the search box. 10,903
-fields that have at least one runway with both ends known, from 86,000 entries.
-Open the start picker, type an ICAO or a name, and you are lined up on the
-longest runway.
+`npm run build:airports` turns **OurAirports** into a 3.9 MB index — 1.3 MB
+over the wire. 28,375 fields with at least one runway, 33,406 runways, from
+86,000 entries. Open the start picker, type an ICAO or a name, and you are
+lined up on the longest runway.
 
 The index is fetched in the background as soon as the aeroplane is flying,
 not only when somebody searches. That was a real bug rather than a nicety:
@@ -202,6 +201,38 @@ What you do not get outside the built fields is pavement: no asphalt, no
 markings, no surveyed slope. You are standing on the terrain mesh at the right
 place and heading. The nine built airfields below are the ones with real
 geometry.
+
+**Standing in the grass beside the runway.** `?start=LFMA` put the aeroplane
+down at Aix-les-Milles on the grass, east of the pavement and short of it.
+Measured against the IGN orthophoto by sampling the brightness across the
+strip at nineteen stations along it, OurAirports' line for LFMA runs **57 m
+east of the real centreline and 97 m too long**. The airport record's own
+position sits 60 m west of that line — which is to say on the centreline,
+within the accuracy of the measurement. Two independent errors do not agree
+like that, so it is the runway ends that are wrong and not the airport point.
+
+The index is crowd-sourced and the two end coordinates are the weakest thing
+in it. `runwayLine` in `src/fly/airports.js` now corrects them, in order of
+how sure the correction is:
+
+| | |
+| --- | --- |
+| **The length is the declared one** | `length_ft` is published; the distance between the end coordinates is whatever the person who plotted them managed. They disagree by more than 40 m on one surveyed single-runway field in six. The line is trimmed to the declared length about its own middle. |
+| **A line that cannot measure itself cannot place itself** | When those two lengths disagree by more than 40 m the ends are demonstrably wrong, and the only other evidence is the airport position. If that is 10–150 m to one side, the line slides sideways onto it. Outside that band, nothing: under 10 m there is nothing to win, over 150 m the airport point is the terminal building. It fires on 2.3% of fields. |
+| **Ends that are not ends** | 158 rows have the same point twice, or two points 8,000 km apart. Those are laid out around the airport position on the heading in the runway number, the way the build step already handles the fields whose ends were never surveyed. `?start=` on one of those used to teleport you a continent away. |
+| **The displaced threshold** | 3,746 runways have one and we were throwing it away. At LFMA it is 50 m, at Schiphol 18R 270 m, at Chambéry 18 230 m. |
+
+The start point is then measured **back from the middle of the strip**, not
+forward from an end coordinate: the middle is the part of the line worth
+trusting, because an error at either end moves it by half as much and two
+equal errors move it not at all. Back by half the declared length, forward
+again past the displaced threshold and 5% of the length (30–90 m), so you are
+past the piano keys with the whole runway in front of you.
+
+For the ordinary field none of this moves anything much: the median start
+shifts 18 m, the ninetieth percentile 54 m, and for every field whose line was
+left alone the start is still exactly on it. At LFMA it is the difference
+between the grass and the centreline.
 
 This is also why it is OurAirports and not X-Plane's `apt.dat`: `apt.dat` is
 GPL and shipping it would pull the GPL over everything here, while OurAirports
@@ -771,6 +802,14 @@ the map has them anywhere in the world; which ones are drawn follows the zoom
 Countries are a wall of labels), except the nearest field, which is always
 worth a line. The index is 28,000 entries, so the list is asked for again only
 when the map has moved a fifth of its width or been zoomed.
+
+**One flick of a trackpad is one zoom step.** It used to be one step per
+wheel event, and a Mac trackpad sends a hundred of them with inertia behind
+them — so the map went from the valley to the continent before the fingers had
+left the glass, and then sat there, apparently zooming itself out for no
+reason. A gesture now counts once, however long it coasts: a quarter of a
+second of quiet ends it, and scrolling again gives another step. There are
+eleven zoom levels in the whole map.
 
 **Drag it to look around**, and ⌖ or a double-click brings it back to the
 aeroplane. Pan and it stays where you put it, while the simulator runs or

@@ -26,9 +26,13 @@ export function loadAirports() {
           lon,
           elevationFt,
           country,
-          runways: runways.map(([leLat, leLon, heLat, heLon, lengthFt, widthFt, surface, leId, heId]) => ({
-            leLat, leLon, heLat, heLon, lengthFt, widthFt, surface, leId, heId,
-          })),
+          runways: runways.map(
+            ([leLat, leLon, heLat, heLon, lengthFt, widthFt, surface, leId, heId, leDisp, heDisp]) => ({
+              leLat, leLon, heLat, heLon, lengthFt, widthFt, surface, leId, heId,
+              leDisplacedFt: leDisp ?? 0,
+              heDisplacedFt: heDisp ?? 0,
+            }),
+          ),
         }));
         return index;
       });
@@ -70,24 +74,124 @@ export function nearestAirports(lat, lon, count = 8, withinKm = 60) {
 }
 
 /**
- * Where a field lies, for drawing it: the longest runway's bearing and length.
- * The map wants the same two numbers the start lines up on, so both take them
- * from here rather than working them out twice.
+ * The longest runway, straightened out: where its middle is, which way it
+ * points, and how long it is. Everything that needs to know where a field
+ * lies — the map tick and the place you start from — takes it from here, so
+ * that the two can never disagree.
+ *
+ * OurAirports is a crowd-sourced index, and its two end coordinates are the
+ * weakest thing in it. Three corrections, in order of how sure they are:
+ *
+ * 1. **The length is the declared one.** `length_ft` is the published runway
+ *    length; the distance between the two end coordinates is whatever the
+ *    person who plotted them managed. They disagree by more than forty metres
+ *    on one surveyed single-runway field in six. The published number wins,
+ *    and the line is trimmed to it about its own middle.
+ *
+ * 2. **A line that cannot measure itself cannot place itself either.** When
+ *    those two lengths disagree by more than forty metres the end coordinates
+ *    are demonstrably wrong, and the only other evidence about where the
+ *    field is sits in the airport record. If that point is between ten and a
+ *    hundred and fifty metres to one side of the line, the line is slid
+ *    sideways onto it. Outside that band it is left alone: at ten metres
+ *    there is nothing to win, and past a hundred and fifty the airport point
+ *    is the terminal building and not the runway at all.
+ *
+ *    This is Aix-les-Milles, where the pilot who reported standing in the
+ *    grass was standing in the grass. Measured against the IGN orthophoto,
+ *    OurAirports' line for LFMA runs fifty-seven metres east of the pavement
+ *    and ninety-seven metres long; the airport point is sixty metres west of
+ *    that line, which is to say on the centreline, within the accuracy of
+ *    the measurement. Two independent errors do not agree like that.
+ *
+ * 3. **The displaced threshold is published data we were throwing away.**
+ *    Nearly one runway in eleven has one, and at LFMA it is fifty metres.
  */
-export function runwayMark(airport) {
+export function runwayLine(airport) {
   const runway = airport.runways[0];
   if (!runway) return null;
   const scale = Math.cos((airport.lat * Math.PI) / 180);
-  const dNorth = runway.heLat - runway.leLat;
-  const dEast = (runway.heLon - runway.leLon) * scale;
+  const north = (runway.heLat - runway.leLat) * METERS_PER_DEGREE;
+  const east = (runway.heLon - runway.leLon) * METERS_PER_DEGREE * scale;
+  const span = Math.hypot(north, east);
+  const length = runway.lengthFt * FT;
+  const off = Math.abs(span - length);
+
+  // 0. A hundred and fifty rows in the index have two ends that are not two
+  //    ends of anything: the same point twice, or two points eight thousand
+  //    kilometres apart. Those are not a runway that needs correcting, they
+  //    are a runway that has to be put back by hand — around the airport
+  //    position, on the heading its number gives, which is what the build
+  //    step already does for the thousands of fields whose ends were never
+  //    surveyed at all. Within a couple of degrees, because the number is
+  //    magnetic and this is drawn true.
+  const numbered = /^\s*(\d{1,2})/.exec(runway.leId ?? '');
+  const bearing = numbered ? Number(numbered[1]) * 10 : NaN;
+  if (!(span > 1) || off > Math.max(150, length * 0.35)) {
+    if (!(bearing >= 10 && bearing <= 360)) return null;
+    const radians = (bearing * Math.PI) / 180;
+    return {
+      icao: airport.ident,
+      name: airport.name,
+      lat: airport.lat,
+      lon: airport.lon,
+      heading: bearing % 360,
+      length,
+      alongN: Math.cos(radians),
+      alongE: Math.sin(radians),
+      runway,
+      suspect: true,
+      moved: 0,
+      laidOut: true,
+    };
+  }
+
+  // Along the runway, and across it.
+  const alongN = north / span;
+  const alongE = east / span;
+  const acrossN = -alongE;
+  const acrossE = alongN;
+
+  let lat = (runway.leLat + runway.heLat) / 2;
+  let lon = (runway.leLon + runway.heLon) / 2;
+  const suspect = off > 40;
+  let moved = 0;
+  if (suspect) {
+    const offset =
+      (airport.lon - lon) * METERS_PER_DEGREE * scale * acrossE +
+      (airport.lat - lat) * METERS_PER_DEGREE * acrossN;
+    if (Math.abs(offset) > 10 && Math.abs(offset) < 150) {
+      lat += (offset * acrossN) / METERS_PER_DEGREE;
+      lon += (offset * acrossE) / (METERS_PER_DEGREE * scale);
+      moved = offset;
+    }
+  }
+
   return {
     icao: airport.ident,
     name: airport.name,
-    lat: airport.lat,
-    lon: airport.lon,
-    heading: ((Math.atan2(dEast, dNorth) * 180) / Math.PI + 360) % 360,
-    length: runway.lengthFt * FT,
+    lat,
+    lon,
+    heading: ((Math.atan2(east, north) * 180) / Math.PI + 360) % 360,
+    length,
+    alongN,
+    alongE,
+    runway,
+    suspect,
+    moved,
+    laidOut: false,
   };
+}
+
+/**
+ * Where a field lies, for drawing it. The map wants the same line the start
+ * is put on, so it asks for it rather than working it out twice.
+ */
+export function runwayMark(airport) {
+  const line = runwayLine(airport);
+  if (!line) return null;
+  const { icao, name, lat, lon, heading, length } = line;
+  return { icao, name, lat, lon, heading, length };
 }
 
 /**
@@ -95,21 +199,29 @@ export function runwayMark(airport) {
  * the caller to take from the terrain: OurAirports gives an elevation above
  * sea level and this viewer works above the ellipsoid, and the difference
  * between the two is a different number in every part of the world.
+ *
+ * Measured back from the middle of the strip rather than forward from an end
+ * coordinate, because the middle is the part of the line worth trusting: an
+ * error at either end moves it by half as much, and an error at both ends
+ * that is the same size moves it not at all.
  */
 export function startFrom(airport) {
-  const runway = airport.runways[0];
-  const mark = runwayMark(airport);
-  if (!mark) return null;
-  const heading = mark.heading;
-  // A little way in from the threshold, so the wheels are on the strip.
-  const f = Math.min(0.08, 60 / Math.max(60, runway.lengthFt * FT));
+  const line = runwayLine(airport);
+  if (!line) return null;
+  const { runway, length, alongN, alongE } = line;
+  // Far enough in to be past the piano keys and on the strip, never so far
+  // that a short field has no runway left in front of it.
+  const inset = Math.min(90, Math.max(30, length * 0.05));
+  const displaced = (runway.leDisplacedFt ?? 0) * FT;
+  const back = Math.max(length * 0.1, length / 2 - displaced - inset);
+  const scale = Math.cos((airport.lat * Math.PI) / 180);
   return {
     id: `oa-${airport.ident}`,
     name: `${airport.ident} · ${airport.name}`,
-    note: `${Math.round(runway.lengthFt * FT)} m ${runway.surface} · runway ${runway.leId || '?'}`,
-    lat: runway.leLat + (runway.heLat - runway.leLat) * f,
-    lon: runway.leLon + (runway.heLon - runway.leLon) * f,
-    heading,
+    note: `${Math.round(length)} m ${runway.surface} · runway ${runway.leId || '?'}`,
+    lat: line.lat - (back * alongN) / METERS_PER_DEGREE,
+    lon: line.lon - (back * alongE) / (METERS_PER_DEGREE * scale),
+    heading: line.heading,
     elevationFt: airport.elevationFt,
     terrainStart: true,
     onGround: true,

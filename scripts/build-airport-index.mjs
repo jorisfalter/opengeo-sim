@@ -120,11 +120,21 @@ async function main() {
     // which is a degree or two off in our region: invisible on a 600 m strip.
     const placed = le[0] !== null && he[0] !== null;
     const list = byIdent.get(r.airport_ident) ?? [];
+    // A displaced threshold is the difference between where the pavement
+    // starts and where you may touch down, and OurAirports has it for one
+    // runway in eleven. Without it the aeroplane is set down on the stopway.
+    // Both are left off the row when neither is given, because they are two
+    // more numbers on 47,000 runways and almost all of them would be zero.
+    const displaced = [
+      Math.round(num(r.le_displaced_threshold_ft) ?? 0),
+      Math.round(num(r.he_displaced_threshold_ft) ?? 0),
+    ];
     list.push([
       placed ? round(le[0], 5) : null, placed ? round(le[1], 5) : null,
       placed ? round(he[0], 5) : null, placed ? round(he[1], 5) : null,
       Math.round(length), Math.round(num(r.width_ft) ?? 0), SURFACE(r.surface),
       r.le_ident || '', r.he_ident || '',
+      ...(displaced[0] || displaced[1] ? displaced : []),
     ]);
     byIdent.set(r.airport_ident, list);
   }
@@ -152,7 +162,10 @@ async function main() {
   const payload = {
     source: 'OurAirports (ourairports.com) — publiek domein, Unlicense',
     fields: ['ident', 'name', 'lat', 'lon', 'elevationFt', 'country', 'runways'],
-    runwayFields: ['leLat', 'leLon', 'heLat', 'heLon', 'lengthFt', 'widthFt', 'surface', 'leId', 'heId'],
+    runwayFields: [
+      'leLat', 'leLon', 'heLat', 'heLon', 'lengthFt', 'widthFt', 'surface', 'leId', 'heId',
+      'leDisplacedFt', 'heDisplacedFt',
+    ],
     airports: index,
   };
   await mkdir(dirname(out), { recursive: true });

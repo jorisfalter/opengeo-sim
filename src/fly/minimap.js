@@ -328,9 +328,23 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
     if (action === 'centre') recentre();
     if (action === 'hide') api.toggle(false);
   });
+  // One flick of a trackpad is a hundred wheel events with inertia behind
+  // them, and a zoom step each took the map from the valley to the continent
+  // before the fingers had left the glass — which is what it did, and why
+  // this map kept zooming itself out.
+  //
+  // So a gesture is worth one step, however long it coasts: the events of a
+  // flick arrive back to back, and a quarter of a second of quiet ends it.
+  // Scroll again and you get another step. There are eleven zoom levels in
+  // the whole map, so one per flick is not a slow way to cross them.
+  let wheelAt = 0;
   root.addEventListener('wheel', (event) => {
     event.preventDefault();
-    setZoom(zoom + (event.deltaY < 0 ? 1 : -1));
+    if (!event.deltaY) return;
+    const now = performance.now();
+    const fresh = now - wheelAt > 250;
+    wheelAt = now;
+    if (fresh) setZoom(zoom + (event.deltaY < 0 ? 1 : -1));
   }, { passive: false });
 
   // Dragging the map. The pointer is captured, so a drag that runs off the
