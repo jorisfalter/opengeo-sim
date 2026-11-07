@@ -25,6 +25,8 @@ npm run dev   # then open /fly.html
 | `start` | a place from `src/fly/places.js` — the six airfields `lflb` `lflj` `lsgg` `lfli` `lflp` `lfhm`, or `final`, `tarentaise`, `montblanc`, `matterhorn`, `amsterdam`, `grandcanyon`, `fuji` — **or any ICAO code in the world index**, such as `eham` or `lszs`. Giving it at all skips the start menu, which is what makes a shared link land where it says |
 | `lat`, `lon`, `alt`, `hdg`, `speed` | start anywhere instead; `alt` is metres above sea level |
 | `view` | `cockpit`, `chase` or `free` |
+| `res` | how many pixels the world is drawn with per CSS pixel. The default is the screen's own, capped at 2 (phones excepted); `res=1` is Cesium's own default and what this used to do |
+| `sharpen` | a contrast-limited sharpening pass over the scene, off by default. `sharpen=0.6` is a good place to start |
 | `fdm` | `jsbsim` (the default) or `simple` for the point-mass model, which has no atmosphere and so reports true airspeed as indicated |
 
 ```
@@ -755,6 +757,75 @@ Checked away from the Alps by flying two minutes at each of several places and
 watching the ground: Mont Blanc 2209 m, the Matterhorn 3453 m, the Grand Canyon
 1577 m with 276 ft of clearance over the rim, Fuji 1262 m. Real heights
 everywhere, which is the whole claim.
+
+### How sharp the world is
+
+"Once I have landed it is very pixelated." Three things could do that, and two
+of them were ruled out by measuring rather than by reasoning about them.
+
+**The photograph is not the problem.** IGN tile level 19 is 0.209 m per pixel
+at 45° north, which is exactly BD ORTHO's 20 cm — and standing on the runway
+at Aix-les-Milles the viewer fetched 25 level-19 tiles. The full resolution
+arrives.
+
+**Anisotropic filtering is not the problem either.** It is the thing that
+saves a ground texture seen at a grazing angle, which is precisely the case
+here, and it is the first thing to suspect. Cesium already asks for the most
+the card will give: `ImageryLayer._finalizeReprojectTexture` passes
+`this._maximumAnisotropy ?? maximumSupportedAnisotropy` into the sampler.
+
+**The drawing buffer is the problem.** Cesium draws at CSS pixels by default
+and lets the browser blow the canvas up to the screen's own. Measured on a 2×
+screen: an 800×457 canvas, an **800×457 drawing buffer**, shown at 1600×914.
+A quarter of the pixels, stretched. The head-up display is text and stays
+crisp through all of that, which is exactly why the contrast is so visible —
+sharp green numbers over a soft world.
+
+What that costs, from eye height on a runway with a 75° field of view:
+
+| ground ahead | one pixel covers, 800 wide | one pixel covers, 1600 wide |
+| --- | --- | --- |
+| 15 m | 0.19 m | 0.09 m |
+| 30 m | 0.76 m | 0.37 m |
+| 60 m | 3.10 m | 1.51 m |
+
+Against a 0.209 m texel that is the whole story. At 30 m the old buffer was
+minifying the photograph 3.6×, so what you saw was a mip level well below the
+data; the full buffer minifies 1.8×, one whole mip level sharper. And at 15 m
+the full buffer is *magnifying* 2.3×, which is the honest ceiling: there you
+have run out of photograph, not out of pixels.
+
+So the world is drawn on the screen's own pixels, capped at 2×. Four times the
+fragments has to be paid for, and it is paid twice:
+
+- **MSAA drops from four samples to two.** At twice the linear resolution
+  every edge is already half as long; four samples on top is buying the same
+  thing again.
+- **FXAA goes off.** It is a blur that guesses where the edges were, and at
+  full resolution it costs more sharpness than it buys.
+
+A phone keeps what it had: its ratio is three, its fill rate is a tenth of a
+laptop's, and nine times the fragments is a slideshow. `?res=1` forces the old
+behaviour and `?res=2` the new one, which is how the two were compared.
+
+**What it still cannot do.** At 15 m ahead the full buffer is magnifying the
+photograph 2.3×, and no number of pixels puts back detail that was never
+photographed. `?sharpen=0.6` adds a sharpening pass that makes the edges
+present in the data read harder — clamped to each pixel's own neighbourhood,
+which is what keeps it from leaving the bright rim along every edge that
+makes sharpened pictures look sharpened; the same trick AMD's RCAS uses. It
+is off by default, because it is a judgement about how a picture should look
+and that belongs to whoever is looking at it. The real answer for the nearest
+twenty metres is a detail texture — tiling asphalt and grass grain blended in
+at close range, modulating the photograph's colour rather than replacing it.
+Not done.
+
+**One suspect that looked good and was not:** `scene.fog.screenSpaceErrorFactor`
+is 4, double Cesium's default, and it relaxes detail with distance. On the
+ground that sounds alarming — but the term it subtracts is
+`1 − exp(−(distance × density)²)` times that factor, and at 200 m with the
+density used here that is 0.002 against an error threshold of 1.5. It only
+bites in the far field, where it is meant to: at 5 km it subtracts 1.2.
 
 ### Time acceleration
 
