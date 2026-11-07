@@ -184,14 +184,55 @@ export function runwayLine(airport) {
 }
 
 /**
+ * The plain geometry of one runway — midpoint, heading, length — with none of
+ * the corrections `runwayLine` applies.
+ *
+ * Those corrections exist to put the *aeroplane* somewhere sensible, and two
+ * of the three only make sense for the runway a field is named after. Sliding
+ * a centreline towards the published airport reference point is right when
+ * the field is one strip and the reference point is on it; at a two-runway
+ * field the reference point sits between them, on neither. Laying a runway
+ * out around that point on the heading in its number is right when the
+ * alternative is a start position on another continent; as a line on a map it
+ * would draw a second runway straight through the terminal.
+ *
+ * So a secondary runway is drawn where the data says or it is not drawn.
+ */
+function plainLine(airport, runway) {
+  const scale = Math.cos((airport.lat * Math.PI) / 180);
+  const north = (runway.heLat - runway.leLat) * METERS_PER_DEGREE;
+  const east = (runway.heLon - runway.leLon) * METERS_PER_DEGREE * scale;
+  const span = Math.hypot(north, east);
+  const length = runway.lengthFt * FT;
+  if (!(span > 1) || Math.abs(span - length) > Math.max(150, length * 0.35)) return null;
+  return {
+    lat: (runway.leLat + runway.heLat) / 2,
+    lon: (runway.leLon + runway.heLon) / 2,
+    heading: ((Math.atan2(east, north) * 180) / Math.PI + 360) % 360,
+    length,
+  };
+}
+
+/**
  * Where a field lies, for drawing it. The map wants the same line the start
  * is put on, so it asks for it rather than working it out twice.
+ *
+ * `strips` is every runway the field has, the start's first. A large field is
+ * a layout rather than a line — Marseille has two parallel strips, Schiphol
+ * has four at three angles — and a map that draws one of them is telling you
+ * something false about where you could put down. The index has carried all
+ * of them all along; only this function was throwing them away.
  */
 export function runwayMark(airport) {
   const line = runwayLine(airport);
   if (!line) return null;
   const { icao, name, lat, lon, heading, length } = line;
-  return { icao, name, lat, lon, heading, length };
+  const strips = [{ lat, lon, heading, length }];
+  for (const runway of airport.runways.slice(1)) {
+    const extra = plainLine(airport, runway);
+    if (extra) strips.push(extra);
+  }
+  return { icao, name, lat, lon, heading, length, strips };
 }
 
 /**

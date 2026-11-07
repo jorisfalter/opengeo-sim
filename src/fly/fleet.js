@@ -64,9 +64,11 @@ export const FLEET = {
     apBank: 35,
     // How high over the threshold the autopilot starts the flare.
     flareAgl: 9,
-    // Reference speeds by flap notch, for the tape.
+    // Reference speeds by flap notch, for the tape, and what each notch is
+    // called on the glass.
     vref: [150, 125, 110],
     flapDeg: [0, 15, 33],
+    flapNames: ['0', '1', '2'],
     // The shortest runway the start menu's dice will offer. A PC-24 lands on
     // gravel and grass in real life, but a random unsurveyed 400 m strip is a
     // bad first impression.
@@ -77,6 +79,20 @@ export const FLEET = {
     chase: { back: 62, up: 11, ahead: 260, follow: 2.8 },
     eye: { forward: 0, up: 1.1 },
     shape: 'pc24',
+    // What it sounds like. The numbers are the engine's, not a mixing desk's:
+    // see the note at the top of sound.js.
+    voice: {
+      core: 42,
+      coreLow: 320,
+      coreGain: [0.22, 0.55],
+      whine: [900, 2600],
+      whineQ: 9,
+      whineGain: [0.04, 0.30],
+      air: [420, 1500],
+      airGain: 0.55,
+      roll: 150,
+      beat: 0,
+    },
     title: 'PC-24 · free flight',
   },
 
@@ -119,13 +135,29 @@ export const FLEET = {
     rotateFade: 30,
     apVmo: 330,
     apMmo: 0.86,
-    apFloor: [200, 170, 150],
+    apFloor: [200, 180, 166, 155, 146],
     apBank: 25,
     // Twice the PC-24's: the main wheels are seven metres below the pilot and
     // the aeroplane takes four seconds to change its mind about anything.
     flareAgl: 18,
-    vref: [210, 175, 145],
-    flapDeg: [0, 15, 35],
+    // Five positions, not three, because the real lever has five: 0, 1, 2, 3
+    // and FULL. Two notches is enough aeroplane for a light jet, where the
+    // choice is take-off or landing; a widebody is configured in stages down
+    // the approach and collapsing that into one step throws away the thing
+    // that makes flying one feel like flying one.
+    //
+    // The angles are nine degrees apart because JSBSim's kinematic component
+    // commands a fraction of the last detent rather than a detent index: the
+    // lever sends notch/4, and 4 x 9 = 36 makes the two agree exactly. The
+    // detents themselves only set how fast it travels between them, 22
+    // seconds end to end.
+    //
+    // Reference speeds are 1.3 x the one-g stall at each setting, worked out
+    // from the lift curve in a380.xml: CLmax runs 1.26, 1.57, 1.87, 2.18,
+    // 2.48 and the stall 160, 144, 131, 122, 114 knots at 450 tonnes.
+    vref: [208, 187, 171, 158, 148],
+    flapDeg: [0, 9, 18, 27, 36],
+    flapNames: ['0', '1', '2', '3', 'FULL'],
     // 2,990 m. The measured take-off distance to screen height at 450 tonnes
     // is 2,756 m and the landing roll 862 m, so this is the take-off that
     // sets the figure, with a couple of hundred metres in hand. Anything
@@ -141,6 +173,26 @@ export const FLEET = {
     // underneath on the flare.
     eye: { forward: 28, up: 1.2 },
     shape: 'a380',
+    // A Trent 900 does not sound like a small FJ44 played louder. Its fan is
+    // 2.95 m across and turns at about 2,700 rpm against the FJ44's 16,000,
+    // so every tone in the engine lands an octave and a half lower: the
+    // fundamental is a rumble you feel more than hear, and the blade-passing
+    // whine sits near 1 kHz instead of 5. The beat is the giveaway that there
+    // are four of them — no two spools run at exactly the same speed, so the
+    // sum of them throbs slowly, which is the sound of a widebody taxiing
+    // past and of nothing else.
+    voice: {
+      core: 24,
+      coreLow: 180,
+      coreGain: [0.30, 0.62],
+      whine: [420, 1100],
+      whineQ: 5,
+      whineGain: [0.05, 0.22],
+      air: [300, 1100],
+      airGain: 0.62,
+      roll: 90,
+      beat: 0.6,
+    },
     title: 'A380 · free flight',
   },
 };

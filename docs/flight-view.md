@@ -587,6 +587,31 @@ through its own limit if you let go of the levers has no limit. The
 compressibility table now doubles the drag over the last two hundredths and
 the aeroplane simply stops at M0.90.
 
+**Five flap positions, not two.** The lever reads 0, 1, 2, 3, FULL, because
+the real one does. Two notches is enough aeroplane for a light jet, where the
+choice is take-off or landing; a widebody is configured in stages down the
+approach, and collapsing that into one step throws away the thing that makes
+flying one feel like flying one. The angles are nine degrees apart for an
+arithmetic reason worth knowing: JSBSim's `kinematic` component commands a
+*fraction of the last detent* rather than a detent index, so the cockpit sends
+notch/4 and 4 × 9 = 36 makes lever and surface agree exactly. The detents
+themselves only set the travel rate — 22 seconds clean to FULL. Reference
+speeds are 1.3 × the one-g stall at each setting, which from the lift curve
+gives 208, 187, 171, 158 and 148 knots against stalls of 160, 144, 131, 122
+and 114.
+
+**It does not sound like a PC-24 played louder.** The engine noise is
+synthesised from a handful of oscillators, and the numbers that drive them are
+the engine's. An FJ44's fan is 1.28 m across and turns at about 16,000 rpm; a
+Trent 900's is 2.95 m and turns at 2,700. Every tone follows from that ratio:
+the low spool's fundamental drops from 42 Hz to 24, and the blade-passing
+whine from roughly five kilohertz to one — which is why a business jet sounds
+like a hairdryer and a widebody sounds like weather. One term is not any
+single engine's property: four spools never run at exactly the same speed, so
+the sum of four nearly-equal tones throbs. That is the sound of a widebody
+taxiing past and of almost nothing else, and it costs one oscillator at 0.6 Hz
+wired into the core's gain.
+
 What the aeroplane changes elsewhere: the dice in the start menu will only
 roll fields with 2,990 m of hard runway — 1,033 in the world against the
 PC-24's 8,835, and 41 inside the sharp photography against 311;
@@ -716,24 +741,61 @@ measured: right pedal now gives about ten degrees a second at taxi speed, and
 the nosewheel's authority tapers off with speed so a bootful of pedal during
 the take-off roll does not put the aeroplane in the grass.
 
-### The grey slab at the border
+### The slab at the border, and the white sea
 
 Both national imagery services are published as rectangles in this viewer, and
-neither country is a rectangle. Outside its own coverage, **IGN does not answer
-with nothing — it answers with a flat grey tile**, and so does swisstopo. An
-opaque grey slab over the neighbour is what makes a frontier show up as a seam
-in the landscape, which is exactly what it looked like flying from Annemasse
-towards Geneva.
+neither country is a rectangle. Outside its own coverage a service does not
+answer with nothing, so something gets painted over the neighbour — and what
+that something is has changed twice, which is the real lesson of this section.
 
-Asking IGN for PNG instead, in the hope of transparency, returns HTTP 400: that
-layer is JPEG only. So the fix is to key the colour out. Both no-data shades
-were *measured* rather than guessed — a tile from outside the coverage was
-fetched, decoded and its average colour read: IGN's is `rgb(215,216,214)` and
-swisstopo's `rgb(160,161,162)` — and Cesium's `colorToAlpha` removes exactly
-those, with a tight threshold so real concrete and snow survive.
+**It used to be grey.** IGN answered out-of-coverage requests with a flat
+`rgb(215,216,214)` and swisstopo with `rgb(160,161,162)`; an opaque slab over
+the neighbour is what made a frontier show up as a seam in the landscape,
+flying from Annemasse towards Geneva. Asking IGN for PNG instead, in the hope
+of transparency, returns HTTP 400 — that layer is JPEG only — so the fix was
+to measure each shade and have Cesium's `colorToAlpha` key exactly it out.
 
-Switzerland then gets SWISSIMAGE on top at 10 cm, which is both better than the
-fallback and the reason the Geneva basin now reads properly.
+**It is white now, and the old key had quietly stopped doing anything.** The
+symptom was not a seam at a border but a sheet of white laid across the
+Mediterranean off Marseille, visible from 1,800 ft with the horizon in frame.
+Thirty tiles were fetched and decoded over Belgium, Luxembourg, Germany,
+Switzerland, Italy, Andorra, Spain, England and four stretches of open water:
+
+| What came back | Tiles |
+| --- | --- |
+| HTTP 404 | 14 |
+| A canned 1,651-byte JPEG, pure 255,255,255 in every pixel | 14 |
+| The coverage edge, 60% and 92% white | 2 |
+| **Anything grey** | **0** |
+
+The highest share of the old no-data grey in any tile was 0.038%, which is
+JPEG noise on a photograph. IGN now serves a global mosaic below zoom 13 — the
+sea is properly blue down there — the canned white tile from 13 to 15, and a
+404 from 16 up. That middle band is exactly what the far field is drawn at,
+which is why the white only ever appeared along the horizon.
+
+So the key is white, with the same tight threshold PDOK's layer has used all
+along for the same canned tile. What that costs was measured too: pure
+255,255,255 is absent from French concrete, runways, white roofs, greenhouses
+and the Camargue salt pans — 0.0000% of every tile sampled — and peaks at
+1.35% on the snowfield below the Aiguille du Midi. Those pixels turn
+transparent and show Sentinel-2 underneath, which over the Vallée Blanche is
+also snow.
+
+**swisstopo's key is gone entirely.** Twenty-four tiles at zoom 14 and 17,
+spread over the French, Italian, German and Austrian parts of its rectangle,
+all came back as real photographs. The key was dissolving nothing but real
+pixels — up to 0.94% of a tile, and 1.39% over Bern, which is inside
+Switzerland and never had a no-data tile to begin with.
+
+Switzerland still gets SWISSIMAGE on top at 10 cm, which is both better than
+the fallback and the reason the Geneva basin reads properly.
+
+The general lesson is in the dates rather than the colours: a constant
+measured off somebody else's server is a measurement with a shelf life, and
+this one outlived the thing it described. The threshold that protected real
+snow is also what kept the drift invisible — the key stopped matching
+anything, and nothing broke loudly enough to notice.
 
 ### The same trick, twice more, for the eastern Alps
 
@@ -961,6 +1023,37 @@ the map has them anywhere in the world; which ones are drawn follows the zoom
 Countries are a wall of labels), except the nearest field, which is always
 worth a line. The index is 28,000 entries, so the list is asked for again only
 when the map has moved a fifth of its width or been zoomed.
+
+**Every runway, not one per field.** The index has always carried all of
+them — four for Schiphol, two for Marseille, four for Charles de Gaulle — and
+the map was drawing the first and throwing the rest away, which tells you
+something false about where you could put down. All of them are drawn now,
+with one name per field: four labels on Schiphol say "Schiphol" four times and
+hide the layout they are labelling. The field's own runway is padded up to
+nine pixels at a wide zoom so it never disappears; the others only draw once
+they are long enough to draw to scale, because two parallel strips 500 m apart
+both padded to the minimum are one fat smudge and a lie about the layout.
+
+The corrections in `runwayLine` do *not* apply to the extra runways, and that
+is deliberate. Two of the three exist to put the *aeroplane* somewhere
+sensible. Sliding a centreline towards the published airport reference point
+is right when the field is one strip and the reference point is on it; at a
+two-runway field the reference point sits between them, on neither. Laying a
+runway out around that point on the heading in its number is right when the
+alternative is a start position on another continent; as a line on a map it
+would draw a second runway straight through the terminal. So a secondary
+runway is drawn where the data says, or it is not drawn.
+
+**The aerodrome you were parked on was the one it could not see.** Finding
+the extra runways turned up a worse bug behind them. A field is *found* by its
+reference point and *drawn* by its runways, and at a large airport those are
+nowhere near each other: Schiphol's reference point is by the terminal, six
+kilometres from the north end of the Polderbaan. Standing on 18R, zoomed in
+far enough to see it, the map searched the three kilometres around the
+aeroplane, found no field at all and drew nothing — not the runway under the
+wheels, not its name, nothing. The search now carries twelve kilometres of
+margin and the drawing clips what falls off the edge, which is the right way
+round.
 
 **One flick of a trackpad is one zoom step.** It used to be one step per
 wheel event, and a Mac trackpad sends a hundred of them with inertia behind

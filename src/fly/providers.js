@@ -41,15 +41,33 @@ export const ATTRIBUTION =
   '© OpenFlights routes and airlines ODbL';
 
 // Mainland France. It is a rectangle and France is not, so the layer is also
-// requested over Switzerland, Italy and Belgium — and outside its coverage IGN
-// does not answer with nothing, it answers with a flat grey tile. That paints
-// a slab over the neighbours and leaves a hard seam along the border.
+// requested over Switzerland, Italy, Belgium and a good deal of the
+// Mediterranean — and outside its coverage IGN does not answer with nothing.
 //
-// Both services do this, in their own shade of grey, and both were measured
-// rather than guessed: a tile from outside the coverage was decoded and its
-// colour read. Cesium can key exactly that colour out, which is why these
-// constants exist and why the threshold is tight — a wide one would also
-// dissolve real concrete and snow.
+// What it answers with has changed, and the old answer was still being keyed
+// out here long after it stopped arriving. This was measured rather than
+// argued about: 30 tiles at zoom 13 and 14, over Belgium, Luxembourg,
+// Germany, Switzerland, Italy, Andorra, Spain, England and four stretches of
+// open water, were fetched and decoded. Fourteen came back 404. Fourteen came
+// back a canned 1,651-byte JPEG that is pure 255,255,255 in every pixel. Two
+// were the coverage edge, 60% and 92% white. **Not one was grey.** The
+// highest share of the old no-data grey in any tile was 0.038%, which is
+// JPEG noise on a real photograph.
+//
+// So the grey key was keying a colour that no longer exists, while the colour
+// that does exist painted a white sheet over the sea off Marseille — visible
+// from 1,800 ft with the horizon in the frame, because the far field is drawn
+// at zoom 13 to 15 and that is exactly the band where IGN serves white rather
+// than 404. Below zoom 13 it has a global mosaic and the sea is blue; at zoom
+// 16 and up it 404s and Cesium simply shows the layer underneath.
+//
+// The key is therefore white now, with the same tight threshold PDOK's layer
+// has used all along for the same canned tile. What that costs was measured
+// too: in real French imagery, pure 255,255,255 is absent from concrete,
+// runways, white roofs, greenhouses and the Camargue salt pans — all exactly
+// 0.0000% — and peaks at 1.35% of a tile on the snowfield below the Aiguille
+// du Midi. Those pixels turn transparent and show Sentinel-2 underneath,
+// which over the Vallée Blanche is also snow.
 const FRANCE = Rectangle.fromDegrees(-5.3, 41.3, 9.7, 51.2);
 const SWITZERLAND = Rectangle.fromDegrees(5.9, 45.75, 10.55, 47.85);
 // The Netherlands plus a margin, so Cesium does not ask PDOK for tiles it has
@@ -69,8 +87,11 @@ const SOUTH_TYROL_RECTANGLE = Rectangle.fromDegrees(10.3, 46.15, 12.55, 47.15);
 // 404, which Cesium treats as no tile once the error event is swallowed — so
 // this one needs no colour keying either.
 const AT_RECTANGLE = Rectangle.fromDegrees(9.4, 46.3, 17.2, 49.1);
-const IGN_NODATA = Color.fromBytes(215, 216, 214);
-const SWISS_NODATA = Color.fromBytes(160, 161, 162);
+// The canned no-data tile, pure white, served by IGN and by PDOK alike.
+const NODATA = Color.WHITE;
+// Tight: ±1 per channel. The tile is exactly 255,255,255, so nothing wider is
+// needed and anything wider starts eating real highlights.
+const NODATA_THRESHOLD = 0.004;
 // basemap.at does the same thing in white: beyond its coverage, and at the
 // coarse levels you see from altitude, it answers with a sheet of 253,253,253
 // flecked with 255. Keying it out is only safe if real snow never lands
@@ -80,7 +101,6 @@ const SWISS_NODATA = Color.fromBytes(160, 161, 162);
 // channel. The threshold below is ±3.
 const AT_NODATA = Color.fromBytes(254, 254, 254);
 const AT_THRESHOLD = 0.012;
-const NODATA_THRESHOLD = 0.015;
 
 export const terrainProvider = () =>
   CesiumTerrainProvider.fromUrl(TERRAIN, { requestVertexNormals: true });
@@ -116,7 +136,7 @@ export function orthoLayer() {
   );
   layer.brightness = 1.04;
   layer.saturation = 1.06;
-  layer.colorToAlpha = IGN_NODATA;
+  layer.colorToAlpha = NODATA;
   layer.colorToAlphaThreshold = NODATA_THRESHOLD;
   return layer;
 }
@@ -149,8 +169,8 @@ export function dutchAerialLayer() {
   // that one colour out is what reveals the layers underneath. The threshold
   // is tighter than the grey ones because this is exactly 255,255,255 and
   // nothing in a real aerial photo is.
-  layer.colorToAlpha = Color.WHITE;
-  layer.colorToAlphaThreshold = 0.004;
+  layer.colorToAlpha = NODATA;
+  layer.colorToAlphaThreshold = NODATA_THRESHOLD;
   layer.brightness = 1.04;
   layer.saturation = 1.04;
   return layer;
@@ -246,10 +266,17 @@ export function austrianLayer() {
 }
 
 /**
- * SWISSIMAGE, 10 cm, over Switzerland. It goes on top of the IGN layer for two
- * reasons: it is the best imagery available there, and it covers the grey
- * no-data tiles IGN serves beyond its own border, which is what made the
- * frontier show as a seam in the landscape.
+ * SWISSIMAGE, 10 cm, over Switzerland. It goes on top of the IGN layer because
+ * it is the best imagery available there, and because it carries the frontier
+ * across without a seam.
+ *
+ * It used to key a grey no-data tile out as well, and that key is gone for the
+ * same reason the French one changed: swisstopo no longer serves it. Twenty-
+ * four tiles at zoom 14 and 17, spread over the parts of this rectangle that
+ * are French, Italian, German and Austrian, all came back as real photographs
+ * — none a no-data sheet. The key was therefore dissolving nothing but real
+ * pixels: up to 0.94% of a tile, and 1.39% over Bern, which is inside
+ * Switzerland and never had a no-data tile to begin with.
  */
 export function swissLayer() {
   const layer = new ImageryLayer(
@@ -261,7 +288,5 @@ export function swissLayer() {
     }),
   );
   layer.brightness = 1.02;
-  layer.colorToAlpha = SWISS_NODATA;
-  layer.colorToAlphaThreshold = NODATA_THRESHOLD;
   return layer;
 }

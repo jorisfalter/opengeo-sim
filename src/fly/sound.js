@@ -8,7 +8,33 @@
 //
 // A browser will not make a sound until somebody has tapped something, so this
 // is built on the first tap and not before.
-const CORE = 42; // Hz at idle; the fundamental of the low-pressure spool
+//
+// Which engine it is comes from `voice` in src/fly/fleet.js, and those numbers
+// are the engine's rather than a mixing desk's. A turbofan's tones are set by
+// how fast its fan turns and how many blades it has. An FJ44's fan is 1.28 m
+// across and spins at about 16,000 rpm; a Trent 900's is 2.95 m and turns at
+// 2,700. Everything follows from that ratio: the low spool's fundamental
+// drops from 42 Hz to 24, and the blade-passing whine from five kilohertz to
+// about one — which is why a business jet sounds like a hairdryer and a
+// widebody sounds like weather.
+//
+// `beat` is the only term that is not one engine's property but the fleet's.
+// Four spools never run at exactly the same speed, so what you hear is the
+// sum of four nearly-equal tones, and that sum throbs. It is the sound of a
+// widebody taxiing past and of almost nothing else, and it costs one
+// oscillator at 0.6 Hz wired into the core's gain.
+const DEFAULT_VOICE = {
+  core: 42,
+  coreLow: 320,
+  coreGain: [0.22, 0.55],
+  whine: [900, 2600],
+  whineQ: 9,
+  whineGain: [0.04, 0.30],
+  air: [420, 1500],
+  airGain: 0.55,
+  roll: 150,
+  beat: 0,
+};
 
 function noiseBuffer(ctx, seconds = 2) {
   const buffer = ctx.createBuffer(1, ctx.sampleRate * seconds, ctx.sampleRate);
@@ -30,7 +56,8 @@ const isApple = () =>
   /iPad|iPhone|iPod/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-export function createSound({ onNotice } = {}) {
+export function createSound({ onNotice, voice } = {}) {
+  const V = { ...DEFAULT_VOICE, ...(voice ?? {}) };
   let ctx = null;
   let parts = null;
   let on = false;
@@ -56,13 +83,13 @@ export function createSound({ onNotice } = {}) {
     coreGain.gain.value = 0;
     const coreFilter = ctx.createBiquadFilter();
     coreFilter.type = 'lowpass';
-    coreFilter.frequency.value = 320;
+    coreFilter.frequency.value = V.coreLow;
     coreFilter.Q.value = 0.8;
     coreFilter.connect(coreGain).connect(master);
     const oscillators = [1, 2, 3.02].map((ratio) => {
       const osc = ctx.createOscillator();
       osc.type = 'sawtooth';
-      osc.frequency.value = CORE * ratio;
+      osc.frequency.value = V.core * ratio;
       const gain = ctx.createGain();
       gain.gain.value = [0.6, 0.3, 0.14][[1, 2, 3.02].indexOf(ratio)];
       osc.connect(gain).connect(coreFilter);
@@ -75,8 +102,8 @@ export function createSound({ onNotice } = {}) {
     whineGain.gain.value = 0;
     const whine = ctx.createBiquadFilter();
     whine.type = 'bandpass';
-    whine.frequency.value = 1200;
-    whine.Q.value = 9;
+    whine.frequency.value = V.whine[0] + V.whine[1] * 0.1;
+    whine.Q.value = V.whineQ;
     noiseSource(ctx, buffer).connect(whine).connect(whineGain).connect(master);
 
     // Airflow over the airframe: broad noise, brighter the faster you go.
@@ -84,7 +111,7 @@ export function createSound({ onNotice } = {}) {
     airGain.gain.value = 0;
     const air = ctx.createBiquadFilter();
     air.type = 'bandpass';
-    air.frequency.value = 700;
+    air.frequency.value = V.air[0];
     air.Q.value = 0.6;
     noiseSource(ctx, buffer).connect(air).connect(airGain).connect(master);
 
@@ -93,7 +120,7 @@ export function createSound({ onNotice } = {}) {
     rollGain.gain.value = 0;
     const roll = ctx.createBiquadFilter();
     roll.type = 'lowpass';
-    roll.frequency.value = 150;
+    roll.frequency.value = V.roll;
     noiseSource(ctx, buffer).connect(roll).connect(rollGain).connect(master);
 
     // Stall warning: the one sound that is meant to be unpleasant.
@@ -104,6 +131,19 @@ export function createSound({ onNotice } = {}) {
     horn.frequency.value = 760;
     horn.connect(hornGain).connect(master);
     horn.start();
+
+    // The throb of engines that are not quite in step. It is wired into the
+    // core's gain as an audio-rate input, so it adds to whatever `update`
+    // sets there rather than fighting it.
+    if (V.beat > 0) {
+      const beat = ctx.createOscillator();
+      beat.type = 'sine';
+      beat.frequency.value = V.beat;
+      const depth = ctx.createGain();
+      depth.gain.value = 0.11;
+      beat.connect(depth).connect(coreGain.gain);
+      beat.start();
+    }
 
     parts = { master, coreGain, coreFilter, oscillators, whine, whineGain, air, airGain, roll, rollGain, hornGain };
   }
@@ -201,19 +241,19 @@ export function createSound({ onNotice } = {}) {
       // Spool speed follows the lever but lags it, the way a turbine does.
       const spool = 0.22 + throttle * 0.78;
       for (const { osc, ratio } of parts.oscillators) {
-        ramp(osc.frequency, CORE * ratio * (0.8 + spool * 1.5), 0.25);
+        ramp(osc.frequency, V.core * ratio * (0.8 + spool * 1.5), 0.25);
       }
-      ramp(parts.coreGain.gain, 0.22 + spool * 0.55, 0.2);
-      ramp(parts.coreFilter.frequency, 240 + spool * 520, 0.2);
+      ramp(parts.coreGain.gain, V.coreGain[0] + spool * V.coreGain[1], 0.2);
+      ramp(parts.coreFilter.frequency, V.coreLow * 0.75 + spool * V.coreLow * 1.63, 0.2);
 
-      ramp(parts.whine.frequency, 900 + spool * 2600, 0.25);
-      ramp(parts.whineGain.gain, 0.04 + spool * 0.30, 0.2);
+      ramp(parts.whine.frequency, V.whine[0] + spool * V.whine[1], 0.25);
+      ramp(parts.whineGain.gain, V.whineGain[0] + spool * V.whineGain[1], 0.2);
 
       // Airflow: roughly the square of the speed, thinner in thin air.
       const q = (kias / 250) ** 2;
       const thin = Math.max(0.35, 1 - altFt / 45000);
-      ramp(parts.airGain.gain, Math.min(0.55, q * 0.55) * thin, 0.15);
-      ramp(parts.air.frequency, 420 + Math.min(1, kias / 300) * 1500, 0.15);
+      ramp(parts.airGain.gain, Math.min(V.airGain, q * V.airGain) * thin, 0.15);
+      ramp(parts.air.frequency, V.air[0] + Math.min(1, kias / 300) * V.air[1], 0.15);
 
       const rolling = aircraft.onGround ? Math.min(1, kias / 90) : 0;
       ramp(parts.rollGain.gain, rolling * 0.35, 0.1);

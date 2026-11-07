@@ -397,7 +397,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
       nodes.touchBrake.classList.toggle('is-on', Boolean(extra.brakes));
       nodes.touchGear.textContent = a.gear ? 'Gear DOWN' : 'Gear UP';
       nodes.touchGear.classList.toggle('is-on', Boolean(a.gear));
-      nodes.touchFlaps.textContent = `Flaps ${a.flaps ?? 0}`;
+      nodes.touchFlaps.textContent = `Flaps ${a.flapLabel ?? a.flaps ?? 0}`;
       nodes.touchFlaps.classList.toggle('is-on', (a.flaps ?? 0) > 0);
       const apOn = Boolean(extra.ap) && !extra.ap.startsWith('PAUSED');
       nodes.touchAp.textContent = apOn ? 'AP ON' : 'AP off';
@@ -413,12 +413,12 @@ export function createPanel(root, { title, subtitle, attribution }) {
       // The button says which it is, not just which colour it is.
       nodes.brakeButton.textContent = extra.brakes ? 'Brake ON' : 'Brake off';
       nodes.gearButton.classList.toggle('is-on', Boolean(a.gear));
-      nodes.flapsButton.textContent = `Flaps ${a.flaps ?? 0}`;
+      nodes.flapsButton.textContent = `Flaps ${a.flapLabel ?? a.flaps ?? 0}`;
       nodes.flapsButton.classList.toggle('is-on', (a.flaps ?? 0) > 0);
       nodes.apButton.classList.toggle('is-on', Boolean(extra.ap) && !extra.ap.startsWith('PAUSED'));
       text(
         'config',
-        `${a.gear ? 'gear' : 'clean'} · flaps ${a.flaps ?? 0}${a.onGround ? ' · ground' : ''}` +
+        `${a.gear ? 'gear' : 'clean'} · flaps ${a.flapLabel ?? a.flaps ?? 0}${a.onGround ? ' · ground' : ''}` +
           `${extra.brakes ? ' · brake' : ''}${extra.speedbrake ? ' · speedbrake' : ''}`,
       );
       text('trim', `trim ${((extra.trim ?? 0) * 100).toFixed(0)}`);

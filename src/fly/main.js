@@ -522,7 +522,7 @@ async function main() {
     lommel: [51.19, 5.25, 51.27, 5.38],
   };
   const scenery = createScenery(viewer, { datum });
-  const sound = createSound({ onNotice: (message) => panel.notice(message) });
+  const sound = createSound({ onNotice: (message) => panel.notice(message), voice: type.voice });
   for (const [id, bbox] of Object.entries(SCENERY)) scenery.register(id, bbox);
 
   const mapRoot = document.createElement('div');
@@ -548,8 +548,15 @@ async function main() {
   const minimap = createMinimap(mapRoot, {
     // Every field in the index that is under the map, so the moving map shows
     // somewhere to land wherever you are and not only around the Alps.
+    // Plus twelve kilometres, because a field is *found* by its reference
+    // point and *drawn* by its runways, and at a large airport those are
+    // nowhere near each other. Schiphol's reference point sits by the
+    // terminal, six kilometres from the north end of the Polderbaan — so
+    // standing on 18R, zoomed in far enough to see it, the map searched three
+    // kilometres around the aeroplane, found no field, and drew nothing at
+    // all. The aerodrome you were parked on was the one it could not see.
     fieldsNear: (lat, lon, radiusKm, minLength) =>
-      (airportsReady() ? nearestAirports(lat, lon, 60, radiusKm) : [])
+      (airportsReady() ? nearestAirports(lat, lon, 60, radiusKm + 12) : [])
         .map(runwayMark)
         .filter(Boolean)
         // Too short to draw at this scale and it is left out — except the

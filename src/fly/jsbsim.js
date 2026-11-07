@@ -186,6 +186,10 @@ class Fdm {
     a.throttle = this.get('fcs/throttle-cmd-norm[0]');
     a.gear = this.get('gear/gear-cmd-norm') > 0.5;
     a.flaps = Math.round(this.get('fcs/flap-cmd-norm') * this.notches);
+    // What that notch is called on the glass. The PC-24 counts 0, 1, 2; the
+    // A380's lever reads 0, 1, 2, 3, FULL, and printing "flaps 4" for the
+    // last one would be the simulator's bookkeeping leaking into the cockpit.
+    a.flapLabel = this.type.flapNames?.[a.flaps] ?? String(a.flaps);
     a.brakes = this.get('fcs/left-brake-cmd-norm') > 0.5;
     // Any wheel on the ground is on the ground. Reading only the nose and the
     // left main was enough for a light jet put down on both mains at once; an

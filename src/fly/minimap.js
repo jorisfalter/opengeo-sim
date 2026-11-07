@@ -182,15 +182,35 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
       if (built.has(field.icao)) continue;
       // Never shorter than this: a runway drawn to scale at a wide zoom is
       // three pixels of dark grey on a satellite photograph of dark grey.
-      const pixels = Math.max(9, field.length / mpp / 2);
-      runway(project(field.lat, field.lon), field, pixels, '#9bd8ff');
+      const strips = field.strips ?? [field];
+      strips.forEach((strip, index) => {
+        const scaled = strip.length / mpp / 2;
+        // The field's own runway always draws, padded up to nine pixels if it
+        // has to be. The others only draw once they are long enough to draw
+        // to scale: two parallel strips 500 m apart, each padded to the
+        // minimum, are one fat smudge and a lie about the layout.
+        if (index > 0 && scaled < 12) return;
+        runway(
+          project(strip.lat, strip.lon),
+          strip,
+          Math.max(9, scaled),
+          '#9bd8ff',
+          index === 0 ? field.icao : null,
+        );
+      });
     }
 
     // The surveyed airports on top, brighter: those have a runway you can
     // actually land on rather than a line on a map.
     ctx.font = '600 14px ui-monospace, monospace';
     for (const field of airports) {
-      runway(project(field.lat, field.lon), field, Math.max(9, field.length / mpp / 2), '#ffffff');
+      runway(
+        project(field.lat, field.lon),
+        field,
+        Math.max(9, field.length / mpp / 2),
+        '#ffffff',
+        field.icao,
+      );
     }
 
     /**
@@ -198,7 +218,7 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
      * draws a road, with a cross tick at each end. Both are what makes it
      * read as a runway at a glance instead of as a scratch on the photo.
      */
-    function runway([x, y], field, pixels, colour) {
+    function runway([x, y], field, pixels, colour, name) {
       if (x < -40 || y < -40 || x > w + 40 || y > h + 40) return;
       const a = field.heading * DEG;
       const [dx, dy] = [Math.sin(a) * pixels, -Math.cos(a) * pixels];
@@ -220,7 +240,9 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
       ctx.strokeStyle = colour;
       ctx.lineWidth = 2.5;
       strip();
-      label(field.icao, x + dx + 7, y + dy - 5, colour);
+      // One name per field, on its own runway. Four labels on Schiphol say
+      // "Schiphol" four times and hide the layout they are labelling.
+      if (name) label(name, x + dx + 7, y + dy - 5, colour);
     }
 
     // The places you can start from double as landmarks.

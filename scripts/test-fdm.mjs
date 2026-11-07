@@ -67,7 +67,7 @@ export const PROFILES = {
     splits: [10000, 20000, 30000, 38000],
     stallFrom: 230,
     touchdown: 140,
-    landingFlapDeg: 35,
+    landingFlapDeg: 36,
     // The centre of gravity rests five and a half metres up on an aeroplane
     // whose wheels are two storeys tall.
     parkedAglFt: 5.6 / FT_PER_M,

@@ -254,16 +254,22 @@
     </channel>
 
     <channel name="Flaps">
-      <!-- Two notches, as everywhere else in this simulator, standing in for
-           the real aeroplane's 1/2/3/FULL: slats and flaps together, 15
-           degrees for take-off and 35 for landing. Twenty-two seconds end to
-           end, which is about what the real ones take. -->
+      <!-- The real lever's five positions — 0, 1, 2, 3, FULL — as one angle
+           standing for slats and flaps together. Nine degrees apart, because
+           JSBSim's kinematic commands a fraction of the LAST detent rather
+           than a detent index: the cockpit sends notch/4 and 4 x 9 = 36 makes
+           the lever and the surface agree exactly. The times are what makes
+           it a widebody rather than an arithmetic exercise: twenty-two
+           seconds from clean to FULL, which is about what the real ones
+           take. -->
       <kinematic name="Flaps Control">
         <input>fcs/flap-cmd-norm</input>
         <traverse>
           <setting><position>0</position><time>0</time></setting>
-          <setting><position>15</position><time>10</time></setting>
-          <setting><position>35</position><time>12</time></setting>
+          <setting><position>9</position><time>6</time></setting>
+          <setting><position>18</position><time>5</time></setting>
+          <setting><position>27</position><time>5</time></setting>
+          <setting><position>36</position><time>6</time></setting>
         </traverse>
         <output>fcs/flap-pos-deg</output>
       </kinematic>
@@ -338,9 +344,11 @@
       </function>
       <function name="aero/coefficient/CLflap">
         <description>Lift from slats and flaps</description>
-        <!-- 0.034 per degree: full flap adds 1.19, for a landing CLmax of
-             2.45 and a one-g stall at 115 kt. Vref then comes out at 141 kt,
-             which is the number in the book for this weight. -->
+        <!-- 0.034 per degree. FULL is 36 degrees and adds 1.22, for a
+             landing CLmax of 2.48 and a one-g stall at 114 kt; the five lever
+             positions then stall at 160, 144, 131, 122 and 114. Vref at FULL
+             comes out at 141 kt on the usual 1.23, which is the number in the
+             book for this weight. -->
         <product>
           <property>aero/qbar-psf</property>
           <property>metrics/Sw-sqft</property>
