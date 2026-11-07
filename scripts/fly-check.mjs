@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // Flies the browser build for real, headless, and reports the result.
 //
-//   node scripts/fly-check.mjs                     # autopilot, Chambéry to a stop
-//   node scripts/fly-check.mjs final 8             # autopilot, from short final
-//   node scripts/fly-check.mjs lflb 6 manual       # hand-flown on the stick
+//   node scripts/fly-check.mjs                       # autopilot, Chambéry to a stop
+//   node scripts/fly-check.mjs final 8               # autopilot, from short final
+//   node scripts/fly-check.mjs lflb 6 manual         # hand-flown on the stick
+//   node scripts/fly-check.mjs lfmn 8 manual a380    # the A380, hand-flown
 //
 // scripts/test-fdm.mjs checks the flight model in Node; this checks the whole
 // browser path: the WebAssembly loads, the terrain feeds the gear, and the
@@ -19,6 +20,10 @@ const minutes = Number(process.argv[3] ?? 20);
 // stick, which is the path a person actually uses and so the one that has to
 // keep working.
 const mode = process.argv[4] ?? 'auto';
+// Which aeroplane. Everything the script needs to know about it — rotate
+// speed, how high the parked centre of gravity sits — it asks the page for,
+// so this stays one word.
+const aircraft = process.argv[5] ?? 'pc24';
 const PORT = 4196;
 const CDP = 9777;
 
@@ -80,14 +85,18 @@ const evaluate = async (expression) => {
 
 await send('Runtime.enable');
 await send('Page.enable');
-await send('Page.navigate', { url: `http://127.0.0.1:${PORT}/fly.html?start=${start}&fdm=jsbsim` });
+await send('Page.navigate', {
+  url: `http://127.0.0.1:${PORT}/fly.html?start=${start}&fdm=jsbsim&aircraft=${aircraft}`,
+});
 
 // Wait for the model to load, which means WebAssembly, terrain and airports.
 for (let i = 0; i < 120; i += 1) {
   if (await evaluate('!!window.__fly')) break;
   await new Promise((r) => setTimeout(r, 1000));
 }
-const ready = await evaluate('window.__fly ? window.__fly.sim.name : null');
+const ready = await evaluate(
+  "window.__fly ? window.__fly.sim.name + ' / ' + window.__fly.type.name : null",
+);
 if (!ready) {
   console.error('vlucht niet geladen:', await evaluate("document.querySelector('#loading')?.textContent"));
   process.exit(1);
@@ -105,6 +114,8 @@ if (mode === 'manual') {
     f.setAutopilot('off');
     f.sim.setBrakes(false);
     const FT = 0.3048, DEG = 180 / Math.PI, dt = 1 / 60;
+    const rotate = f.type.rotateKias;
+    const screen = f.type.parkedCg / FT + 35;
     const marks = [];
     let t = 0, rotated = false, airborne = null, levelled = false, turning = false;
     let heading0 = null, turned = null, rolledOut = null, maxBank = 0;
@@ -116,8 +127,8 @@ if (mode === 'manual') {
       let pitch = 0, roll = 0;
 
       if (!airborne) {
-        if (a.kias > 95) { if (!rotated) { rotated = true; marks.push('rotatie op ' + Math.round(a.kias) + ' KIAS na ' + t.toFixed(0) + ' s'); } pitch = 0.9; }
-        if (agl > 35) { airborne = t; marks.push('los na ' + t.toFixed(0) + ' s, ' + Math.round(a.kias) + ' KIAS'); f.sim.setGear(false); f.sim.setFlaps(0); }
+        if (a.kias > rotate) { if (!rotated) { rotated = true; marks.push('rotatie op ' + Math.round(a.kias) + ' KIAS na ' + t.toFixed(0) + ' s'); } pitch = 0.9; }
+        if (agl > screen) { airborne = t; marks.push('los na ' + t.toFixed(0) + ' s, ' + Math.round(a.kias) + ' KIAS, pitch ' + (a.pitch * DEG).toFixed(1) + '°'); f.sim.setGear(false); f.sim.setFlaps(0); }
       } else if (!levelled) {
         // Hold about twelve degrees on the stick, then push over at 8000 ft.
         const want = (a.alt - f.datum) / FT > 8000 ? 2 : 12;
@@ -176,8 +187,9 @@ const flown = await evaluate(`(async () => {
     const a = f.aircraft;
     const nav = f.sim.routeAutopilot(f.navState);
     // Full thrust and a take-off rotation until the autopilot's legs take over.
-    const input = !airborne && a.onGround && a.kias < 110
-      ? { attitude: { pitch: a.kias > 95 ? 0.14 : 0, bank: 0 }, throttle: 1 }
+    const rotate = f.type.rotateKias;
+    const input = !airborne && a.onGround && a.kias < rotate * 1.16
+      ? { attitude: { pitch: a.kias > rotate ? 0.14 : 0, bank: 0 }, throttle: 1 }
       : nav;
     if (input.config) {
       if (input.config.gear !== a.gear) f.sim.setGear(input.config.gear);

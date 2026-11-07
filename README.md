@@ -7,11 +7,12 @@ national open geodata.
   Lelylaan, over PDOK terrain, 8 cm aerial photography and LoD 2.2 buildings,
   with the track itself built from the ProRail import in OpenStreetMap and
   heights sampled from AHN at 1 m.
-- **`fly.html`** — a light jet **you fly yourself**, on **JSBSim**:
-  FlightGear's flight dynamics engine, compiled to WebAssembly and running at
-  120 Hz, on a PC-24 model written for this project and checked against the
-  published figures. Start on the runway at Chambéry-Savoie, on the 18.6%
-  slope at Courchevel Altiport, or anywhere on earth — the terrain and the
+- **`fly.html`** — a light jet or a 450-tonne widebody **you fly yourself**, on
+  **JSBSim**: FlightGear's flight dynamics engine, compiled to WebAssembly and
+  running at 120 Hz, on PC-24 and A380 models written for this project and
+  checked against the published figures. Start on the runway at
+  Chambéry-Savoie, on the 18.6% slope at Courchevel Altiport, or anywhere on
+  earth — the terrain and the
   satellite imagery are global, and the two Alpine runways are built from OSM
   outlines and IGN elevations. Keyboard, mouse yoke or gamepad; the autopilot
   is a button, not the default.

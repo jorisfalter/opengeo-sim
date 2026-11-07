@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<!--
+  Rolls-Royce Trent 970, as flown on the A380-800: 70,000 lbf flat rated,
+  bypass ratio 8.7. Four of them.
+
+  Same shape of model as the FJ44 next door — thrust falls off with altitude
+  and with Mach — but a high-bypass engine does both differently, and the
+  difference is the whole character of the aeroplane. A small-bypass business
+  jet engine loses about 9% of its static thrust by M0.4 at sea level; this one
+  loses 23%, because most of its thrust comes from a fan pushing a great deal
+  of air slowly, and air that is already moving past the aeroplane at 265 knots
+  cannot be pushed much faster. That is why a widebody's take-off acceleration
+  tails off the way it does, and why the first thousand feet is flown at a
+  pitch attitude that would be absurd in the PC-24.
+
+  The lapse with altitude is gentler than the FJ44's in relative terms at the
+  top: 24% of static thrust at FL370 against the FJ44's 25% at FL400 — these
+  engines are sized for a cruise that happens up there.
+
+  Checked against the one number that can be checked from outside: cruise fuel
+  flow. At M0.85 and FL370 the table gives 17,100 lbf per engine available,
+  the airframe needs 48,900 lbf to hold level at 450 t, so the four sit at 71%
+  — and 0.53 lb/lbf/h of that is 10.5 tonnes an hour, which is what an A380
+  burns at that weight.
+-->
+<turbine_engine name="Trent 970">
+  <milthrust unit="LBS">70000</milthrust>
+  <bypassratio>8.7</bypassratio>
+  <!-- Static, not cruise: JSBSim scales this with the thrust tables, and the
+       cruise figure of 0.53 falls out of the lapse above. -->
+  <tsfc>0.30</tsfc>
+  <bleed>0.04</bleed>
+  <idlen1>20.0</idlen1>
+  <idlen2>58.0</idlen2>
+  <maxn1>100.0</maxn1>
+  <maxn2>100.0</maxn2>
+  <augmented>0</augmented>
+  <injected>0</injected>
+
+  <function name="IdleThrust">
+    <table>
+      <independentVar lookup="row">velocities/mach</independentVar>
+      <independentVar lookup="column">atmosphere/density-altitude</independentVar>
+      <tableData>
+                 0     10000    25000    40000
+        0.00  0.050    0.038    0.026    0.015
+        0.40  0.042    0.033    0.024    0.015
+        0.85  0.050    0.040    0.029    0.019
+      </tableData>
+    </table>
+  </function>
+
+  <function name="MilThrust">
+    <table>
+      <independentVar lookup="row">velocities/mach</independentVar>
+      <independentVar lookup="column">atmosphere/density-altitude</independentVar>
+      <tableData>
+                 0     10000    25000    40000    45000
+        0.00  1.000    0.700    0.400    0.215    0.165
+        0.20  0.860    0.625    0.375    0.208    0.160
+        0.40  0.770    0.575    0.355    0.202    0.156
+        0.60  0.730    0.555    0.350    0.202    0.156
+        0.85  0.760    0.580    0.370    0.213    0.164
+      </tableData>
+    </table>
+  </function>
+</turbine_engine>

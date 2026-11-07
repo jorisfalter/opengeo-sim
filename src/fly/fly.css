@@ -1234,6 +1234,54 @@ body {
   color: var(--fly-text);
 }
 
+/* Which aeroplane. Two cards above the regions, because the choice changes
+   what the dice below are allowed to roll: an A380 needs three kilometres of
+   runway and the pool of fields that have one is a twentieth the size. */
+.fly-start__fleet {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.fly-start__fleet button {
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  border: 1px solid var(--fly-line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--fly-muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fly-start__fleet button strong {
+  color: var(--fly-text);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+.fly-start__fleet button span {
+  font-size: 11px;
+}
+
+.fly-start__fleet button:hover {
+  border-color: var(--fly-accent);
+}
+
+.fly-start__fleet button.is-on {
+  border-color: var(--fly-accent);
+  background: rgba(94, 200, 242, 0.14);
+}
+
+.fly-start__fleet button.is-on span {
+  color: var(--fly-text);
+}
+
 .fly-start__dice {
   display: flex;
   flex-wrap: wrap;

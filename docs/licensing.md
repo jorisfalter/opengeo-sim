@@ -31,11 +31,13 @@ project, so it is worth being precise about what:
 
 What would *not* work is taking aircraft definitions out of FlightGear's
 library: those are GPL, and shipping them would pull the GPL over the whole
-distribution. That is the reason `public/fdm/aircraft/pc24/pc24.xml` and
-`public/fdm/engine/fj44.xml` were written from published performance figures
-instead of adapted from an existing model. Writing them took an afternoon and
-keeps the project MIT; it is the single most consequential licensing decision in
-the repository.
+distribution. That is the reason `public/fdm/aircraft/pc24/pc24.xml`,
+`public/fdm/aircraft/a380/a380.xml` and the two engine files beside them were
+written from published performance figures instead of adapted from an existing
+model. Writing the first took an afternoon and keeps the project MIT; it is the
+single most consequential licensing decision in the repository. Writing the
+second took rather less, which is the usual shape of this kind of decision: the
+cost is paid once and the discipline is free afterwards.
 
 ## Data: ODbL is the one that actually constrains
 
@@ -112,9 +114,9 @@ for the Netherlands and France, higher resolution.
 JSBSim is the library, designed to be linked, and taking it is the supported
 path. FlightGear around it is **GPL**, and GPL code in an MIT project makes the
 whole thing GPL. So nothing from FlightGear is in this repository: not aircraft
-definitions, not scenery code, not the `apt.dat` airport database. The PC-24
-and its engine were written from published performance figures and validated
-against them in `scripts/test-fdm.mjs`.
+definitions, not scenery code, not the `apt.dat` airport database. The PC-24,
+the A380 and their engines were written from published performance figures and
+validated against them in `scripts/test-fdm.mjs`.
 
 The distinction is worth stating because it is easy to blur. Linking a library
 that was written to be linked is one thing; copying someone's content out of a

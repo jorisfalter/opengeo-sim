@@ -26,9 +26,12 @@ in a different build of that file and the simulator uses it. So the LGPL applies
 to that file and this project's own code stays MIT.
 
 The aircraft and engine definitions in `public/fdm/aircraft` and
-`public/fdm/engine` are this project's own work, written against published
-figures rather than adapted from FlightGear's aircraft library — which is why
-they are MIT too, and why they were written from scratch rather than copied.
+`public/fdm/engine` — the PC-24 with its FJ44s and the A380 with its Trent 900s
+— are this project's own work, written against published figures rather than
+adapted from FlightGear's aircraft library, which is why they are MIT too. The
+same goes for the meshes in `src/fly/aircraft.js`: both aeroplanes are a few
+dozen numbers rather than a downloaded model, and the licence question never
+arises.
 
 ## Geodata
 

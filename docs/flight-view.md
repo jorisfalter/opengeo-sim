@@ -22,6 +22,8 @@ npm run dev   # then open /fly.html
 
 | Parameter | Meaning |
 | --- | --- |
+| `aircraft` | `pc24` (the default) or `a380`. The start menu asks as well |
+| `traffic` | `1` puts other people's aeroplanes in the sky from the start; otherwise they are off and `T` switches them on |
 | `start` | a place from `src/fly/places.js` — the six airfields `lflb` `lflj` `lsgg` `lfli` `lflp` `lfhm`, or `final`, `tarentaise`, `montblanc`, `matterhorn`, `amsterdam`, `grandcanyon`, `fuji` — **or any ICAO code in the world index**, such as `eham` or `lszs`. Giving it at all skips the start menu, which is what makes a shared link land where it says |
 | `lat`, `lon`, `alt`, `hdg`, `speed` | start anywhere instead; `alt` is metres above sea level |
 | `view` | `cockpit`, `chase` or `free` |
@@ -31,6 +33,7 @@ npm run dev   # then open /fly.html
 
 ```
 /fly.html?start=lflj                     on the slope at Courchevel
+/fly.html?start=lfpg&aircraft=a380       an A380 on 26R at Charles de Gaulle
 /fly.html?lat=46.02&lon=7.75&alt=4200    somewhere above the Valais
 ```
 
@@ -377,7 +380,8 @@ from FlightGear's aircraft library — which matters for the licence, see
 polar with a compressibility rise, and a turbine with an altitude lapse table.
 
 `npm run test:fdm` flies it headless in Node and prints what it does, which is
-how the numbers below were tuned. Against Pilatus' figures:
+how the numbers below were tuned — `npm run test:fdm a380` flies the other one.
+Against Pilatus' figures:
 
 | | Book | Model |
 | --- | --- | --- |
@@ -510,6 +514,90 @@ Eindhoven 2.08 → 1.92, Kiewit 2.12 → 1.90 and dead still, Chambéry 1.90 and
 dead still. Zwartberg is the one that still moves, 2.08 → 2.02 with a tenth of
 a metre of ringing afterwards; the aeroplane there appears not to come to rest
 at all, which is a slope and a locked wheel and not this.
+
+### The second aeroplane
+
+An A380, on the same JSBSim, from the same start menu. `?aircraft=a380`, or
+the two cards at the top of the menu.
+
+Adding it was mostly an exercise in finding out how much of the simulator
+believed it was a PC-24. The answer was about thirty numbers, in nine files:
+the rotate speed in a notice, the reference speeds on the tape, VMO and MMO
+inside the overspeed protection, the stick rates, the inner loop's gains,
+how far behind the chase camera sits, how high the centre of gravity rests
+when parked, how long a runway the dice may roll. None of them was wrong.
+All of them were literals, which is the right way to write the first
+aeroplane and the wrong way to write the second.
+
+They now live in `src/fly/fleet.js`, one entry per type, and the rule is that
+no number which would change if you swapped the aeroplane may live anywhere
+else. What is *not* in there is aerodynamics: that stays in `public/fdm`, in
+JSBSim's own XML. The fleet file is what the viewer needs to know about the
+aeroplane JSBSim is flying.
+
+`public/fdm/aircraft/a380/a380.xml` and `public/fdm/engine/trent900.xml` are
+written the same way as the PC-24's — from published figures, not from
+FlightGear — and `npm run test:fdm a380` flies them headless. At 450 tonnes,
+which is a real long-haul take-off weight rather than the 575 t maximum:
+
+| | Book | Model |
+| --- | --- | --- |
+| Rotate | ~150 KIAS | 150 KIAS after 1,668 m of roll |
+| Initial climb | 2,500–3,000 fpm | 2,806 fpm at 1,000 ft |
+| To FL390 | 20–25 min | 22.8 min |
+| Cruise | M0.85, ~490 KTAS at FL370 | M0.871, 500 KTAS at 85% |
+| Mmo | M0.89 | will not pass M0.899 at full thrust |
+| Stall, clean | ~160 KIAS | 160 KIAS at 15.3° alpha |
+| Stall, landing | ~115 KIAS | 111 KIAS |
+| Landing roll | ~900 m, dry | 859 m from 140 KIAS, flat |
+
+**Why 450 tonnes and not 575.** At 450 t the cruise lift coefficient is 0.46,
+and the wing's best lift-to-drag ratio of 20 falls at CL 0.47. The aeroplane
+is therefore flying at its own design point, which is where an A380 is
+interesting. At the maximum weight half the runways in the index would be too
+short, and empty it is a glider with four engines bolted on.
+
+**The drag coefficient is half the PC-24's, and that is not a typo.** CD0 is
+an equivalent flat-plate area divided by the wing area. The A380 has about
+thirteen times the PC-24's flat plate and twenty-seven times its wing, so it
+comes out at 0.0115 against 0.023 — which is the whole reason it holds L/D 20
+where the light jet manages 14. Large aeroplanes are cleaner by this measure.
+It reads like a mistake and it is the opposite of one.
+
+**The engines were buried in the runway.** The legs were drawn from published
+heights; the model settled with its centre of gravity 4.43 m up, and the
+bottom of the inboard nacelles is 5.04 m below the centreline, so they were
+sitting 60 cm under the concrete. Nothing showed it, because nothing draws
+the wheels and from outside the aeroplane merely looked low. The fix is not
+a fudge factor: let the model settle, read `position/h-agl-ft` back, and make
+the leg the length that puts the resting height where the geometry says it
+belongs. 249 inches, resting at 5.68 m, 64 cm of daylight under the engines.
+
+**A gain that suits six tonnes makes four hundred and fifty porpoise.** The
+A380 gets about a *tenth* of the PC-24's pitch acceleration per degree of
+elevator — 36 million slug-feet-squared of inertia against 19,500 — so the
+attitude loop runs at lower proportional gain and double the rate damping.
+The stick rates come down with it: 3.5°/s of pitch and 14°/s of roll against
+7 and 45. That is the aeroplane, not a limiter. Asking a 260-foot span for 45
+degrees a second gets you full aileron and twelve.
+
+**The Mach limit had to be made real.** With a gentle drag rise past MMO, full
+thrust at FL370 reached M0.91 and kept going, and an aeroplane that will fly
+through its own limit if you let go of the levers has no limit. The
+compressibility table now doubles the drag over the last two hundredths and
+the aeroplane simply stops at M0.90.
+
+What the aeroplane changes elsewhere: the dice in the start menu will only
+roll fields with 2,990 m of hard runway — 1,033 in the world against the
+PC-24's 8,835, and 41 inside the sharp photography against 311;
+the chase camera sits 180 m back instead of 62; and the cockpit eye is 28 m
+ahead of the centre of gravity instead of on top of it, taken in the
+aeroplane's own frame, which is why the nose wheel goes somewhere other than
+where you are looking.
+
+What it does not do: the Courchevel route under `R` is a PC-24's flight plan,
+with a 500 m runway at the end of it. The A380 will fly the legs and the
+arrival is a joke. Nothing stops you.
 
 ### Two control laws
 
@@ -895,6 +983,13 @@ flight data and the scene needs the budget more.
 ### Other people's aeroplanes
 
 `T`, or the Traffic button. Real airlines on real city pairs, flown by nobody.
+
+**Off by default**, and that is a judgement rather than an oversight. Other
+people's aeroplanes are a good thing to know are there and almost never a
+thing you look at: three miles of air turns an airliner into four pixels, and
+the route table that decides where those pixels go is a megabyte fetched
+before the first frame. So nothing is fetched until `T` is pressed, and
+`?traffic=1` is there for anyone who wants it from the start.
 
 `scripts/build-routes.mjs` joins **OpenFlights**' route and airline databases
 to OurAirports' positions and writes 48,753 routes, 445 airlines and 2,804

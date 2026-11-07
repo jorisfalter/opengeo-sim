@@ -1,15 +1,22 @@
-// A PC-24, built here rather than downloaded.
+// The aeroplanes, built here rather than downloaded.
 //
-// The outside view is the only thing that sees it, but boxes were not doing
+// The outside view is the only thing that sees them, but boxes were not doing
 // the shape justice — a light jet is a tapered tube with swept wings and a
-// T-tail, and none of those is a box. So the mesh is authored: a lofted
+// T-tail, and none of those is a box. So the meshes are authored: a lofted
 // fuselage through a dozen stations, wings with sweep, taper, dihedral and
 // thickness, nacelles, fin and stabiliser.
 //
-// Writing it beats finding one. Free aircraft models exist, but the good ones
-// come out of FlightGear and X-Plane and carry GPL or worse; this is a few
-// dozen numbers and the licence question never arises. Dimensions follow the
-// published PC-24: 16.85 m long, 17.0 m span, 5.4 m tall.
+// Writing them beats finding them. Free aircraft models exist, but the good
+// ones come out of FlightGear and X-Plane and carry GPL or worse; these are a
+// few dozen numbers each and the licence question never arises. Dimensions
+// follow the published aircraft: the PC-24 is 16.85 m long, 17.0 m span and
+// 5.4 m tall; the A380 is 72.72 m, 79.75 m and 24.1 m.
+//
+// Everything below the helpers is data. Adding the second aeroplane added one
+// entry to SHAPES and three helpers — a box, a shift and a nacelle that takes
+// its dimensions instead of knowing them — and changed no geometry code at
+// all, which is the test of whether the first aeroplane was written as a shape
+// or as a special case.
 import {
   BoundingSphere,
   Cartesian3,
@@ -131,33 +138,116 @@ function panel({ rootX, rootChord, rootZ, tipY, sweep, tipChord, dihedral, thick
   return mirror ? [...build(1), ...build(-1)] : build(1);
 }
 
+/** A rectangular box, for struts and pylons: six quads, wound outwards. */
+function box([x0, x1], [y0, y1], [z0, z1]) {
+  const p = (x, y, z) => [x, y, z];
+  return [
+    [p(x1, y0, z0), p(x1, y1, z0), p(x1, y1, z1), p(x1, y0, z1)],
+    [p(x0, y1, z0), p(x0, y0, z0), p(x0, y0, z1), p(x0, y1, z1)],
+    [p(x0, y0, z0), p(x1, y0, z0), p(x1, y0, z1), p(x0, y0, z1)],
+    [p(x1, y1, z0), p(x0, y1, z0), p(x0, y1, z1), p(x1, y1, z1)],
+    [p(x0, y0, z1), p(x1, y0, z1), p(x1, y1, z1), p(x0, y1, z1)],
+    [p(x0, y1, z0), p(x1, y1, z0), p(x1, y0, z0), p(x0, y0, z0)],
+  ];
+}
+
+/** Moves a set of faces bodily. Winglets are fins that live out at the tip. */
+const shift = (faces, [dx, dy, dz]) =>
+  faces.map((face) => face.map(([x, y, z]) => [x + dx, y + dy, z + dz]));
+
+/**
+ * Stands a panel on end, so a wing becomes a fin: the span direction becomes
+ * height and the thickness direction becomes span. `base` is the z the root
+ * was drawn at, and the height it then stands on.
+ */
+const upright = (faces, base) =>
+  faces.map((face) => face.map(([x, y, z]) => [x, z - base, y + base]));
+
+/**
+ * A podded engine: five rings from the intake lip to the exhaust.
+ *
+ * The proportions are one engine's, measured off the PC-24 nacelle this
+ * started as — lip at 47% of the maximum radius, full width 9% of the length
+ * aft of it, the fan case from there to two thirds back, then a taper to 53%
+ * at the jet pipe. Scaling those by length and radius is what makes a 2.95 m
+ * Trent and a 1.28 m FJ44 both look like what they are.
+ */
+function nacelle({ front, length, radius, y, z }) {
+  const stations = [
+    [0, 0.47], [0.09, 0.97], [0.66, 1.0], [0.88, 0.81], [1.0, 0.53],
+  ];
+  const rings = stations.map(([along, scale]) =>
+    ring(front - along * length, radius * scale, z, SIDES).map(([x, ry, rz]) => [x, ry + y, rz]),
+  );
+  return loft(rings);
+}
+
 const SIDES = 12;
 
 // Fuselage stations: x, radius, centreline height. The tail lifts, the way a
 // jet's does to clear the ground on rotation.
-const FUSELAGE = [
+const PC24_FUSELAGE = [
   [8.35, 0.06, 0.05], [8.0, 0.38, 0.03], [7.4, 0.66, 0.0], [6.5, 0.86, 0.0],
   [5.2, 0.96, 0.0], [2.0, 1.0, 0.0], [-1.5, 1.0, 0.0], [-3.4, 0.93, 0.08],
   [-5.2, 0.74, 0.3], [-6.8, 0.5, 0.6], [-8.0, 0.22, 0.85], [-8.5, 0.06, 0.95],
 ];
 
-function nacelle(y) {
-  const rings = [
-    ring(-2.3, 0.30, 0.55, SIDES), ring(-2.6, 0.62, 0.55, SIDES),
-    ring(-4.4, 0.64, 0.55, SIDES), ring(-5.1, 0.52, 0.55, SIDES),
-    ring(-5.5, 0.34, 0.55, SIDES),
-  ].map((r) => r.map(([x, ry, rz]) => [x, ry + y, rz]));
-  // Pylon from the nacelle to the fuselage side.
+/** The PC-24's engines: a nacelle on the fuselage side, on a short pylon. */
+function pc24Engine(y) {
   const pylon = panel({
     rootX: -3.0, rootChord: 1.6, rootZ: 0.55, tipY: y, sweep: 0.3,
     tipChord: 1.3, dihedral: 0, thick: 0.16, mirror: false,
   });
-  return [...loft(rings), ...pylon];
+  return [...nacelle({ front: -2.3, length: 3.2, radius: 0.64, y, z: 0.55 }), ...pylon];
 }
 
-export function addAircraft(viewer) {
-  const parts = [
-    { colour: WHITE, faces: loft(FUSELAGE.map(([x, r, z]) => ring(x, r, z, SIDES, 0.92))) },
+// The A380's fuselage: 7.14 m wide and 8.41 m tall, which is the one dimension
+// that gives the aeroplane away from any angle. A ring is drawn round in y and
+// scaled in z, so the squash factor is 4.205 / 3.57.
+const A380_FUSELAGE = [
+  [36.1, 0.25, 1.05], [35.0, 1.15, 0.85], [33.0, 2.15, 0.5], [30.5, 2.95, 0.2],
+  [27.0, 3.35, 0.0], [22.0, 3.57, 0.0], [10.0, 3.57, 0.0], [-5.0, 3.57, 0.0],
+  [-14.0, 3.5, 0.1], [-20.0, 3.2, 0.4], [-25.0, 2.6, 0.9], [-29.5, 1.8, 1.5],
+  [-33.5, 0.9, 2.1], [-36.6, 0.15, 2.5],
+];
+
+// Where the wing is, in one place, because the engines hang off it and have to
+// follow it: leading edge at the root, chord, how far aft and how far up the
+// tip goes, and the semi-span.
+const A380_WING = {
+  rootX: 12.1, rootChord: 17.7, rootZ: -2.4, tipY: 39.9, sweep: 27.9, dihedral: 3.6,
+};
+
+/**
+ * One of the A380's four engines, hung under the wing on a pylon.
+ *
+ * The engine's station and height are worked out from the wing rather than
+ * written down, because the wing sweeps back 28 m and rises 3.6 m over its
+ * semi-span: an outboard engine on an inboard engine's coordinates would hang
+ * in the air eight metres ahead of the leading edge. `fraction` is how far out
+ * along the span it sits.
+ */
+function a380Engine(side, fraction, { radius, length, drop }) {
+  const w = A380_WING;
+  const y = side * w.tipY * fraction;
+  const leadingEdge = w.rootX - w.sweep * fraction;
+  const wingZ = w.rootZ + w.dihedral * fraction;
+  const z = wingZ - drop;
+  const front = leadingEdge + radius * 2.0;
+  return [
+    ...nacelle({ front, length, radius, y, z }),
+    // Pylon: a slab from the top of the nacelle up into the wing.
+    ...box(
+      [front - length * 0.75, front - length * 0.1],
+      [y - 0.45, y + 0.45],
+      [z + radius * 0.6, wingZ + 0.4],
+    ),
+  ];
+}
+
+const SHAPES = {
+  pc24: () => [
+    { colour: WHITE, faces: loft(PC24_FUSELAGE.map(([x, r, z]) => ring(x, r, z, SIDES, 0.92))) },
     {
       colour: WHITE,
       faces: panel({
@@ -167,11 +257,14 @@ export function addAircraft(viewer) {
     },
     {
       colour: TRIM,
-      faces: panel({
-        // The fin, drawn as a wing standing on its root.
-        rootX: -4.6, rootChord: 3.0, rootZ: 0.8, tipY: 3.5,
-        sweep: 1.9, tipChord: 1.5, dihedral: 0, thick: 0.22, mirror: false,
-      }).map((face) => face.map(([x, y, z]) => [x, z - 0.8, y + 0.8])),
+      faces: upright(
+        panel({
+          // The fin, drawn as a wing standing on its root.
+          rootX: -4.6, rootChord: 3.0, rootZ: 0.8, tipY: 3.5,
+          sweep: 1.9, tipChord: 1.5, dihedral: 0, thick: 0.22, mirror: false,
+        }),
+        0.8,
+      ),
     },
     {
       colour: WHITE,
@@ -180,7 +273,7 @@ export function addAircraft(viewer) {
         sweep: 0.8, tipChord: 0.95, dihedral: 0.1, thick: 0.18,
       }),
     },
-    { colour: METAL, faces: [...nacelle(1.6), ...nacelle(-1.6)] },
+    { colour: METAL, faces: [...pc24Engine(1.6), ...pc24Engine(-1.6)] },
     {
       colour: GLASS,
       // Windscreen: a short wedge over the nose.
@@ -191,7 +284,110 @@ export function addAircraft(viewer) {
       // Cheatline along the waist, a thin ring segment either side.
       faces: loft([ring(5.0, 1.0, -0.22, SIDES, 0.14), ring(-2.0, 1.02, -0.22, SIDES, 0.14)]),
     },
-  ];
+  ],
+
+  a380: () => {
+    const w = A380_WING;
+    // 2.33 m below the wing at that station puts the inboard nacelle's
+    // centre 3.56 m under the fuselage centreline, where a380.xml hangs its
+    // engines, and leaves 0.76 m of daylight under it when parked.
+    const engine = { radius: 1.48, length: 7.3, drop: 2.33 };
+    return [
+      { colour: WHITE, faces: loft(A380_FUSELAGE.map(([x, r, z]) => ring(x, r, z, SIDES, 1.178))) },
+      {
+        colour: WHITE,
+        faces: panel({
+          rootX: w.rootX, rootChord: w.rootChord, rootZ: w.rootZ, tipY: w.tipY,
+          sweep: w.sweep, tipChord: 4.0, dihedral: w.dihedral, thick: 1.3,
+        }),
+      },
+      {
+        // Winglets: short fins standing on the wing tip, which is 28 m aft of
+        // the root and 3.6 m above it.
+        colour: WHITE,
+        faces: [1, -1].flatMap((side) =>
+          shift(
+            upright(
+              panel({
+                rootX: 0, rootChord: 3.6, rootZ: 0, tipY: 3.4,
+                sweep: 1.4, tipChord: 2.0, dihedral: 0, thick: 0.35, mirror: false,
+              }),
+              0,
+            ),
+            [w.rootX - w.sweep, side * w.tipY, w.rootZ + w.dihedral],
+          ),
+        ),
+      },
+      {
+        colour: TRIM,
+        faces: upright(
+          panel({
+            // The fin: 14 m of it, standing on the top of the fuselage.
+            rootX: -24.0, rootChord: 12.0, rootZ: 3.2, tipY: 14.2,
+            sweep: 9.0, tipChord: 4.5, dihedral: 0, thick: 0.9, mirror: false,
+          }),
+          3.2,
+        ),
+      },
+      {
+        colour: WHITE,
+        faces: panel({
+          // Horizontal stabiliser, bigger than a 737's whole wing.
+          rootX: -27.0, rootChord: 8.5, rootZ: 0.6, tipY: 15.2,
+          sweep: 7.0, tipChord: 3.0, dihedral: 0.4, thick: 0.6,
+        }),
+      },
+      {
+        colour: METAL,
+        faces: [1, -1].flatMap((side) => [
+          ...a380Engine(side, 0.326, engine),
+          ...a380Engine(side, 0.639, engine),
+        ]),
+      },
+      {
+        colour: GLASS,
+        // The flight deck, eight metres back from the nose and tucked between
+        // the two passenger decks.
+        faces: loft([
+          ring(34.0, 1.85, 1.5, SIDES, 0.40),
+          ring(31.4, 2.75, 1.4, SIDES, 0.32),
+        ]),
+      },
+      {
+        colour: TRIM,
+        // Two cheatlines, one along each deck. On this aeroplane that is not
+        // decoration: a single band reads as a narrowbody with a very large
+        // tail, and two is the only thing that says double-decker.
+        //
+        // Both stay inside the parallel middle of the fuselage, 24 m forward
+        // of the centre of gravity to 16 m aft. The first version ran them up
+        // to the flight deck, where the fuselage has narrowed to 2.3 m and a
+        // 3.0 m band stands 70 cm proud of it: from above the aeroplane had a
+        // navy blue blister on the nose. A band has to be drawn a few
+        // centimetres outside the skin it sits on, which means it can only go
+        // where the skin's radius is known — here, the part that does not
+        // change.
+        faces: [
+          ...loft([
+            ring(24.0, 3.60, -1.1, SIDES, 0.05),
+            ring(-16.0, 3.55, -1.1, SIDES, 0.05),
+          ]),
+          ...loft([
+            ring(24.0, 3.25, 2.0, SIDES, 0.05),
+            ring(-14.0, 3.20, 2.0, SIDES, 0.05),
+          ]),
+        ],
+      },
+    ];
+  },
+};
+
+/**
+ * Puts an aeroplane in the scene and hands back the handle that flies it.
+ * `shape` names an entry in SHAPES; anything else gets the PC-24.
+ */
+export function addAircraft(viewer, shape = 'pc24') {
+  const parts = (SHAPES[shape] ?? SHAPES.pc24)();
 
   const instances = parts.map(
     (part) =>

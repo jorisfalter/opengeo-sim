@@ -116,12 +116,18 @@ function bearing(aLat, aLon, bLat, bLon) {
   );
 }
 
-export function createTraffic(viewer, { onNotice, max = 40 } = {}) {
+export function createTraffic(viewer, { onNotice, max = 40, enabled: on = false } = {}) {
   // How many to draw at once. A phone is drawing the world as well.
   const MAX_LIVE = max;
   let table = null;
   let loading = null;
-  let enabled = true;
+  // Off unless asked for, and that is a judgement rather than a default. Other
+  // people's aeroplanes are a nice thing to know are there and almost never a
+  // thing you look at: three miles of air turns an airliner into four pixels,
+  // and the route table that decides where those pixels go is half a megabyte
+  // fetched before the first frame. So it is behind the T key, and the half
+  // megabyte is not fetched until somebody presses it.
+  let enabled = on;
   let nearby = []; // routes worth asking about
   let scannedAt = null;
   let census = null;

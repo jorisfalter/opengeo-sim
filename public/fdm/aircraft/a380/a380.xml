@@ -1,0 +1,611 @@
+<?xml version="1.0"?>
+<fdm_config name="A380" version="2.0" release="ALPHA">
+
+  <fileheader>
+    <author>opengeo-sim</author>
+    <description>
+      Four-engined widebody in the class of an Airbus A380-800. Written for
+      this project rather than taken from an aircraft library, so it carries
+      the same MIT licence as the rest of the repository. The geometry is the
+      published aircraft — 72.72 m long, 79.75 m span, 845 m2 of wing; the
+      aerodynamic coefficients are textbook values for a large swept-wing
+      transport, tuned until the numbers that matter match the book: rotate
+      near 150 kt, approach near 140 kt, cruise M0.85 at FL370, clean stall
+      near 160 kt.
+
+      Weight is 450 tonnes, not the 575 t maximum. That is a real long-haul
+      take-off weight and it is also the weight at which this aeroplane makes
+      sense to fly: at 450 t the cruise lift coefficient of 0.46 sits exactly
+      on the wing's best lift-to-drag ratio of 20, which is the whole design
+      point of the aircraft. Empty it would be a glider with four engines
+      strapped on; at 575 t every second runway in the index would be too
+      short.
+    </description>
+    <limitation>Not a certified flight model. Do not learn to fly on it.</limitation>
+  </fileheader>
+
+  <metrics>
+    <!-- 845 m2, 79.75 m, mean aerodynamic chord 12.5 m. -->
+    <wingarea unit="FT2">9096.0</wingarea>
+    <wingspan unit="FT">261.6</wingspan>
+    <chord unit="FT">41.0</chord>
+    <!-- Horizontal stabiliser 205 m2 on a 33 m arm; fin 122 m2 on 31 m.
+         The arm is what makes this aeroplane steady in pitch despite the
+         inertia: 108 ft of it against the PC-24's 24. -->
+    <htailarea unit="FT2">2206.0</htailarea>
+    <htailarm unit="FT">108.0</htailarm>
+    <vtailarea unit="FT2">1313.0</vtailarea>
+    <vtailarm unit="FT">102.0</vtailarm>
+    <!-- x runs aft from the nose, z up from the fuselage centreline. -->
+    <location name="AERORP" unit="IN">
+      <x>1432.0</x><y>0.0</y><z>0.0</z>
+    </location>
+    <!-- The flight deck: 8.1 m aft of the nose and 1.2 m above the
+         centreline, which is 7.0 m above the runway. Low for an aeroplane
+         this tall, and deliberately so on the real one — the cockpit is
+         tucked between the two decks rather than sitting on top of them. -->
+    <location name="EYEPOINT" unit="IN">
+      <x>320.0</x><y>-30.0</y><z>47.0</z>
+    </location>
+    <location name="VRP" unit="IN">
+      <x>0.0</x><y>0.0</y><z>0.0</z>
+    </location>
+  </metrics>
+
+  <mass_balance>
+    <!-- Scaled from the 747-400's published inertias by mass and by span or
+         length as the axis demands: roll goes with the span squared, pitch
+         with the length squared, and yaw is very nearly the sum of the two,
+         which it should be for anything this flat. -->
+    <ixx unit="SLUG*FT2">29500000</ixx>
+    <iyy unit="SLUG*FT2">36600000</iyy>
+    <izz unit="SLUG*FT2">67000000</izz>
+    <ixz unit="SLUG*FT2">2000000</ixz>
+    <!-- Operating empty weight, 277 tonnes. -->
+    <emptywt unit="LBS">610680</emptywt>
+    <!-- z zero, on the fuselage centreline, because the mesh in
+         src/fly/aircraft.js is drawn about that line and the two have to
+         agree on where the aeroplane is: the model matrix is planted on the
+         centre of gravity. -->
+    <location name="CG" unit="IN">
+      <x>1420.0</x><y>0.0</y><z>0.0</z>
+    </location>
+    <pointmass name="passengers and cargo">
+      <!-- 60 tonnes: a full aeroplane of people and their luggage. -->
+      <weight unit="LBS">132277</weight>
+      <location name="POINTMASS" unit="IN"><x>1350.0</x><y>0.0</y><z>-40.0</z></location>
+    </pointmass>
+  </mass_balance>
+
+  <ground_reactions>
+    <!-- Three contacts, as on the PC-24: a nose leg and the two wing gears.
+         The real aeroplane has twenty-two wheels on five legs, and the two
+         body gears in the middle of that would change nothing here except the
+         indices the viewer reads weight-on-wheels from.
+
+         Spring rates are the PC-24's scaled by weight, which puts the static
+         deflection of a main leg at 27 cm — an oleo's worth. Damping keeps the
+         PC-24's ratio to the spring, 4.4%, deliberately far below critical for
+         the reason written out at length in pc24.xml: JSBSim's ground model
+         treats terrain as locally horizontal, so rolling down a slope has the
+         whole descent rate counted as strut closure, and this is the only term
+         that multiplies that invented velocity. At 450 tonnes the mistake
+         would be proportionally larger, not smaller.
+
+         The legs are 249 inches long, and that number was measured rather
+         than drawn. At 215 the aeroplane settled with its centre of gravity
+         4.43 m above the runway, which put the bottom of the inboard
+         nacelles 1.2 m UNDERNEATH it — the engines were buried in the
+         concrete and the only reason it was not obvious is that nothing
+         draws the wheels. The static deflection under 450 tonnes is half a
+         metre, so the leg has to be 6.32 m to rest the aeroplane at 5.8 m,
+         where the fuselage centreline belongs and where the engines clear
+         the ground by 0.76 m. -->
+    <contact type="BOGEY" name="NOSE">
+      <location unit="IN"><x>287.0</x><y>0.0</y><z>-249.0</z></location>
+      <static_friction>0.60</static_friction>
+      <dynamic_friction>0.35</dynamic_friction>
+      <rolling_friction>0.02</rolling_friction>
+      <spring_coeff unit="LBS/FT">200000</spring_coeff>
+      <damping_coeff unit="LBS/FT/SEC">9000</damping_coeff>
+      <max_steer unit="DEG">45.0</max_steer>
+      <brake_group>NONE</brake_group>
+      <retractable>1</retractable>
+    </contact>
+    <contact type="BOGEY" name="LEFT_MAIN">
+      <location unit="IN"><x>1543.0</x><y>-281.0</y><z>-249.0</z></location>
+      <static_friction>0.60</static_friction>
+      <dynamic_friction>0.35</dynamic_friction>
+      <rolling_friction>0.02</rolling_friction>
+      <spring_coeff unit="LBS/FT">500000</spring_coeff>
+      <damping_coeff unit="LBS/FT/SEC">22000</damping_coeff>
+      <max_steer unit="DEG">0.0</max_steer>
+      <brake_group>LEFT</brake_group>
+      <retractable>1</retractable>
+    </contact>
+    <contact type="BOGEY" name="RIGHT_MAIN">
+      <location unit="IN"><x>1543.0</x><y>281.0</y><z>-249.0</z></location>
+      <static_friction>0.60</static_friction>
+      <dynamic_friction>0.35</dynamic_friction>
+      <rolling_friction>0.02</rolling_friction>
+      <spring_coeff unit="LBS/FT">500000</spring_coeff>
+      <damping_coeff unit="LBS/FT/SEC">22000</damping_coeff>
+      <max_steer unit="DEG">0.0</max_steer>
+      <brake_group>RIGHT</brake_group>
+      <retractable>1</retractable>
+    </contact>
+    <!-- The tail bottom, 32.5 m aft of the centre of gravity and a metre
+         above it, so it strikes at 14 degrees of pitch. -->
+    <contact type="STRUCTURE" name="TAIL_SKID">
+      <location unit="IN"><x>2700.0</x><y>0.0</y><z>40.0</z></location>
+      <static_friction>0.60</static_friction>
+      <dynamic_friction>0.50</dynamic_friction>
+      <spring_coeff unit="LBS/FT">1200000</spring_coeff>
+      <damping_coeff unit="LBS/FT/SEC">240000</damping_coeff>
+    </contact>
+  </ground_reactions>
+
+  <propulsion>
+    <!-- Inboard engines at 13.0 m from the centreline, outboard at 25.5 m,
+         all of them 3.5 m below it and well ahead of the wing. -->
+    <engine file="trent900">
+      <location unit="IN"><x>1300.0</x><y>-1004.0</y><z>-140.0</z></location>
+      <orient unit="DEG"><pitch>0.0</pitch><roll>0.0</roll><yaw>0.0</yaw></orient>
+      <feed>0</feed>
+      <thruster file="direct">
+        <location unit="IN"><x>1400.0</x><y>-1004.0</y><z>-140.0</z></location>
+        <orient unit="DEG"><pitch>0.0</pitch><roll>0.0</roll><yaw>0.0</yaw></orient>
+      </thruster>
+    </engine>
+    <engine file="trent900">
+      <location unit="IN"><x>1300.0</x><y>-512.0</y><z>-140.0</z></location>
+      <orient unit="DEG"><pitch>0.0</pitch><roll>0.0</roll><yaw>0.0</yaw></orient>
+      <feed>1</feed>
+      <thruster file="direct">
+        <location unit="IN"><x>1400.0</x><y>-512.0</y><z>-140.0</z></location>
+        <orient unit="DEG"><pitch>0.0</pitch><roll>0.0</roll><yaw>0.0</yaw></orient>
+      </thruster>
+    </engine>
+    <engine file="trent900">
+      <location unit="IN"><x>1300.0</x><y>512.0</y><z>-140.0</z></location>
+      <orient unit="DEG"><pitch>0.0</pitch><roll>0.0</roll><yaw>0.0</yaw></orient>
+      <feed>2</feed>
+      <thruster file="direct">
+        <location unit="IN"><x>1400.0</x><y>512.0</y><z>-140.0</z></location>
+        <orient unit="DEG"><pitch>0.0</pitch><roll>0.0</roll><yaw>0.0</yaw></orient>
+      </thruster>
+    </engine>
+    <engine file="trent900">
+      <location unit="IN"><x>1300.0</x><y>1004.0</y><z>-140.0</z></location>
+      <orient unit="DEG"><pitch>0.0</pitch><roll>0.0</roll><yaw>0.0</yaw></orient>
+      <feed>3</feed>
+      <thruster file="direct">
+        <location unit="IN"><x>1400.0</x><y>1004.0</y><z>-140.0</z></location>
+        <orient unit="DEG"><pitch>0.0</pitch><roll>0.0</roll><yaw>0.0</yaw></orient>
+      </thruster>
+    </engine>
+    <!-- 113 tonnes of fuel, out in the wings where it belongs: a quarter of
+         the take-off weight, and enough for eight hours. -->
+    <tank type="FUEL" number="0">
+      <location unit="IN"><x>1420.0</x><y>-700.0</y><z>-40.0</z></location>
+      <capacity unit="LBS">70000</capacity>
+      <contents unit="LBS">62280</contents>
+    </tank>
+    <tank type="FUEL" number="1">
+      <location unit="IN"><x>1420.0</x><y>-300.0</y><z>-40.0</z></location>
+      <capacity unit="LBS">70000</capacity>
+      <contents unit="LBS">62280</contents>
+    </tank>
+    <tank type="FUEL" number="2">
+      <location unit="IN"><x>1420.0</x><y>300.0</y><z>-40.0</z></location>
+      <capacity unit="LBS">70000</capacity>
+      <contents unit="LBS">62280</contents>
+    </tank>
+    <tank type="FUEL" number="3">
+      <location unit="IN"><x>1420.0</x><y>700.0</y><z>-40.0</z></location>
+      <capacity unit="LBS">70000</capacity>
+      <contents unit="LBS">62280</contents>
+    </tank>
+  </propulsion>
+
+  <flight_control name="FCS: A380">
+    <channel name="Pitch">
+      <summer name="Pitch Trim Sum">
+        <input>fcs/elevator-cmd-norm</input>
+        <input>fcs/pitch-trim-cmd-norm</input>
+        <clipto><min>-1</min><max>1</max></clipto>
+      </summer>
+      <aerosurface_scale name="Elevator Control">
+        <input>fcs/pitch-trim-sum</input>
+        <range><min>-0.30</min><max>0.26</max></range>
+        <output>fcs/elevator-pos-rad</output>
+      </aerosurface_scale>
+    </channel>
+
+    <channel name="Roll">
+      <summer name="Roll Trim Sum">
+        <input>fcs/aileron-cmd-norm</input>
+        <input>fcs/roll-trim-cmd-norm</input>
+        <clipto><min>-1</min><max>1</max></clipto>
+      </summer>
+      <aerosurface_scale name="Left Aileron Control">
+        <input>fcs/roll-trim-sum</input>
+        <range><min>-0.30</min><max>0.30</max></range>
+        <output>fcs/left-aileron-pos-rad</output>
+      </aerosurface_scale>
+      <aerosurface_scale name="Right Aileron Control">
+        <input>-fcs/roll-trim-sum</input>
+        <range><min>-0.30</min><max>0.30</max></range>
+        <output>fcs/right-aileron-pos-rad</output>
+      </aerosurface_scale>
+    </channel>
+
+    <channel name="Yaw">
+      <summer name="Rudder Command Sum">
+        <input>fcs/rudder-cmd-norm</input>
+        <input>fcs/yaw-trim-cmd-norm</input>
+        <clipto><min>-1</min><max>1</max></clipto>
+      </summer>
+      <aerosurface_scale name="Rudder Control">
+        <input>fcs/rudder-command-sum</input>
+        <range><min>-0.52</min><max>0.52</max></range>
+        <output>fcs/rudder-pos-rad</output>
+      </aerosurface_scale>
+    </channel>
+
+    <channel name="Flaps">
+      <!-- Two notches, as everywhere else in this simulator, standing in for
+           the real aeroplane's 1/2/3/FULL: slats and flaps together, 15
+           degrees for take-off and 35 for landing. Twenty-two seconds end to
+           end, which is about what the real ones take. -->
+      <kinematic name="Flaps Control">
+        <input>fcs/flap-cmd-norm</input>
+        <traverse>
+          <setting><position>0</position><time>0</time></setting>
+          <setting><position>15</position><time>10</time></setting>
+          <setting><position>35</position><time>12</time></setting>
+        </traverse>
+        <output>fcs/flap-pos-deg</output>
+      </kinematic>
+    </channel>
+
+    <channel name="Landing Gear">
+      <kinematic name="Gear Control">
+        <input>gear/gear-cmd-norm</input>
+        <traverse>
+          <setting><position>0</position><time>0</time></setting>
+          <setting><position>1</position><time>14</time></setting>
+        </traverse>
+        <output>gear/gear-pos-norm</output>
+      </kinematic>
+    </channel>
+
+    <channel name="Speedbrake">
+      <kinematic name="Speedbrake Control">
+        <input>fcs/speedbrake-cmd-norm</input>
+        <traverse>
+          <setting><position>0</position><time>0</time></setting>
+          <setting><position>1</position><time>3</time></setting>
+        </traverse>
+        <output>fcs/speedbrake-pos-norm</output>
+      </kinematic>
+    </channel>
+  </flight_control>
+
+  <aerodynamics>
+    <axis name="LIFT">
+      <function name="aero/coefficient/CLalpha">
+        <description>Lift from angle of attack</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <table>
+            <!-- Slope 5.0 per radian: aspect ratio 7.5 with 33 degrees of
+                 sweep. The break is at 14.3 degrees and CL 1.26, which puts
+                 the clean one-g stall at 160 kt at this weight — the book
+                 figure. The PC-24's wing peaks at 1.55; a transport wing
+                 built for cruise efficiency does not, and makes up the
+                 difference with slats and flaps below. -->
+            <independentVar lookup="row">aero/alpha-rad</independentVar>
+            <tableData>
+              -0.20  -0.85
+               0.00   0.18
+               0.17   1.03
+               0.25   1.26
+               0.31   1.12
+               0.60   0.80
+            </tableData>
+          </table>
+        </product>
+      </function>
+      <function name="aero/coefficient/CLDe">
+        <description>Lift from elevator</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>fcs/elevator-pos-rad</property>
+          <value>0.45</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/CLspeedbrake">
+        <description>Lift dump from the speedbrake</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>fcs/speedbrake-pos-norm</property>
+          <value>-0.06</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/CLflap">
+        <description>Lift from slats and flaps</description>
+        <!-- 0.034 per degree: full flap adds 1.19, for a landing CLmax of
+             2.45 and a one-g stall at 115 kt. Vref then comes out at 141 kt,
+             which is the number in the book for this weight. -->
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>fcs/flap-pos-deg</property>
+          <value>0.034</value>
+        </product>
+      </function>
+    </axis>
+
+    <axis name="DRAG">
+      <function name="aero/coefficient/CD0">
+        <description>Parasitic drag</description>
+        <!-- 0.0115, half the PC-24's, and that is not a mistake: this
+             coefficient is an area divided by the wing area. The A380 has
+             about 100 square feet of equivalent flat plate against the
+             PC-24's 7.6 — thirteen times as much — but it carries 27 times
+             the wing. A large aeroplane is aerodynamically cleaner than a
+             small one by this measure, which is why it can hold a
+             lift-to-drag ratio of 20 where the light jet manages 14. -->
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <value>0.0115</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/CDi">
+        <description>Induced drag</description>
+        <!-- 1/(pi * 7.53 * 0.80). -->
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>aero/cl-squared</property>
+          <value>0.053</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/CDmach">
+        <description>Compressibility drag</description>
+        <!-- Nothing until M0.80, a count or two at the M0.85 cruise, and the
+             wall arriving just past MMO at M0.89. The rise past the limit
+             is steep on purpose: with a gentler one, full thrust at FL370
+             reached M0.91 and kept going, and an aeroplane that will fly
+             through its own Mach limit if you let go of the levers is an
+             aeroplane with no limit. Now the drag doubles over the last
+             two hundredths and the aeroplane simply will not pass M0.90. -->
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <table>
+            <independentVar lookup="row">velocities/mach</independentVar>
+            <tableData>
+              0.00  0.0000
+              0.80  0.0000
+              0.85  0.0006
+              0.89  0.0032
+              0.93  0.0260
+              1.00  0.1200
+            </tableData>
+          </table>
+        </product>
+      </function>
+      <function name="aero/coefficient/CDflap">
+        <description>Drag from slats and flaps</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>fcs/flap-pos-deg</property>
+          <value>0.0018</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/CDgear">
+        <description>Drag from the landing gear</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>gear/gear-pos-norm</property>
+          <value>0.022</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/CDspeedbrake">
+        <description>Drag from the speedbrake</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>fcs/speedbrake-pos-norm</property>
+          <value>0.022</value>
+        </product>
+      </function>
+    </axis>
+
+    <axis name="SIDE">
+      <function name="aero/coefficient/CYb">
+        <description>Side force from sideslip</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>aero/beta-rad</property>
+          <value>-1.20</value>
+        </product>
+      </function>
+    </axis>
+
+    <axis name="ROLL">
+      <function name="aero/coefficient/Clb">
+        <description>Dihedral effect</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/bw-ft</property>
+          <property>aero/beta-rad</property>
+          <value>-0.12</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/Clp">
+        <description>Roll damping</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/bw-ft</property>
+          <property>aero/bi2vel</property>
+          <property>velocities/p-aero-rad_sec</property>
+          <value>-0.52</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/Clr">
+        <description>Roll moment from yaw rate</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/bw-ft</property>
+          <property>aero/bi2vel</property>
+          <property>velocities/r-aero-rad_sec</property>
+          <value>0.14</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/ClDa">
+        <description>Roll moment from aileron</description>
+        <!-- Deliberately low. A 260-foot span has to be rolled, and this is
+             the number that makes it take four seconds to reach 25 degrees
+             instead of the PC-24's one and a half. -->
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/bw-ft</property>
+          <property>fcs/left-aileron-pos-rad</property>
+          <value>0.095</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/ClDr">
+        <description>Roll moment from rudder</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/bw-ft</property>
+          <property>fcs/rudder-pos-rad</property>
+          <value>0.020</value>
+        </product>
+      </function>
+    </axis>
+
+    <axis name="PITCH">
+      <function name="aero/coefficient/Cmalpha">
+        <description>Pitch moment from angle of attack, i.e. stability</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/cbarw-ft</property>
+          <property>aero/alpha-rad</property>
+          <value>-1.10</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/Cm0">
+        <description>Zero-lift pitching moment</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/cbarw-ft</property>
+          <value>0.06</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/Cmq">
+        <description>Pitch damping</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/cbarw-ft</property>
+          <property>aero/ci2vel</property>
+          <property>velocities/q-aero-rad_sec</property>
+          <value>-28.0</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/Cmadot">
+        <description>Pitch moment from alpha rate</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/cbarw-ft</property>
+          <property>aero/ci2vel</property>
+          <property>aero/alphadot-rad_sec</property>
+          <value>-9.0</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/CmDe">
+        <description>Pitch moment from elevator</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/cbarw-ft</property>
+          <property>fcs/elevator-pos-rad</property>
+          <value>-1.45</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/Cmflap">
+        <description>Pitch moment from flaps</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/cbarw-ft</property>
+          <property>fcs/flap-pos-deg</property>
+          <value>-0.0030</value>
+        </product>
+      </function>
+    </axis>
+
+    <axis name="YAW">
+      <function name="aero/coefficient/Cnb">
+        <description>Weathercock stability</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/bw-ft</property>
+          <property>aero/beta-rad</property>
+          <value>0.17</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/Cnr">
+        <description>Yaw damping</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/bw-ft</property>
+          <property>aero/bi2vel</property>
+          <property>velocities/r-aero-rad_sec</property>
+          <value>-0.30</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/CnDr">
+        <description>Yaw moment from rudder</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/bw-ft</property>
+          <property>fcs/rudder-pos-rad</property>
+          <value>-0.12</value>
+        </product>
+      </function>
+      <function name="aero/coefficient/CnDa">
+        <description>Adverse yaw from aileron</description>
+        <product>
+          <property>aero/qbar-psf</property>
+          <property>metrics/Sw-sqft</property>
+          <property>metrics/bw-ft</property>
+          <property>fcs/left-aileron-pos-rad</property>
+          <value>-0.010</value>
+        </product>
+      </function>
+    </axis>
+  </aerodynamics>
+</fdm_config>

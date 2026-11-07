@@ -17,6 +17,8 @@ const checks = [
   ['/fly.html', 'text/html'],
   ['/fdm/wasm/jsbsim_wasm.wasm', 'application/wasm'],
   ['/fdm/aircraft/pc24/pc24.xml', /xml/],
+  ['/fdm/aircraft/a380/a380.xml', /xml/],
+  ['/fdm/engine/trent900.xml', /xml/],
   ['/fly/lflj.json', 'application/json'],
   // The WebAssembly loader is an .mjs, which nginx 1.24 does not know either;
   // nothing in the HTML links to it, so it has to be named here or the check

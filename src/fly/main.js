@@ -31,6 +31,7 @@ import { createTraffic } from './traffic.js';
 import { createSound } from './sound.js';
 import { GROUPS, PLACES, findPlace, groupsOf } from './places.js';
 import { askWhereToStart } from './start.js';
+import { FLEET, typeFor, vrefFor } from './fleet.js';
 import {
   airportsReady,
   loadAirports,
@@ -297,9 +298,20 @@ async function main() {
       : { ...leg, alt: leg.msl + datum },
   );
 
+  // ---- which aeroplane ----------------------------------------------------
+  // The URL may already say; otherwise the menu writes its answer into these
+  // same params before anything below is read, because every function that
+  // uses the type is called after the menu has been answered.
+  let type = typeFor(params.get('aircraft'));
+  // The point-mass model in flight.js is the PC-24's and only the PC-24's, so
+  // ?fdm=simple flies that whatever was asked for. Better one line here than
+  // an A380 that weighs eight tonnes.
+  if (!useJsbsim) type = FLEET.pc24;
+
   // ---- where to begin -----------------------------------------------------
-  // Ground to the point the flight model is positioned by, wheels down.
-  const GEAR = 1.6;
+  // Ground to the point the flight model is positioned by, wheels down: the
+  // height of the centre of gravity over the runway when it is parked, which
+  // is 1.6 m on the PC-24 and 5.6 m on an aeroplane with two-storey wheels.
   const bearingTo = (from, to) => {
     const east = (to.lon - from.lon) * Math.cos(from.lat * DEG);
     return ((Math.atan2(east, to.lat - from.lat) / DEG) + 360) % 360;
@@ -319,7 +331,7 @@ async function main() {
       const aim = centre[Math.max(0, Math.min(centre.length - 1, towards))];
       const east = (aim.lon - point.lon) * Math.cos(point.lat * DEG);
       const heading = ((Math.atan2(east, aim.lat - point.lat) / DEG) + 360) % 360;
-      return { ...place, lat: point.lat, lon: point.lon, alt: point.h + GEAR, heading };
+      return { ...place, lat: point.lat, lon: point.lon, alt: point.h + type.parkedCg, heading };
     }
     return { ...place, alt: place.msl + datum, heading: place.heading ?? bearingTo(place, route[6]) };
   }
@@ -333,7 +345,7 @@ async function main() {
     const probe = [Cartographic.fromDegrees(place.lon, place.lat)];
     await sampleTerrainMostDetailed(terrain, probe);
     const ground = Number.isFinite(probe[0].height) ? probe[0].height : datum;
-    return { ...place, alt: ground + GEAR, groundHeight: ground };
+    return { ...place, alt: ground + type.parkedCg, groundHeight: ground };
   }
 
   /**
@@ -364,7 +376,7 @@ async function main() {
     lowFlying = true;
     const feed = groundHeight(place.lat, place.lon);
     if (!Number.isFinite(feed)) return place;
-    return { ...place, groundHeight: feed, alt: feed + GEAR };
+    return { ...place, groundHeight: feed, alt: feed + type.parkedCg };
   }
 
   // A place can also come straight out of the URL, which is the whole point of
@@ -386,6 +398,8 @@ async function main() {
   // the whole load to be answered in, and it writes its answer into the URL,
   // so a reload lands where you chose instead of back at the menu.
   const picked = await startMenu.chosen;
+  // The menu may have changed the aeroplane as well as the place.
+  if (useJsbsim) type = typeFor(params.get('aircraft'));
   const wanted = picked ?? params.get('start');
   let startPlace =
     fromUrl ??
@@ -430,7 +444,7 @@ async function main() {
 
   let sim;
   if (useJsbsim) {
-    const fdm = await createFdm(start, { onStatus: status });
+    const fdm = await createFdm(start, { onStatus: status, type });
     sim = {
       name: 'JSBSim',
       aircraft: fdm.aircraft,
@@ -483,7 +497,7 @@ async function main() {
 
   // ---- the glass ----------------------------------------------------------
   const panel = createPanel(document.querySelector('#hud'), {
-    title: 'PC-24 · free flight',
+    title: type.title,
     subtitle: `${startPlace.name} · ${sim.name} · IGN, swisstopo, Südtirol, basemap.at and PDOK · the rest worldwide`,
     attribution: ATTRIBUTION,
   });
@@ -524,9 +538,12 @@ async function main() {
   const traffic = createTraffic(viewer, {
     onNotice: (message) => panel.notice(message),
     max: smallScreen ? 14 : 40,
+    enabled: params.get('traffic') === '1',
   });
   let trafficClock = Date.now() / 1000;
-  traffic.load();
+  // Only fetch the route table if the traffic is actually on. Switching it on
+  // with T fetches it then, which costs a second once and nothing ever again.
+  if (traffic.enabled) traffic.load();
 
   const minimap = createMinimap(mapRoot, {
     // Every field in the index that is under the map, so the moving map shows
@@ -780,7 +797,7 @@ async function main() {
     model.setVisible(mode !== 'cockpit');
     scene.screenSpaceCameraController.enableInputs = mode === 'free';
   };
-  const model = addAircraft(viewer);
+  const model = addAircraft(viewer, type.shape);
 
   // One way in and out of the parking brake, so the key and the button cannot
   // disagree and both say what they did. A toggle that confirms nothing gets
@@ -818,7 +835,7 @@ async function main() {
     scene.globe.maximumScreenSpaceError = 1.5 + t * 1.5;
   };
 
-  const vrefFor = () => (aircraft.flaps >= 2 ? 110 : aircraft.flaps === 1 ? 125 : 150);
+  const vref = () => vrefFor(type, aircraft.flaps);
 
   const controls = createControls(viewer.canvas, {
     onNotice: (message) => panel.notice(message),
@@ -829,7 +846,7 @@ async function main() {
           panel.notice(aircraft.gear ? 'Gear up' : 'Gear down');
           break;
         case 'KeyF':
-          sim.setFlaps((aircraft.flaps + 1) % 3);
+          sim.setFlaps((aircraft.flaps + 1) % type.flapDeg.length);
           break;
         case 'KeyB':
           setBrakes(!brakes);
@@ -1018,7 +1035,7 @@ async function main() {
   // It follows an attitude of its own: most of the pitch and a third of the
   // bank. A camera welded to the airframe makes the world roll instead of the
   // aeroplane, and that is how you lose your bearings and your lunch.
-  const CHASE = { back: 62, up: 11, ahead: 260, follow: 2.8 };
+  const CHASE = type.chase;
   let chaseEye = null;
   const scratch = new Cartesian3();
 
@@ -1053,8 +1070,23 @@ async function main() {
     const position = Cartesian3.fromDegrees(aircraft.lon, aircraft.lat, aircraft.alt);
     model.update(position, aircraft.heading, aircraft.pitch, aircraft.bank);
     if (view === 'cockpit') {
+      // The eye sits where the pilot's head is, not where the centre of
+      // gravity is, and the offset is taken in the aeroplane's own frame so
+      // that it stays there through a bank and a flare. On the PC-24 that is
+      // 1.1 m straight up and the distinction hardly shows; on the A380 the
+      // flight deck is 28 m ahead of the centre of gravity, which is why the
+      // nose wheel on that aeroplane goes somewhere other than where you are
+      // looking.
+      const seat = Transforms.headingPitchRollToFixedFrame(
+        position,
+        new HeadingPitchRoll(aircraft.heading, aircraft.pitch, aircraft.bank),
+      );
       viewer.camera.setView({
-        destination: Cartesian3.fromDegrees(aircraft.lon, aircraft.lat, aircraft.alt + 1.1),
+        destination: Matrix4.multiplyByPoint(
+          seat,
+          new Cartesian3(0, type.eye.forward, type.eye.up),
+          new Cartesian3(),
+        ),
         orientation: {
           heading: aircraft.heading,
           pitch: aircraft.pitch + CesiumMath.toRadians(1.5),
@@ -1077,7 +1109,7 @@ async function main() {
       input: axes.yoke ? 'mouse' : axes.source,
       brakes,
       speedbrake: sim.speedbrake,
-      vref: vrefFor(),
+      vref: vref(),
       tilting: controls.tilting,
       pitchInverted: controls.pitchInverted,
       tiltStatus: controls.tiltStatus,
@@ -1187,7 +1219,7 @@ async function main() {
         sim.setGear(!aircraft.gear);
         break;
       case 'flaps':
-        sim.setFlaps((aircraft.flaps + 1) % 3);
+        sim.setFlaps((aircraft.flaps + 1) % type.flapDeg.length);
         break;
       case 'ap':
         cycleAutopilot();
@@ -1289,6 +1321,7 @@ async function main() {
     armPlan,
     scene,
     sim,
+    type,
     aircraft,
     route,
     navState,
@@ -1312,7 +1345,7 @@ async function main() {
   // Say, once, that nobody else is flying this.
   panel.notice(
     start.onGround
-      ? 'You are flying. Brake off with B, throttle up with W, rotate at 95 kt.'
+      ? `You are flying. Brake off with B, throttle up with W, rotate at ${type.rotateKias} kt.`
       : 'You are flying. Arrows steer, W and S for throttle, P for the autopilot.',
   );
   console.info(

@@ -14,6 +14,7 @@
 // link that worked before still works and lands where it says.
 import { GROUPS, PLACES, groupsOf } from './places.js';
 import { loadAirports, searchAirports, startFrom } from './airports.js';
+import { DEFAULT_TYPE, FLEET, typeFor } from './fleet.js';
 
 // Where the aerial photography is centimetres a pixel instead of Sentinel-2's
 // ten metres. A random field inside one of these is worth flying from; a
@@ -35,17 +36,23 @@ const COVERED = [
 // sorted that out and writes one of hard, soft, other, water or snow. Matching
 // the raw spellings here found nothing at all: 28,338 fields, no candidates,
 // and a die that silently refused to roll.
+//
+// How long the runway has to be is the aeroplane's business, not this file's:
+// a thousand metres for the PC-24, three thousand for the A380, both in
+// fleet.js. Counted over the index: 8,835 hard fields in the world are long
+// enough for the PC-24 and 1,033 for the A380, 311 and 41 of them inside the
+// sharp photography. Roll the dice with the big one selected and the pool
+// shrinks by a factor of eight, which is exactly what should happen.
 const HARD = 'hard';
-const MIN_LENGTH_FT = 3280; // a thousand metres
 
 const inBox = (airport, [west, south, east, north]) =>
   airport.lon >= west && airport.lon <= east && airport.lat >= south && airport.lat <= north;
 
 /** A field a jet can use, picked at random, optionally inside the good imagery. */
-function randomField(index, covered) {
+function randomField(index, covered, minLengthFt) {
   const pool = index.filter((airport) => {
     const runway = airport.runways[0];
-    if (!runway || !(runway.lengthFt >= MIN_LENGTH_FT) || runway.surface !== HARD) return false;
+    if (!runway || !(runway.lengthFt >= minLengthFt) || runway.surface !== HARD) return false;
     if (covered && !COVERED.some((region) => inBox(airport, region.box))) return false;
     // Only offer what the simulator can actually line up on.
     return Boolean(startFrom(airport));
@@ -79,6 +86,16 @@ export function askWhereToStart(params) {
     <div class="fly-picker__sheet">
       <h2>Where do you want to begin?</h2>
       <p class="fly-start__lead">Pick a region for a hand-picked field, roll for one, or name any airfield on earth.</p>
+      <div class="fly-start__fleet" data-el="fleet">
+        ${Object.values(FLEET)
+          .map(
+            (aircraft) =>
+              `<button type="button" data-aircraft="${escape(aircraft.id)}"><strong>${escape(
+                aircraft.label,
+              )}</strong><span>${escape(aircraft.note)}</span></button>`,
+          )
+          .join('')}
+      </div>
       <div class="fly-start__regions" data-el="regions">
         ${GROUPS.map(
           (group) => `<button type="button" data-region="${escape(group)}">${escape(group)}</button>`,
@@ -117,6 +134,17 @@ export function askWhereToStart(params) {
       .join('');
   };
 
+  // Which aeroplane, kept here until the start is settled. It goes back into
+  // the params object this function was handed, which is the one the simulator
+  // reads — the menu is answered long before anything looks at the type.
+  let aircraft = typeFor(params.get('aircraft'));
+  const showAircraft = () => {
+    for (const button of menu.querySelectorAll('[data-aircraft]')) {
+      button.classList.toggle('is-on', button.dataset.aircraft === aircraft.id);
+    }
+  };
+  showAircraft();
+
   let settle;
   const chosen = new Promise((resolve) => {
     settle = (value) => {
@@ -124,6 +152,9 @@ export function askWhereToStart(params) {
       // here rather than back at the menu.
       const url = new URL(window.location.href);
       url.searchParams.set('start', value);
+      if (aircraft.id === DEFAULT_TYPE) url.searchParams.delete('aircraft');
+      else url.searchParams.set('aircraft', aircraft.id);
+      params.set('aircraft', aircraft.id);
       window.history.replaceState({}, '', url);
       menu.remove();
       resolve(value);
@@ -139,6 +170,16 @@ export function askWhereToStart(params) {
     if (!button) return;
     if (button.dataset.place) {
       settle(button.dataset.place);
+      return;
+    }
+    if (button.dataset.aircraft) {
+      aircraft = typeFor(button.dataset.aircraft);
+      showAircraft();
+      think(
+        `${aircraft.label}: ${aircraft.note}. The dice will only offer fields with ` +
+          `${((Math.round((aircraft.minRunwayFt * 0.3048) / 100) * 100).toLocaleString('en-US'))} m ` +
+          'or more of hard runway.',
+      );
       return;
     }
     if (button.dataset.region) {
@@ -161,9 +202,9 @@ export function askWhereToStart(params) {
         think('The world index would not load. The regions above work without it.');
         return;
       }
-      const field = randomField(index, covered);
+      const field = randomField(index, covered, aircraft.minRunwayFt);
       if (!field) {
-        think('No field came up. Try the other dice.');
+        think(`No field came up. ${aircraft.label} needs a long runway — try the other dice.`);
         return;
       }
       settle(field.ident);

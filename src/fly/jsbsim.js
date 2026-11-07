@@ -11,6 +11,7 @@
 // against published PC-24 figures and checked by scripts/test-fdm.mjs. JSBSim
 // itself is LGPL 2.1 and is loaded as an unmodified library; see ATTRIBUTION.md.
 import { asset } from '../base.js';
+import { FLEET, floorFor } from './fleet.js';
 
 import { JSBSimSdk } from '@0x62/jsbsim-wasm';
 
@@ -23,10 +24,14 @@ const MAX_STEPS = 160;
 const FT = 0.3048;
 const KT = 0.514444;
 const DEG = Math.PI / 180;
-const FILES = ['aircraft/pc24/pc24.xml', 'engine/fj44.xml', 'engine/direct.xml'];
 
-/** Loads JSBSim and the aeroplane. Resolves once the model is in place. */
-export async function createFdm(start, { onStatus } = {}) {
+/**
+ * Loads JSBSim and the aeroplane. Resolves once the model is in place.
+ *
+ * Which aeroplane comes from src/fly/fleet.js, and so does every number this
+ * file used to carry as a literal. Nothing here knows what a PC-24 is.
+ */
+export async function createFdm(start, { onStatus, type = FLEET.pc24 } = {}) {
   onStatus?.('Loading JSBSim…');
   const sdk = await JSBSimSdk.create({
     moduleUrl: asset('fdm/wasm/jsbsim_wasm.mjs'),
@@ -34,28 +39,29 @@ export async function createFdm(start, { onStatus } = {}) {
     log: { console: false },
   });
 
-  onStatus?.('Loading the aircraft model…');
+  onStatus?.(`Loading the ${type.name}…`);
   const sources = await Promise.all(
-    FILES.map((path) => fetch(asset(`fdm/${path}`)).then((res) => res.text())),
+    type.files.map((path) => fetch(asset(`fdm/${path}`)).then((res) => res.text())),
   );
-  FILES.forEach((path, i) => sdk.writeDataFile(path, sources[i]));
+  type.files.forEach((path, i) => sdk.writeDataFile(path, sources[i]));
   sdk.configurePaths({
     rootDir: '/runtime',
     aircraftPath: 'aircraft',
     enginePath: 'engine',
     systemsPath: 'systems',
   });
-  if (!sdk.loadModel('pc24')) throw new Error('JSBSim refused the aircraft model');
+  if (!sdk.loadModel(type.model)) throw new Error('JSBSim refused the aircraft model');
   sdk.setDt(DT);
 
-  const fdm = new Fdm(sdk);
+  const fdm = new Fdm(sdk, type);
   fdm.reset(start);
   return fdm;
 }
 
 class Fdm {
-  constructor(sdk) {
+  constructor(sdk, type) {
     this.sdk = sdk;
+    this.type = type;
     // Commanded attitude. The keyboard moves these and an inner loop flies to
     // them, which is what makes a real flight model keyboard-flyable: you ask
     // for ten degrees of pitch, the aeroplane works out the elevator.
@@ -73,7 +79,8 @@ class Fdm {
     this.thrustCap = 1;
     this.lastOver = 0;
     this.overTrend = 0;
-    this.aircraft = {};
+    this.aircraft = { type: type.id };
+    this.notches = type.flapDeg.length - 1;
   }
 
   get(prop) {
@@ -84,29 +91,35 @@ class Fdm {
     this.sdk.setPropertyValue(prop, value);
   }
 
+  /** The same lever to every engine, however many there are. */
+  throttle(value) {
+    for (let i = 0; i < this.type.engines; i += 1) {
+      this.set(`fcs/throttle-cmd-norm[${i}]`, value);
+    }
+  }
+
   /** Puts the aeroplane somewhere, on the ground or in the air, and trims it. */
   reset(start) {
     const sdk = this.sdk;
-    this.ground = start.groundHeight ?? start.alt - 1.6;
+    this.ground = start.groundHeight ?? start.alt - this.type.parkedCg;
     this.set('ic/lat-geod-deg', start.lat);
     this.set('ic/long-gc-deg', start.lon);
     this.set('ic/terrain-elevation-ft', this.ground / FT);
     this.set('ic/psi-true-deg', start.heading);
     this.set('ic/vc-kts', start.speed ?? 0);
     this.set('ic/gamma-deg', 0);
-    if (start.onGround) this.set('ic/h-agl-ft', 1.6 / FT);
+    if (start.onGround) this.set('ic/h-agl-ft', this.type.parkedCg / FT);
     else this.set('ic/h-sl-ft', start.alt / FT);
     this.set('propulsion/set-running', -1);
     sdk.runIc();
 
-    this.set('fcs/throttle-cmd-norm[0]', start.throttle ?? 0);
-    this.set('fcs/throttle-cmd-norm[1]', start.throttle ?? 0);
+    this.throttle(start.throttle ?? 0);
     this.set('gear/gear-cmd-norm', start.gear ? 1 : 0);
-    this.set('fcs/flap-cmd-norm', (start.flaps ?? 0) / 2);
+    this.set('fcs/flap-cmd-norm', (start.flaps ?? 0) / this.notches);
     // Gear and flaps travel on a timer; in the air they are wanted now.
     if (!start.onGround) {
       this.set('gear/gear-pos-norm', start.gear ? 1 : 0);
-      this.set('fcs/flap-pos-deg', ((start.flaps ?? 0) / 2) * 33);
+      this.set('fcs/flap-pos-deg', this.type.flapDeg[Math.min(this.notches, start.flaps ?? 0)]);
     }
     this.cmdPitch = this.get('attitude/theta-rad');
     this.cmdBank = 0;
@@ -172,17 +185,26 @@ class Fdm {
     // itself. thrustCap is where that limit currently stands.
     a.throttle = this.get('fcs/throttle-cmd-norm[0]');
     a.gear = this.get('gear/gear-cmd-norm') > 0.5;
-    a.flaps = Math.round((this.get('fcs/flap-cmd-norm') * 2 * 10) / 10);
+    a.flaps = Math.round(this.get('fcs/flap-cmd-norm') * this.notches);
     a.brakes = this.get('fcs/left-brake-cmd-norm') > 0.5;
-    a.onGround = this.get('gear/unit/WOW') > 0.5 || this.get('gear/unit[1]/WOW') > 0.5;
-    a.thrust = this.get('propulsion/engine/thrust-lbs') + this.get('propulsion/engine[1]/thrust-lbs');
+    // Any wheel on the ground is on the ground. Reading only the nose and the
+    // left main was enough for a light jet put down on both mains at once; an
+    // aeroplane with 260 feet of span lands one wing at a time.
+    a.onGround =
+      this.get('gear/unit/WOW') > 0.5 ||
+      this.get('gear/unit[1]/WOW') > 0.5 ||
+      this.get('gear/unit[2]/WOW') > 0.5;
+    a.thrust = 0;
+    for (let i = 0; i < this.type.engines; i += 1) {
+      a.thrust += this.get(i === 0 ? 'propulsion/engine/thrust-lbs' : `propulsion/engine[${i}]/thrust-lbs`);
+    }
     // Angle of attack means nothing without air going over the wing. JSBSim
     // works it out from the velocity vector, so a parked aeroplane settling a
     // millimetre onto its gear is flying straight down at 127 degrees alpha —
     // which lit the stall warning on the glass and handed the stick to the
     // alpha protection, on the runway, with the brakes on.
     a.flying = (a.kias ?? 0) > 40;
-    a.stall = a.flying && a.alpha > 14 * DEG;
+    a.stall = a.flying && a.alpha > this.type.stallAlpha * DEG;
     return a;
   }
 
@@ -197,18 +219,21 @@ class Fdm {
    * fighting your hands, because a protection you can feel pulling against
    * you is worse than none at all.
    *
-   * Measured on this airframe: the wing breaks at 15.4 degrees clean and 14.0
-   * with gear and flap, so the guard sits at 12. The speed limits are the
-   * aeroplane's own: VMO 290 KIAS, MMO M0.74.
+   * Measured on the PC-24: the wing breaks at 15.4 degrees clean and 14.0
+   * with gear and flap, so the guard sits at 12, and the speed limits are
+   * VMO 290 KIAS and MMO M0.74. All four of those numbers now come from
+   * fleet.js, because the A380's are 15.3, 12, 340 and M0.89 — the argument
+   * below is the same, the figures are not.
    *
    * None of this exists in direct law. That is what direct law is for.
    */
   protect(a, hand) {
+    const { guardAlpha, vmo, mmo, gUp, gDown } = this.type;
     const alpha = a.flying ? (a.alpha ?? 0) / DEG : 0;
-    if (alpha > 12) {
+    if (alpha > guardAlpha) {
       // Give back exactly the attitude the wing is complaining about. You keep
       // your turn and your climb; you simply cannot ask for the stall.
-      this.cmdPitch = Math.min(this.cmdPitch, a.pitch - (alpha - 12) * DEG);
+      this.cmdPitch = Math.min(this.cmdPitch, a.pitch - (alpha - guardAlpha) * DEG);
     }
     // Past the limit the nose comes up and will not go back down until the
     // speed has. Mach becomes knots of urgency so that one number drives this
@@ -233,8 +258,8 @@ class Fdm {
     // would shut to its floor, and the throttle would sit at 15% for a
     // minute while the speed bled off — with the autopilot off and nothing
     // on the glass saying why. The limits are now the aeroplane's own.
-    const over = Math.max((a.kias ?? 0) - 290, ((a.mach ?? 0) - 0.74) * 350);
-    const past = Math.max((a.kias ?? 0) - 296, ((a.mach ?? 0) - 0.755) * 350);
+    const over = Math.max((a.kias ?? 0) - vmo, ((a.mach ?? 0) - mmo) * 350);
+    const past = Math.max((a.kias ?? 0) - (vmo + 6), ((a.mach ?? 0) - (mmo + 0.015)) * 350);
     // Take the power off before taking the aeroplane. Pitch alone could stop
     // the descent but not the overspeed: at full thrust it settled into a
     // 4000 fpm climb at 294 knots, still over the line, with the stick fully
@@ -279,11 +304,11 @@ class Fdm {
     // the first tenth of a degree it asks for already cancels a thirteen
     // degree dive, and reporting from one degree meant the stick moved with
     // nothing on the glass.
-    a.guard = this.overGuard > 0.1 * DEG ? 'speed' : alpha > 12 ? 'alpha' : null;
+    a.guard = this.overGuard > 0.1 * DEG ? 'speed' : alpha > guardAlpha ? 'alpha' : null;
     // Last word: a pull already at the structural limit does not get to grow,
     // whoever asked for it — the pilot or the guard above.
-    if ((a.gLoad ?? 1) > 2.4) this.cmdPitch = Math.min(this.cmdPitch, a.pitch);
-    else if ((a.gLoad ?? 1) < -0.5) this.cmdPitch = Math.max(this.cmdPitch, a.pitch);
+    if ((a.gLoad ?? 1) > gUp) this.cmdPitch = Math.min(this.cmdPitch, a.pitch);
+    else if ((a.gLoad ?? 1) < gDown) this.cmdPitch = Math.max(this.cmdPitch, a.pitch);
   }
 
   /**
@@ -323,13 +348,18 @@ class Fdm {
       // the simulated step would make a tap on the arrow key worth sixteen
       // times as much attitude at sixteen times speed, which is unflyable.
       const hand = input.handDt ?? dt;
-      this.cmdPitch += input.pitch * 7 * DEG * hand;
-      this.cmdBank += input.roll * 45 * DEG * hand;
+      const { pitchRate, rollRate, trimRate, pitchRange, bankLimit } = this.type;
+      this.cmdPitch += input.pitch * pitchRate * DEG * hand;
+      this.cmdBank += input.roll * rollRate * DEG * hand;
       // Wings roll themselves level when the stick is centred; the nose does
       // not, because an attitude that will not hold is no use on an approach.
       if (!input.roll) this.cmdBank *= Math.max(0, 1 - 1.2 * hand);
-      this.cmdPitch = clamp(this.cmdPitch + (input.trim ?? 0) * 10 * DEG * hand, -15 * DEG, 20 * DEG);
-      this.cmdBank = clamp(this.cmdBank, -67 * DEG, 67 * DEG);
+      this.cmdPitch = clamp(
+        this.cmdPitch + (input.trim ?? 0) * trimRate * DEG * hand,
+        pitchRange[0] * DEG,
+        pitchRange[1] * DEG,
+      );
+      this.cmdBank = clamp(this.cmdBank, -bankLimit * DEG, bankLimit * DEG);
       this.protect(a, hand);
     }
     // On the ground below rotate speed there is nothing to command but the nose.
@@ -348,8 +378,7 @@ class Fdm {
     // Where the limit stands, for the mark on the lever. Outside the assisted
     // law there is no limit, and a mark for one would be a lie.
     a.thrustCap = capped ? this.thrustCap : 1;
-    this.set('fcs/throttle-cmd-norm[0]', throttle);
-    this.set('fcs/throttle-cmd-norm[1]', throttle);
+    this.throttle(throttle);
     // It has to be the -asl- property. Writing position/terrain-elevation-ft at
     // runtime reads back fine and changes nothing: the aeroplane keeps touching
     // down on the height it was initialised with, which on a mountain approach
@@ -407,10 +436,11 @@ class Fdm {
     // the integrator is held still, and the loop fades in over the twenty
     // knots either side of rotation rather than switching.
     const kias = this.get('velocities/vc-kts');
-    const onWheels = onGround ? clamp((95 - kias) / 20, 0, 1) : 0;
+    const { rotateKias, rotateFade, gains } = this.type;
+    const onWheels = onGround ? clamp((rotateKias - kias) / rotateFade, 0, 1) : 0;
 
     const error = this.cmdPitch - pitch;
-    const demand = -(error * 2.6 - q * 0.9) * scale;
+    const demand = -(error * gains.pitch - q * gains.pitchRate) * scale;
     const stick = -(this.axes.pitch ?? 0) - (this.axes.trim ?? 0);
     const elevator = clamp(
       (demand + this.trim) * (1 - onWheels) + stick * onWheels,
@@ -420,13 +450,13 @@ class Fdm {
     // Anti-windup: the trim only moves while the surface has somewhere to go,
     // and never while the aeroplane is sitting on its wheels.
     if (onWheels < 0.5 && (Math.abs(elevator) < 0.98 || Math.sign(error) !== -Math.sign(elevator))) {
-      this.trim = clamp(this.trim - error * 0.9 * DT, -0.8, 0.8);
+      this.trim = clamp(this.trim - error * gains.trim * DT, -0.8, 0.8);
     }
     this.set('fcs/elevator-cmd-norm', elevator);
     // Keep the commanded attitude on the aeroplane's own while it is rolling,
     // so rotation starts from where the nose actually is.
     if (onWheels > 0.5) this.cmdPitch = pitch;
-    const aileron = ((this.cmdBank - bank) * 1.6 - p * 0.5) * scale;
+    const aileron = ((this.cmdBank - bank) * gains.roll - p * gains.rollRate) * scale;
     this.set('fcs/aileron-cmd-norm', clamp(aileron, -1, 1));
     // On the ground the rudder steers; in the air it only keeps the ball centred.
     // Pedals. Two corrections live here, both found by measuring rather than
@@ -454,7 +484,7 @@ class Fdm {
   }
 
   setFlaps(notch) {
-    this.set('fcs/flap-cmd-norm', clamp(notch / 2, 0, 1));
+    this.set('fcs/flap-cmd-norm', clamp(notch / this.notches, 0, 1));
   }
 
   setBrakes(on) {
@@ -500,6 +530,7 @@ const clamp = (value, lo, hi) => Math.max(lo, Math.min(hi, value));
  */
 export function autopilot(fdm, route, state, dt = 1 / 60) {
   const a = fdm.aircraft;
+  const type = fdm.type;
   const target = route[state.leg];
   if (!target) return { attitude: { pitch: 0, bank: 0 }, throttle: a.throttle };
 
@@ -526,7 +557,10 @@ export function autopilot(fdm, route, state, dt = 1 / 60) {
     wantedAlt = target.alt + Math.max(0, along) * (target.glide ?? 0.105);
     // Hold the approach speed to the threshold, then flare: nose up, idle, and
     // aim a couple of metres into the runway so the aeroplane keeps settling.
-    if (a.agl < 9) {
+    // Where the flare begins is the aeroplane's, not the runway's: nine metres
+    // is a light jet's height over the threshold and a widebody's main wheels
+    // are nearly that far below the pilot.
+    if (a.agl < type.flareAgl) {
       flare = true;
       wantedAlt = a.alt - 2;
       wantedSpeed = (target.speed ?? 115) * 0.88 * KT;
@@ -536,7 +570,7 @@ export function autopilot(fdm, route, state, dt = 1 / 60) {
   let error = course - a.heading;
   while (error > Math.PI) error -= 2 * Math.PI;
   while (error < -Math.PI) error += 2 * Math.PI;
-  const bank = clamp(error * 1.3, -35 * DEG, 35 * DEG);
+  const bank = clamp(error * 1.3, -type.apBank * DEG, type.apBank * DEG);
 
   // Vertical speed first, then the pitch attitude that flies it. Pitch is the
   // flight path angle plus the angle of attack, which is why this loop needs
@@ -549,10 +583,10 @@ export function autopilot(fdm, route, state, dt = 1 / 60) {
   // Speed protection. The flight model will stall if asked to, so the autopilot
   // has to not ask: below the configuration's minimum the nose comes down, and
   // the climb waits.
-  const floor = (a.flaps > 0 ? 110 : 140) * (a.gear ? 1 : 1.05);
+  const floor = floorFor(type, a.flaps, a.gear);
   if (a.kias < floor) pitch = Math.min(pitch, a.alpha - (floor - a.kias) * 0.4 * DEG);
 
-  let throttle = autoThrottle(a, tasFor(a, Math.min(wantedSpeed / KT, limitKias(a))), wantedVs, dt);
+  let throttle = autoThrottle(a, tasFor(a, Math.min(wantedSpeed / KT, limitKias(fdm))), wantedVs, dt);
   if (flare) throttle = Math.min(throttle, 0.1);
 
   // Down: everything that stops an aeroplane, at once. Courchevel's runway is
@@ -573,15 +607,15 @@ export function autopilot(fdm, route, state, dt = 1 / 60) {
  * down, Mmo high up, whichever bites first, with a margin so the autopilot
  * does not live on the red line.
  */
-function limitKias(a) {
-  // The autopilot's own ceiling, deliberately under the airframe's: VMO is
-  // 290 and MMO M0.74, and an autothrottle that cruises on the limit spends
-  // its life setting off the overspeed protection. A hand on the lever may
-  // fly to the limit; the machine keeps eight knots in hand.
-  const VMO = 282;
-  const MMO = 0.72;
-  const byMach = (a.mach ?? 0) > 0.15 ? (a.kias * MMO) / a.mach : Infinity;
-  return Math.min(VMO, byMach);
+function limitKias(fdm) {
+  // The autopilot's own ceiling, deliberately under the airframe's: an
+  // autothrottle that cruises on the limit spends its life setting off the
+  // overspeed protection. A hand on the lever may fly to the limit; the
+  // machine keeps eight knots and two hundredths of Mach in hand, and what
+  // those are a margin on is in fleet.js.
+  const a = fdm.aircraft;
+  const byMach = (a.mach ?? 0) > 0.15 ? (a.kias * fdm.type.apMmo) / a.mach : Infinity;
+  return Math.min(fdm.type.apVmo, byMach);
 }
 
 /** Indicated to true, measured from the aeroplane rather than assumed. */
@@ -614,20 +648,22 @@ function autoThrottle(a, wantedTas, wantedVs, dt) {
  */
 export function holdAutopilot(fdm, target, dt = 1 / 60) {
   const a = fdm.aircraft;
+  const type = fdm.type;
   let error = (target.heading ?? a.heading) - a.heading;
   while (error > Math.PI) error -= 2 * Math.PI;
   while (error < -Math.PI) error += 2 * Math.PI;
-  const bank = clamp(error * 1.6, -25 * DEG, 25 * DEG);
+  const limit = Math.min(25, type.apBank) * DEG;
+  const bank = clamp(error * 1.6, -limit, limit);
 
   const wantedVs = clamp(((target.alt ?? a.alt) - a.alt) * 0.03, -10, 12);
   const gamma = Math.asin(clamp(wantedVs / Math.max(a.speed, 50), -0.25, 0.25));
   let pitch = clamp(gamma + a.alpha, -10 * DEG, 14 * DEG);
-  const floor = (a.flaps > 0 ? 110 : 140) * (a.gear ? 1 : 1.05);
+  const floor = floorFor(type, a.flaps, a.gear);
   if (a.kias < floor) pitch = Math.min(pitch, a.alpha - (floor - a.kias) * 0.4 * DEG);
 
   // With nothing asked for, cruise at the limit: that is what the aeroplane is
   // for, and anything slower is a choice nobody made.
-  const wantedKias = Math.min(target.speed ?? limitKias(a), limitKias(a));
+  const wantedKias = Math.min(target.speed ?? limitKias(fdm), limitKias(fdm));
   const throttle = autoThrottle(a, tasFor(a, wantedKias), wantedVs, dt);
   return { attitude: { pitch, bank }, throttle };
 }
