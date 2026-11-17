@@ -11,6 +11,7 @@ import {
   ImageryLayer,
   Rectangle,
   UrlTemplateImageryProvider,
+  WebMapServiceImageryProvider,
   WebMapTileServiceImageryProvider,
   WebMercatorTilingScheme,
 } from 'cesium';
@@ -36,6 +37,8 @@ export const ATTRIBUTION =
   '© Re:Earth Terrain (Copernicus/NASADEM) · © IGN BD ORTHO & RGE ALTI, Géoplateforme · ' +
   '© swisstopo SWISSIMAGE · © Kadaster/PDOK CC BY 4.0 · ' +
   '© Autonome Provinz Bozen – Südtirol, Orthofoto 2023 CC BY 4.0 · ' +
+  '© GeoBasis-DE: NW, NI, HE, RP, SL, BW, BY, TH, SN, ST, BB/BE, MV, SH — ' +
+  'dl-de/by-2-0 and CC BY 4.0 · ' +
   'Data source: basemap.at CC BY 4.0 · ' +
   '© EOX Sentinel-2 cloudless CC BY 4.0 · © OpenStreetMap contributors ODbL · ' +
   '© OpenFlights routes and airlines ODbL';
@@ -87,6 +90,64 @@ const SOUTH_TYROL_RECTANGLE = Rectangle.fromDegrees(10.3, 46.15, 12.55, 47.15);
 // 404, which Cesium treats as no tile once the error event is swallowed — so
 // this one needs no colour keying either.
 const AT_RECTANGLE = Rectangle.fromDegrees(9.4, 46.3, 17.2, 49.1);
+// Germany, state by state, because there is no other way in.
+//
+// BKG publishes a nationwide DOP20 and it answers 403 on both of its
+// hostnames; the free registration puts a token in the URL path, which is a
+// key, and this file has none. What the Laender publish instead is thirteen
+// separate WMS services -- fourteen states, since Berlin shares Brandenburg's
+// -- and together they cover everything except Hamburg and Bremen.
+//
+// Three measurements on 2026-11-17 decided the shape of this, one tile per
+// service over a point inside each state:
+//
+//   - PNG with TRANSPARENT=TRUE returns a genuinely transparent tile outside
+//     each state's border, which would make the stacking below exact. It also
+//     costs 58 to 179 kB a tile against 8 to 39 kB for JPEG. Five to twelve
+//     times the bytes, under a moving aeroplane, is not a trade worth making.
+//   - So JPEG -- and outside its coverage every one of the thirteen answers a
+//     sheet of pure 255,255,255, the same canned no-data tile IGN and PDOK
+//     serve. The states' bounding boxes overlap heavily and that white key is
+//     exactly what makes the overlaps resolve: each layer paints only where
+//     it has photography and lets the one beneath through everywhere else.
+//   - What the key costs in real German imagery: 0.000% of pixels over the
+//     Frankfurt and Duesseldorf aprons, 0.093% over Munich's, 0.004% over the
+//     Straelen glasshouses, 0.000% over the Garzweiler pit and over the
+//     Feldberg and Nebelhorn snowfields. The one exception is the Zugspitze
+//     glacier at 8.4%, where the pixels that go transparent reveal
+//     Sentinel-2, which up there is also snow.
+//
+// Hesse is the odd one out: its service draws nothing below zoom 16, a scale
+// limit at their end. It needs no special handling, because what it returns
+// below that limit is the same 667-byte sheet of white, keyed out like any
+// other gap -- Hesse simply appears as you come down through zoom 16.
+//
+// None of these carries a minimumLevel, and that is deliberate twice over.
+// Cesium does not skip a layer below its minimum level, it clamps the request
+// up to it: one zoom-3 terrain tile with a minimum of 13 would ask for four
+// thousand tiles of North Rhine-Westphalia at once. But letting the level
+// follow the terrain is not free either — measured from the cockpit at
+// Wiesbaden, twelve coarse tiles of Lower Saxony, a hundred and fifty
+// kilometres up the horizon, cost 1.7 MB between them, because a WMS asked
+// for a ten-kilometre square renders a ten-kilometre square. So the floor is
+// enforced the third way, with blankBelow: no request at all under zoom 13,
+// where Sentinel-2 is finer than these would be anyway.
+const GERMANY = [
+  ['NW', 'wms.nrw.de/geobasis/wms_nw_dop', 'nw_dop_rgb', 5.86, 50.32, 9.47, 52.54],
+  ['NI', 'opendata.lgln.niedersachsen.de/doorman/noauth/dop_wms', 'ni_dop20', 6.44, 51.29, 11.60, 53.90],
+  ['HE', 'www.gds-srv.hessen.de/cgi-bin/lika-services/ogc-free-images.ows', 'he_dop20_rgb', 7.77, 49.39, 10.24, 51.66],
+  ['RP', 'geo4.service24.rlp.de/wms/rp_dop20.fcgi', 'rp_dop20', 6.11, 48.96, 8.51, 50.95],
+  ['SL', 'geoportal.saarland.de/freewms/dop2016', 'sl_dop2016', 6.35, 49.11, 7.41, 49.64],
+  ['BW', 'owsproxy.lgl-bw.de/owsproxy/ows/WMS_LGL-BW_ATKIS_DOP_20_C', 'IMAGES_DOP_20_RGB', 7.51, 47.53, 10.50, 49.80],
+  ['BY', 'geoservices.bayern.de/od/wms/dop/v1/dop40', 'by_dop40c', 8.97, 47.27, 13.84, 50.57],
+  ['TH', 'www.geoproxy.geoportal-th.de/geoproxy/services/DOP20', 'th_dop', 9.87, 50.20, 12.66, 51.65],
+  ['SN', 'geodienste.sachsen.de/wms_geosn_dop-rgb/guest', 'sn_dop_020', 11.87, 50.16, 15.05, 51.69],
+  ['ST', 'www.geodatenportal.sachsen-anhalt.de/wss/service/ST_LVermGeo_DOP_WMS_OpenData/guest', 'lsa_lvermgeo_dop20_2', 10.56, 50.93, 13.19, 53.05],
+  ['BB', 'isk.geobasis-bb.de/mapproxy/dop20c/service/wms', 'bebb_dop20c', 11.26, 51.35, 14.77, 53.56],
+  ['MV', 'www.geodaten-mv.de/dienste/adv_dop', 'mv_dop', 10.59, 53.10, 14.42, 54.69],
+  ['SH', 'dienste.gdi-sh.de/WMS_SH_DOP20col_OpenGBD', 'sh_dop20_rgb', 7.86, 53.35, 11.32, 55.06],
+];
+
 // The canned no-data tile, pure white, served by IGN and by PDOK alike.
 const NODATA = Color.WHITE;
 // Tight: ±1 per channel. The tile is exactly 255,255,255, so nothing wider is
@@ -101,6 +162,25 @@ const NODATA_THRESHOLD = 0.004;
 // channel. The threshold below is ±3.
 const AT_NODATA = Color.fromBytes(254, 254, 254);
 const AT_THRESHOLD = 0.012;
+
+// A one-pixel transparent tile. Cesium, when an imagery request fails, does
+// not fall through to the layer underneath -- it draws the nearest ancestor
+// that layer does have, stretched. Handing it a blank ancestor is how a layer
+// is told to stop at its own coverage.
+const BLANK = (() => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  return canvas;
+})();
+
+/** Makes a provider answer blank below `floor`, so nothing coarser is stretched. */
+function blankBelow(provider, floor) {
+  const inner = provider.requestImage.bind(provider);
+  provider.requestImage = (x, y, level, request) =>
+    level < floor ? Promise.resolve(BLANK) : inner(x, y, level, request);
+  return provider;
+}
 
 export const terrainProvider = () =>
   CesiumTerrainProvider.fromUrl(TERRAIN, { requestVertexNormals: true });
@@ -119,20 +199,32 @@ export function baseLayer() {
 /** BD ORTHO, 20 cm over France — this is what makes the valleys read. */
 export function orthoLayer() {
   const layer = new ImageryLayer(
-    new WebMapTileServiceImageryProvider({
-      url:
-        `${IGN_WMTS}?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS` +
-        '&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM' +
-        '&TILEMATRIX={TileMatrix}&TILEROW={TileRow}&TILECOL={TileCol}',
-      layer: 'ORTHOIMAGERY.ORTHOPHOTOS',
-      style: 'normal',
-      format: 'image/jpeg',
-      tileMatrixSetID: 'PM',
-      tilingScheme: new WebMercatorTilingScheme(),
-      maximumLevel: 19,
-      rectangle: FRANCE,
-      credit: 'IGN BD ORTHO',
-    }),
+    // IGN answers zoom 13 and up with BD ORTHO or with nothing, which is what
+    // this layer is for. At zoom 12 and below it answers something else
+    // entirely: a global mosaic, served as readily over Cologne, Warsaw and
+    // Milan as over Paris. That is not a curiosity, because the rectangle
+    // below reaches to 9.7 E and a failed tile is drawn from its ancestor --
+    // so a 404 over Wiesbaden at zoom 16 did not reveal Sentinel-2
+    // underneath, it stretched IGN's zoom-12 world mosaic across the
+    // windscreen. Measured there on 2026-11-17 it shifted the ground by 54,
+    // 49 and 60 counts per channel and turned western Germany pale grey.
+    blankBelow(
+      new WebMapTileServiceImageryProvider({
+        url:
+          `${IGN_WMTS}?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS` +
+          '&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM' +
+          '&TILEMATRIX={TileMatrix}&TILEROW={TileRow}&TILECOL={TileCol}',
+        layer: 'ORTHOIMAGERY.ORTHOPHOTOS',
+        style: 'normal',
+        format: 'image/jpeg',
+        tileMatrixSetID: 'PM',
+        tilingScheme: new WebMercatorTilingScheme(),
+        maximumLevel: 19,
+        rectangle: FRANCE,
+        credit: 'IGN BD ORTHO',
+      }),
+      13,
+    ),
   );
   layer.brightness = 1.04;
   layer.saturation = 1.06;
@@ -290,3 +382,38 @@ export function swissLayer() {
   layer.brightness = 1.02;
   return layer;
 }
+
+/**
+ * The thirteen German services, coarse to fine in the only sense that matters
+ * here: they do not overlap in coverage, only in bounding box, and the white
+ * key sorts that out. Ten of the thirteen are 20 cm, NRW is 10 and Bavaria 40.
+ */
+export function germanLayers() {
+  return GERMANY.map(([code, host, name, west, south, east, north]) => {
+    const layer = new ImageryLayer(
+      blankBelow(
+        new WebMapServiceImageryProvider({
+          url: `https://${host}`,
+          layers: name,
+          parameters: {
+            version: '1.3.0',
+            format: 'image/jpeg',
+            transparent: false,
+            styles: '',
+          },
+          tilingScheme: new WebMercatorTilingScheme(),
+          tileWidth: 256,
+          tileHeight: 256,
+          rectangle: Rectangle.fromDegrees(west, south, east, north),
+          maximumLevel: 19,
+          credit: `GeoBasis-DE/${code}`,
+        }),
+        13,
+      ),
+    );
+    layer.colorToAlpha = NODATA;
+    layer.colorToAlphaThreshold = NODATA_THRESHOLD;
+    return layer;
+  });
+}
+

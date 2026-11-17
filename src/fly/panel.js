@@ -223,7 +223,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
       -->
       <div class="fly-hud__foot">
         <button class="fly-hud__legendkey" data-action="legend" aria-expanded="false" data-el="legendButton">
-          <span aria-hidden="true">i</span> © IGN, swisstopo, PDOK, basemap.at and others · keys
+          <span aria-hidden="true">i</span> © IGN, GeoBasis-DE, swisstopo, PDOK, basemap.at and others · keys
         </button>
         <div class="fly-hud__legend" data-el="legend" hidden>
           <h3>Keys</h3>

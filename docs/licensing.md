@@ -91,6 +91,24 @@ words rather than in a summary of them, because that is where openAIP failed:
   basemap.at"* — so the attribution string carries exactly that rather than a
   paraphrase.
 
+- **GeoBasis-DE**, thirteen separate state services covering fourteen of
+  Germany's sixteen states, between 10 cm (North Rhine-Westphalia) and 40 cm
+  (Bavaria). There is no one licence to quote, because there is no one
+  publisher: each state's own `AccessConstraints` and `Fees` were read out of
+  its WMS capabilities and they say four different things. Creative Commons BY
+  4.0 for Lower Saxony, Bavaria, Thuringia and Schleswig-Holstein; Datenlizenz
+  Deutschland Namensnennung 2.0 for Rhineland-Palatinate, Baden-Württemberg
+  and the joint Berlin–Brandenburg service; *"NONE"* or *"noLimitations"* for
+  North Rhine-Westphalia, Hesse and Saarland, each of which separately states
+  the data is free of charge under open-data principles; and Saxony's portal
+  terms. All of them are attribution-only or freer, which is why one
+  `GeoBasis-DE` credit naming the states satisfies the lot.
+
+  Hamburg and Bremen are absent because no working endpoint was found for
+  either, not because of a licence. BKG's nationwide DOP20, which would
+  replace all thirteen, answers 403 without a registered token — and a token
+  in a URL is a key, which this project does not use.
+
 ## What had to be changed before publishing
 
 **Esri basemap tiles had to go.** The ArcGIS World Shaded Relief and boundary

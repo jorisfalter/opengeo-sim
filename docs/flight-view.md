@@ -797,6 +797,102 @@ this one outlived the thing it described. The threshold that protected real
 snow is also what kept the drift invisible — the key stopped matching
 anything, and nothing broke loudly enough to notice.
 
+### A third thing the no-data tile does, which is worse
+
+Keying the white out is only half of it, and the half that was missing cost
+western Germany its ground for a year.
+
+The symptom came in as a question rather than a bug report: standing at
+Wiesbaden, is the German imagery really this soft, or is the connection slow?
+Neither. The imagery was IGN's.
+
+France's rectangle runs to 9.7 E so that Corsica fits inside it, which puts
+Cologne, Frankfurt, Stuttgart and Wiesbaden inside it too. Over all of them
+IGN answers 404 from zoom 13 up, and that is correct — there is no BD ORTHO
+there. The trouble is what Cesium does with a failed tile. It does **not**
+fall through to the layer underneath. It walks up the layer's own ancestor
+chain and draws the nearest level that did load, stretched to fit:
+
+```
+z16 over Wiesbaden  ->  404
+z15, z14, z13       ->  404
+z12                 ->  200, and this is what gets drawn
+```
+
+And zoom 12 is not BD ORTHO. Below zoom 13 IGN serves a global mosaic — it
+answers just as readily over Warsaw and Milan as over Paris, which is how this
+was confirmed. So the layer was stretching a world mosaic of roughly 24 m per
+pixel across Germany, on top of a Sentinel-2 base of 10 m, and brightening it
+by 4% and saturating it by 6% on the way out because those settings exist for
+French photography.
+
+Rendering Wiesbaden twice, once with the layer shown and once hidden, put a
+number on it: the ground moved by 54, 49 and 60 counts per channel, from a
+dark olive to a pale grey-brown. That pale grey-brown is what the question was
+about.
+
+The fix is four lines and no new dependency — the provider answers a
+one-pixel blank below zoom 13, so the ancestor chain has nothing to stretch:
+
+```js
+function blankBelow(provider, floor) {
+  const inner = provider.requestImage.bind(provider);
+  provider.requestImage = (x, y, level, request) =>
+    level < floor ? Promise.resolve(BLANK) : inner(x, y, level, request);
+  return provider;
+}
+```
+
+Nothing is lost over France. What IGN serves below zoom 13 was never BD ORTHO,
+and Sentinel-2 at 10 m is finer than the mosaic it replaces.
+
+### Germany, which is thirteen services
+
+There is no national open orthophoto for Germany that a browser can reach.
+BKG's nationwide DOP20 answers 403 on both `sgx.` and `sg.geodatenzentrum.de`;
+the free registration puts a token in the URL path, and a token in a URL is a
+key, which this file does not have. The states publish their own instead, and
+thirteen of them answer without one — every state but Hamburg and Bremen,
+since Berlin shares Brandenburg's service. Ten are 20 cm, North
+Rhine-Westphalia is 10, Bavaria 40.
+
+Three measurements set the shape of it.
+
+**PNG or JPEG.** With `TRANSPARENT=TRUE` and `image/png`, every one of the
+thirteen returns a genuinely transparent tile outside its own border, which
+would make the stacking exact. It also costs 58 to 179 kB a tile against 8 to
+39 kB for JPEG. Five to twelve times the bytes, under a moving aeroplane, is
+not a trade worth making — so JPEG, and the white key does the same job.
+
+**What the key costs here.** The states' bounding boxes overlap heavily, so
+the key is not a tidy-up, it is the mechanism: each layer paints where it has
+photography and lets the one beneath through everywhere else. Pure
+255,255,255 in real German imagery: 0.000% over the Frankfurt and Düsseldorf
+aprons, 0.093% over Munich's, 0.004% over the Straelen glasshouses, 0.000%
+over the Garzweiler pit and the Feldberg and Nebelhorn snowfields. The
+exception is the Zugspitze glacier at 8.4%, where what shows through is
+Sentinel-2, which up there is also snow.
+
+**No minimum level, and that is deliberate twice over.** Hesse draws nothing
+below zoom 16 — a scale limit at their end — and the obvious response is to
+give that layer a `minimumLevel` so it is not asked. Cesium does not skip a
+layer below its minimum level; it clamps the request *up* to it. One zoom-3
+terrain tile with a minimum of 13 asks for four thousand tiles of North
+Rhine-Westphalia at once.
+
+Letting the level follow the terrain instead is not free either, and the first
+run measured the bill. Standing at Wiesbaden with the horizon in frame, twelve
+coarse tiles of Lower Saxony — a hundred and fifty kilometres up the view —
+cost 1.7 MB between them, because a WMS asked for a ten-kilometre square
+renders a ten-kilometre square and hands back a 140 kB JPEG. Thuringia did the
+same for 876 kB.
+
+So the floor is enforced the third way, with the same `blankBelow` the French
+layer got: no request at all below zoom 13, where Sentinel-2 is finer than
+these would be anyway. Below its own limit Hesse then answers the same
+667-byte sheet of white as any other gap, and simply appears as you descend
+through zoom 16.
+
 ### The same trick, twice more, for the eastern Alps
 
 Geneva is not where the Alps stop, and east of it the ground used to be

@@ -498,7 +498,7 @@ async function main() {
   // ---- the glass ----------------------------------------------------------
   const panel = createPanel(document.querySelector('#hud'), {
     title: type.title,
-    subtitle: `${startPlace.name} · ${sim.name} · IGN, swisstopo, Südtirol, basemap.at and PDOK · the rest worldwide`,
+    subtitle: `${startPlace.name} · ${sim.name} · IGN, GeoBasis-DE, swisstopo, Südtirol, basemap.at and PDOK · the rest worldwide`,
     attribution: ATTRIBUTION,
   });
 

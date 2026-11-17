@@ -45,6 +45,7 @@ arises.
 | **swisstopo SWISSIMAGE** | Swiss imagery in the flight view | Free, commercial use allowed | Attribution |
 | **Autonome Provinz Bozen – Südtirol**, Orthofoto 2023 | South Tyrol imagery in the flight view | CC BY 4.0 | Attribution |
 | **basemap.at** Orthofoto | Austrian imagery in the flight view | Open Government Data Austria / CC BY 4.0 | Attribution, wording fixed as "Data source: basemap.at" |
+| **GeoBasis-DE**, thirteen state surveying authorities (NW, NI, HE, RP, SL, BW, BY, TH, SN, ST, BB/BE, MV, SH) | German imagery in the flight view | Open data: CC BY 4.0 (NI, BY, TH, SH), dl-de/by-2-0 (RP, BW, BB/BE), no constraints (NW, HE, SL), Saxony's portal terms (SN) | Attribution |
 | **OurAirports** | The world airfield index and runway ends | Public domain (Unlicense) | Nothing |
 | **OpenFlights** routes and airlines | The robot traffic's airlines and city pairs | ODbL 1.0 | Attribution, **and share-alike on derived databases** |
 | **EOX Sentinel-2 cloudless** | Global base imagery in the flight view | CC BY 4.0 | Attribution |

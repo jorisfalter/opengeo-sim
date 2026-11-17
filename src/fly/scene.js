@@ -7,6 +7,7 @@ import {
   baseLayer,
   dutchAerialLayer,
   flemishLayer,
+  germanLayers,
   orthoLayer,
   southTyrolLayer,
   swissLayer,
@@ -109,6 +110,10 @@ export async function createScene(container, { time }) {
   // basemap.at's 30 cm first, then South Tyrol's 20 cm over the Brenner
   // ridge, then SWISSIMAGE's 10 cm over the Engadin and Val Müstair.
   viewer.imageryLayers.add(orthoLayer());
+  // Germany is thirteen services rather than one, and they go on before the
+  // Alpine layers because Bavaria's bounding box runs into Austria's and
+  // Baden-Württemberg's into Switzerland's, where the finer imagery wins.
+  for (const layer of germanLayers()) viewer.imageryLayers.add(layer);
   viewer.imageryLayers.add(austrianLayer());
   viewer.imageryLayers.add(southTyrolLayer());
   viewer.imageryLayers.add(swissLayer());

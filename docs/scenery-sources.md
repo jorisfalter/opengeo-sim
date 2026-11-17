@@ -22,8 +22,17 @@ Coverage breadth is therefore worth more than a third aeroplane.
 | Flanders | Vlaanderen OMW WMTS | 25 cm |
 | South Tyrol | Autonome Provinz Bozen, Aerial 2023 | — |
 | Austria | basemap.at bmaporthofoto30cm | 30 cm |
+| Germany, 14 states | thirteen Land WMS services (Berlin shares Brandenburg's) | 10–40 cm |
 
-## What is available and not wired in
+Germany was added on 2026-11-17, after the survey below turned into a bug
+report: standing at Wiesbaden the ground was a pale grey-brown smear, which
+turned out to be two separate faults stacked on each other. There was no
+German imagery at all, and the French layer was stretching its zoom-12 world
+mosaic over the gap. Both are written up in `flight-view.md`, under "A third
+thing the no-data tile does, which is worse" and "Germany, which is thirteen
+services".
+
+## What is available (the German rows are now wired in)
 
 Measured on 2026-11-10. For each service one tile was fetched over a point
 inside its coverage, with `Origin: https://opengeo.ai-tigers.com` on the
