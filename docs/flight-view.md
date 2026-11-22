@@ -999,6 +999,52 @@ tiles row before column**. The URL is `{z}/{y}/{x}`, not the `{z}/{x}/{y}`
 every other service here uses, and asking the usual way answers 404 on every
 single tile — which looks exactly like a country with no coverage.
 
+### Whose photograph wins at the border
+
+Weeze is a German airport ten kilometres from the Dutch border, and until
+22 November 2026 it was photographed twice. A white seam ran diagonally
+across the aerodrome, flat grey-brown Dutch winter imagery on one side of it
+and North Rhine-Westphalia's green summer imagery on the other, with the
+runway cut in half. It came in as a question about the airport rather than
+about the stack: *Weeze is cut through halfway.*
+
+The cause is that PDOK's mosaic does not stop at the border. One `GetMap`
+over the full length of the runway, asked of both services, settles it: North
+Rhine-Westphalia returns the whole field at 10 cm in 355 ms, and PDOK returns
+a Dutch winter image that reaches several kilometres into Germany and then
+ends on a curved coverage edge — 81% of that frame is the canned white sheet
+and the rest is real pixels, laid over the German photograph.
+
+They were in that order because resolution decided it: PDOK is 8 cm and NRW
+is 10, so by the coarse-to-fine rule the Dutch layer went on top. That rule
+is right between two services that cover the same ground and wrong between
+two that cover different countries. The useful rule is **a service's own
+territory beats a neighbour's overspill**, and the stack now says so:
+`dutchAerialLayer()` and `flemishLayer()` go on before the thirteen German
+ones.
+
+Putting them underneath is safe because the German services are polite about
+their own edges, which was measured rather than assumed. Asked for ground at
+Gennep, Nijmegen, Venlo and Enschede — all plainly in the Netherlands —
+North Rhine-Westphalia and Lower Saxony each answer the same 667-byte sheet
+of pure 255,255,255, which is exactly what the no-data key already removes:
+
+| Ground | NRW | Lower Saxony | PDOK |
+| --- | --- | --- | --- |
+| Gennep (NL) | 667 B, 100% white | 667 B, 100% white | 17 kB photograph |
+| Nijmegen (NL) | 667 B, 100% white | 667 B, 100% white | 36 kB photograph |
+| Venlo (NL) | 667 B, 100% white | 667 B, 100% white | 32 kB photograph |
+| Enschede (NL) | 667 B, 100% white | 667 B, 100% white | 31 kB photograph |
+| Weeze (DE) | 11 kB photograph | 667 B, 100% white | 7 kB, 81% white |
+
+Rendered from 2,600 m straight down over EDLV, before and after: the near-white
+seam goes from **1.27% of the frame to 0.00%**, and the western half of the
+aerodrome moves from a flat (130,131,115) to NRW's (108,118,106). What this
+does not buy is sharpness — edge energy in that half is slightly *higher* in
+the Dutch image, because it is a leafless winter mosaic and NRW's is summer
+canopy. The gain is that the aerodrome is one photograph, of the country it
+is in, taken on one day.
+
 ### Feeding it the ground, anywhere
 
 JSBSim needs a terrain height under the aircraft every frame, synchronously,

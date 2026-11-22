@@ -110,6 +110,24 @@ export async function createScene(container, { time }) {
   // basemap.at's 30 cm first, then South Tyrol's 20 cm over the Brenner
   // ridge, then SWISSIMAGE's 10 cm over the Engadin and Val Müstair.
   viewer.imageryLayers.add(orthoLayer());
+  // The Low Countries go on before Germany, and resolution is not what
+  // decides it. PDOK is 8 cm against North Rhine-Westphalia's 10, so by the
+  // coarse-to-fine rule it belongs on top — but its mosaic does not stop at
+  // the border. It reaches several kilometres into Germany and then ends on a
+  // curved edge, and over Weeze that edge runs diagonally across the
+  // aerodrome: the western half of the runway in a flat Dutch winter image,
+  // the eastern half in NRW's summer one, with a seam between them. What
+  // PDOK serves beyond its own coverage is the same canned white sheet as
+  // ever, which keys out — the damage is done where it does have pixels and
+  // they are not the country you are flying over.
+  //
+  // Below Germany is safe because the German services are polite about it:
+  // asked for ground in Gennep, Nijmegen, Venlo or Enschede, North
+  // Rhine-Westphalia and Lower Saxony each answer the same 667-byte sheet of
+  // pure 255,255,255 that the no-data key already removes. So over the
+  // Netherlands PDOK still shows, and over Germany the German state wins.
+  viewer.imageryLayers.add(dutchAerialLayer());
+  viewer.imageryLayers.add(flemishLayer());
   // Germany is thirteen services rather than one, and they go on before the
   // Alpine layers because Bavaria's bounding box runs into Austria's and
   // Baden-Württemberg's into Switzerland's, where the finer imagery wins.
@@ -117,8 +135,6 @@ export async function createScene(container, { time }) {
   viewer.imageryLayers.add(austrianLayer());
   viewer.imageryLayers.add(southTyrolLayer());
   viewer.imageryLayers.add(swissLayer());
-  viewer.imageryLayers.add(dutchAerialLayer());
-  viewer.imageryLayers.add(flemishLayer());
   // Cesium limits itself to six requests per host, which is an HTTP/1 rule.
   // Every service we use speaks HTTP/2, where a dozen streams share a single
   // connection — so the tiles arrive in half the wall-clock time at no extra

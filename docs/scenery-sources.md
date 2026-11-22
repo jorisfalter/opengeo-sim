@@ -146,3 +146,21 @@ echo | openssl s_client -connect $h:443 -servername $h -verify_hostname $h \
 
 Run over all 22 imagery hosts this project uses, North Rhine-Westphalia was
 the only one failing.
+
+## A mosaic that does not stop at the border
+
+PDOK's aerial photography reaches several kilometres into Germany before it
+ends, on a curved coverage edge rather than on the frontier. Because it is
+8 cm against North Rhine-Westphalia's 10, it used to sit on top of the German
+layers — which put that edge straight across Weeze airport, half the runway
+in a Dutch winter image and half in a German summer one, with a white seam
+between them.
+
+Resolution is the wrong tie-break between two countries. The stack now puts
+the Netherlands and Flanders *under* the thirteen German services, so a
+state's own photography wins over a neighbour's overspill. Nothing is lost on
+the Dutch side: asked for ground at Gennep, Nijmegen, Venlo or Enschede, both
+North Rhine-Westphalia and Lower Saxony answer the same 667-byte sheet of
+pure 255,255,255 that the no-data key already removes, and PDOK shows
+through. Measured from 2,600 m over EDLV, the seam went from 1.27% of the
+frame to none of it.
