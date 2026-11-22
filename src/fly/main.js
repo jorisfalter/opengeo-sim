@@ -695,7 +695,12 @@ async function main() {
 
   const showPlan = (open) => {
     planSheet.classList.toggle('is-open', open);
-    if (open) renderPlan();
+    if (!open) return;
+    renderPlan();
+    // Straight into the search field, because that is what the sheet is for.
+    // Not on a phone: there the keyboard would come up over the plan you
+    // opened the sheet to look at.
+    if (!smallScreen) planSheet.querySelector('[data-el="planfind"] input')?.focus();
   };
 
   planSheet.addEventListener('click', (event) => {

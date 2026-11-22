@@ -85,7 +85,30 @@ export function createControls(element, { onAction, onNotice } = {}) {
   window.addEventListener('mousemove', onMouseMove);
 
   // ---- keyboard -----------------------------------------------------------
+  //
+  // A focused text field owns the keyboard, and until this it did not.
+  //
+  // Every control here is a letter, and the axes are held keys that have to
+  // swallow their own keypresses — a W that scrolls the page is not a
+  // throttle. Those two facts together meant that typing a destination into
+  // the search field dropped the E, the D and the S into the controls and
+  // sent the L to the start menu: "Düsseldorf" arrived as "üorf" with the
+  // aeroplane rolling right. Worse in the coordinate fields, where Minus and
+  // Period are the trim and the rudder, so a negative longitude could not be
+  // typed at all.
+  //
+  // So an input, a textarea, a select or anything contenteditable takes the
+  // lot while it has the focus, and a focused button keeps its own space bar
+  // and return — otherwise clicking Gear and then pressing space pauses the
+  // simulation instead of pressing the button again.
+  const TEXT_FIELD = /^(?:input|textarea|select)$/i;
+  const owns = (node, code) => {
+    if (!(node instanceof HTMLElement)) return false;
+    if (node.isContentEditable || TEXT_FIELD.test(node.tagName)) return true;
+    return node.tagName === 'BUTTON' && (code === 'Space' || code === 'Enter');
+  };
   const onKeyDown = (event) => {
+    if (owns(event.target, event.code)) return;
     if (event.repeat) {
       if (HELD.has(event.code)) event.preventDefault();
       return;
