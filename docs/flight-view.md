@@ -48,9 +48,10 @@ npm run dev   # then open /fly.html
 | `[` / `]` | trim |
 | `G` `F` `B` `V` | gear, flaps, brakes, speedbrake |
 | `M` | control law: assisted or direct |
-| `P` | autopilot: off → heading and height → the valley route → off |
+| `P` | autopilot: off → heading and height → your own plan → the valley route → off |
 | `J` | engine and airflow sound |
 | `N` | the moving map |
+| `R` | the flight plan, and where you are going |
 | `C` `L` `space` `1` `2` | camera, start picker, pause, time rate |
 | click | the mouse becomes a yoke, `Esc` lets go |
 
@@ -70,6 +71,18 @@ managing sixty frames a second or six.
 
 Touching the controls disengages the autopilot, the way it would in the
 aeroplane.
+
+**A focused text field owns the keyboard.** Every control here is a letter,
+and the axis keys have to swallow their own keypresses — a `W` that scrolls
+the page is not a throttle — so the window-level listener that reads them was
+also reading what people typed into the search fields. Typing a destination
+dropped the `E` and the `D` into the rudder and the roll and handed the `L` to
+the start menu; in the coordinate fields, where `-` and `.` are trim and
+rudder, `-5.3` arrived as `53` and a negative longitude could not be entered
+at all. An input, textarea, select or contenteditable now takes the lot while
+it has the focus, and a focused button keeps its own space and return, so
+clicking `Gear` and then pressing space works the button instead of pausing
+the simulation.
 
 ![The head-up display on the runway at Chambéry](img/fly-hud-chambery.png)
 
