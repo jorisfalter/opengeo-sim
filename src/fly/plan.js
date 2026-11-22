@@ -99,6 +99,34 @@ export function createPlan({ onNotice } = {}) {
       return points[index] ?? null;
     },
 
+    /**
+     * The same target, without flying it: where the active waypoint is, how
+     * far off it is and which way it lies. `guide` cannot answer this —
+     * sequencing the plan is a side effect of it, so calling it to draw a
+     * line would tick waypoints off while the autopilot was switched off.
+     */
+    preview(aircraft) {
+      if (index >= points.length) return null;
+      const target = points[index];
+      const distance = distanceBetween(aircraft, target);
+      let remaining = distance;
+      for (let i = index; i < points.length - 1; i += 1) {
+        remaining += distanceBetween(points[i], points[i + 1]);
+      }
+      return {
+        name: target.name,
+        lat: target.lat,
+        lon: target.lon,
+        alt: target.alt ?? null,
+        index,
+        last: points[points.length - 1],
+        bearing: ((bearingBetween(aircraft, target) / DEG) % 360 + 360) % 360,
+        distance,
+        remaining,
+        seconds: remaining / Math.max(40, aircraft.speed ?? 120),
+      };
+    },
+
     /** Everything the autopilot and the glass need, or null when it is done. */
     guide(aircraft) {
       if (index >= points.length) return null;

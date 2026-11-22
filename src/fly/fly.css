@@ -302,6 +302,36 @@ body {
   fill: #ffd166;
 }
 
+/* The destination: cyan while you are flying it yourself, amber once the
+   autopilot has it, which is the same pair of colours the moving map uses for
+   the same distinction. */
+.fly-glass .g-dest polygon {
+  fill: #7cd7ff;
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 1.5;
+}
+
+.fly-glass .g-dest.is-armed polygon {
+  fill: #ffd166;
+}
+
+.fly-glass .g-dest.is-off {
+  display: none;
+}
+
+.fly-glass .g-dest-label {
+  font-size: 20px;
+  fill: #7cd7ff;
+  letter-spacing: 0.05em;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 3;
+}
+
+.fly-glass .g-dest-label.is-armed {
+  fill: #ffd166;
+}
+
 .fly-glass .g-box {
   fill: rgba(8, 14, 12, 0.3);
   stroke: rgba(122, 240, 176, 0.35);
@@ -1099,7 +1129,7 @@ body {
 
 .fly-plan__legs li {
   display: grid;
-  grid-template-columns: 24px 1fr 78px 32px;
+  grid-template-columns: 24px 1fr 62px 78px 32px;
   align-items: center;
   gap: 8px;
   padding: 7px 10px;
@@ -1129,6 +1159,13 @@ body {
   background: #202830;
   font-size: 12px;
   color: #9fb3c0;
+}
+
+.fly-plan__km {
+  font-size: 12px;
+  color: #9fb3c0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .fly-plan__alt {
@@ -1163,6 +1200,34 @@ body {
   border: 1px dashed #2b3238;
   border-radius: 9px;
   color: #7f8c96;
+}
+
+/* Every search hit carries two buttons: add it to the plan, or throw the plan
+   away and go straight there. */
+.fly-plan .fly-picker__hits li {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.fly-plan .fly-picker__hits li > button:first-child {
+  flex: 1;
+}
+
+.fly-plan__direct {
+  flex: 0 0 auto;
+  padding: 0 12px;
+  border: 1px solid #2f6f8a;
+  border-radius: 9px;
+  background: #112733;
+  color: #7cd7ff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.fly-plan__direct:hover {
+  background: #17384a;
 }
 
 .fly-plan__actions {

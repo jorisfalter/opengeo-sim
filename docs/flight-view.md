@@ -649,9 +649,11 @@ does in the cockpit.
 
 ### The autopilot, when you want it
 
-`P` cycles through three states. **Heading and height hold** freezes what the
-aeroplane is doing now, which is the useful one in free flight. **Route** flies
-the Chambéry–Courchevel valley and lands. Then off again.
+`P` cycles through four states. **Heading and height hold** freezes what the
+aeroplane is doing now, which is the useful one in free flight. **Nav** flies
+your own plan, and only appears once you have made one — see *Where you are
+going* below. **Route** flies the Chambéry–Courchevel valley and lands. Then
+off again.
 
 The route autopilot is three cascaded loops — route to heading, heading to
 bank, altitude to vertical speed to pitch attitude — plus two things a real one
@@ -691,6 +693,65 @@ bocht van 90° klaar na 2.1 min, bank tot 66°, 249 KIAS
 
 The manual run drives the same axes the keyboard and the gamepad feed, so the
 path a person actually uses is the path that is tested.
+
+### Where you are going
+
+A simulator that drops you over Frankfurt with no destination is a view, not a
+flight. So: pick a field, and a line to it is drawn from the aeroplane.
+
+Three ways to pick one, because the right one depends on whether you know what
+it is called. **Tap a runway on the moving map** — every field drawn there is
+a target, and the tap has to be a tap and not a drag, within twenty canvas
+pixels of the field, or the map would set a destination every time somebody
+panned it. **Open `R` Plan and search** for an ICAO code or a name; the first
+button adds the field to the end of the plan, `Direct` throws the plan away
+and flies straight there. Or **put it in the link**: `?to=EDDL`, and
+`?to=EDDL,EHAM` for the way round. A link that hands somebody a flight rather
+than a place to stand.
+
+The plan was already there — `plan.js` has done great-circle legs, early turn
+capture and cross-track correction since the autopilot learned to be told
+where to go. What was missing was the line, and the reason it was missing is
+worth writing down: the map drew a polyline through the waypoints, and a
+polyline through one point has no segments. Pick a single destination and you
+got a dot. The one line anybody actually wants — from the aeroplane to the
+next waypoint, which moves as you fly — was the one line that was never drawn.
+
+So the plan is drawn dashed, as intention, and the live leg solid on top of
+it, from wherever the aeroplane is now. The destination carries a ring. When
+the target is off the edge of the map, which is the normal case rather than
+the exception, an arrow sits on the edge where the line leaves, with the
+identifier and the distance on it.
+
+Two things this needed that were not there:
+
+- **A preview that does not fly the plan.** `plan.guide()` sequences the plan
+  as a side effect: call it and a waypoint inside the capture radius is
+  counted as reached. Drawing a line is not flying, so asking `guide` where
+  the target is would have ticked waypoints off a plan nobody had armed.
+  `plan.preview()` answers the same question — which waypoint, how far, which
+  bearing, how long — and changes nothing.
+- **A colour that says who is flying.** Cyan while you are flying it yourself,
+  amber once `P` has handed it to the autopilot, on the map line, on the
+  readout under the speed tape and on the bug below the compass tape. The bug
+  is clamped to the ends of the tape, so a destination behind you parks it at
+  the edge it is nearest instead of disappearing off the glass; the gap
+  between it and the centre is the turn you still owe.
+
+The readout is on the left, under the speed tape, rather than across the top
+where a navigation line belongs on real glass. The top of this HUD already
+carries the autopilot line, and above that sit the mode buttons, which are
+HTML: at a narrow window a destination written there runs straight through
+`Start…`.
+
+The time to run is blank below forty knots of ground speed. The plan's
+guidance floors its ground speed at forty metres a second so that a stationary
+aeroplane cannot divide by zero, and the honest consequence of that floor is
+that a PC-24 parked on the apron at Frankfurt was being promised Düsseldorf in
+an hour and eighteen minutes.
+
+And the autopilot does not engage itself. Tapping a field on a map is not a
+request to have the aeroplane flown for you; `P`, or `Fly it`, or `Direct` is.
 
 ### The Courchevel trench
 
@@ -1109,8 +1170,9 @@ scene already uses, so there is no second source and no second licence, and
 the mosaic reads at every zoom from the continents down to one valley.
 
 On it: the aeroplane and its heading, a breadcrumb trail of the last five
-minutes, the places from `places.js` as landmarks, the route with its waypoint
-names when the route autopilot is flying, and **every airfield under the map**
+minutes, the places from `places.js` as landmarks, the plan and the line to
+the next waypoint (see *Where you are going* — tapping a field here is how you
+make one), and **every airfield under the map**
 — drawn as the runway itself, a dark casing and a bright core with a tick at
 each threshold, so it reads as somewhere to land and not as a scratch on the
 photograph. The fields come from the same index the start menu searches, so

@@ -24,7 +24,7 @@ import { createControls } from './controls.js';
 import { createPanel } from './panel.js';
 import { createMinimap } from './minimap.js';
 import { createLookahead } from './lookahead.js';
-import { createPlan } from './plan.js';
+import { createPlan, distanceBetween } from './plan.js';
 import { createScenery } from './scenery.js';
 import { buildStrip } from './strip.js';
 import { createTraffic } from './traffic.js';
@@ -574,6 +574,7 @@ async function main() {
       heading: airports[id].runways[0].heading,
       length: airports[id].runways[0].length,
     })),
+    onTarget: (field) => targetFromMap(field),
     onNotice: (message) => panel.notice(message),
   });
   if (smallScreen) minimap.toggle(false);
@@ -591,6 +592,14 @@ async function main() {
         </label>
       </form>
       <ul class="fly-picker__hits" data-el="planhits"></ul>
+      <p>
+        <strong>Direct</strong> throws the plan away and flies straight there;
+        the first button adds the field to the end of the plan. Tapping a
+        runway on the map does the same, and so does <code>?to=EDDF</code> in
+        the address. The line to the next waypoint is drawn from the aeroplane
+        on the map, cyan while you are flying it yourself and amber once the
+        autopilot has it.
+      </p>
       <p>
         Altitudes are metres above sea level and you can type over them. The
         autopilot turns early, cuts back onto the line if you drift, and hands
@@ -612,17 +621,24 @@ async function main() {
       legs.innerHTML = '<li class="fly-plan__empty">No waypoints yet.</li>';
       return;
     }
+    // The distances are legs from where the aeroplane is now, which is the
+    // number you want when you are deciding whether to go: how far to the
+    // first one, and then how far that one is from the one before it.
+    let from = aircraft;
     legs.innerHTML = plan.points
-      .map(
-        (point, i) => `
+      .map((point, i) => {
+        const km = distanceBetween(from, point) / 1000;
+        from = point;
+        return `
         <li${i === plan.index && autoMode === 'nav' ? ' class="is-active"' : ''}>
           <span class="fly-plan__n">${i + 1}</span>
           <strong>${point.name}</strong>
+          <span class="fly-plan__km">${km < 10 ? km.toFixed(1) : Math.round(km)} km</span>
           <input class="fly-plan__alt" data-alt="${i}" inputmode="numeric"
                  value="${point.alt === null ? '' : Math.round(point.alt)}" placeholder="keep">
           <button type="button" data-drop="${i}" title="Remove">×</button>
-        </li>`,
-      )
+        </li>`;
+      })
       .join('');
   }
 
@@ -633,10 +649,48 @@ async function main() {
     return Math.round(Math.max(aircraft.alt ?? 0, field + 2000) / 50) * 50;
   };
 
-  function addToPlan(point) {
+  function addToPlan(point, note) {
     plan.add({ ...point, alt: point.alt ?? defaultAlt(point) });
     renderPlan();
-    panel.notice(`${point.name} added — ${plan.points.length} waypoints`);
+    if (note !== null) panel.notice(note ?? `${point.name} added — ${plan.points.length} waypoints`);
+  }
+
+  /**
+   * A field tapped on the map. The first one is where you are going; tap more
+   * and they are the way you want to get there, in the order you tapped them.
+   * It does not engage the autopilot — a tap that starts flying the aeroplane
+   * for you is not a tap anybody meant — but the line appears at once, which
+   * is the whole point of being able to point at a field.
+   */
+  function targetFromMap(field) {
+    const known = airportsReady() ? searchAirports(field.icao, 1)[0] : null;
+    addToPlan(
+      {
+        name: `${field.icao} ${field.name ?? ''}`.trim(),
+        lat: field.lat,
+        lon: field.lon,
+        elevationFt: known?.elevationFt,
+      },
+      plan.points.length === 0
+        ? `${field.icao} — ${Math.round(distanceBetween(aircraft, field) / 1000)} km · P to fly it`
+        : `${field.icao} added — ${plan.points.length + 1} waypoints`,
+    );
+  }
+
+  /** Clears the plan and flies to one field, now. */
+  function directTo(field) {
+    plan.clear();
+    addToPlan(
+      {
+        name: `${field.ident} ${field.name}`.trim(),
+        lat: field.lat,
+        lon: field.lon,
+        elevationFt: field.elevationFt,
+      },
+      null,
+    );
+    armPlan();
+    renderPlan();
   }
 
   const showPlan = (open) => {
@@ -696,16 +750,21 @@ async function main() {
     hits.innerHTML = searchAirports(query, 6)
       .map(
         (field) =>
-          `<li><button type="button" data-add="${field.ident}"><strong>${field.ident}</strong> ${field.name}</button></li>`,
+          `<li><button type="button" data-add="${field.ident}"><strong>${field.ident}</strong> ${field.name}</button>` +
+          `<button type="button" class="fly-plan__direct" data-direct="${field.ident}" title="Clear the plan and fly straight there">Direct</button></li>`,
       )
       .join('');
   });
   planEl('planhits').addEventListener('click', async (event) => {
-    const ident = event.target.closest('button')?.dataset.add;
-    if (!ident) return;
-    const field = searchAirports(ident, 1)[0];
+    const { add, direct } = event.target.closest('button')?.dataset ?? {};
+    const field = searchAirports(add ?? direct ?? '', 1)[0];
     if (!field) return;
-    addToPlan({ name: `${field.ident} ${field.name}`.trim(), lat: field.lat, lon: field.lon, elevationFt: field.elevationFt });
+    if (direct) {
+      directTo(field);
+      showPlan(false);
+    } else {
+      addToPlan({ name: `${field.ident} ${field.name}`.trim(), lat: field.lat, lon: field.lon, elevationFt: field.elevationFt });
+    }
     planSheet.querySelector('[data-el="planfind"] input').value = '';
     planEl('planhits').innerHTML = '';
   });
@@ -785,6 +844,9 @@ async function main() {
   let autoMode = 'off'; // off | hold | nav | route
   let navLeg = null;
   const plan = createPlan({ onNotice: (message) => panel.notice(message) });
+  // The glass has room for an identifier, not for "LFLJ Courchevel Altiport".
+  const shortName = (name) =>
+    /^[A-Z0-9]{3,4}\b/.test(name) ? name.split(' ')[0] : name.slice(0, 14);
   const clock = (seconds) => {
     if (!Number.isFinite(seconds)) return '--:--';
     const whole = Math.max(0, Math.round(seconds));
@@ -927,6 +989,35 @@ async function main() {
     const first = plan.arm(aircraft);
     autoMode = 'nav';
     panel.notice(`Flight plan armed — ${first.name}`);
+  }
+
+  // ?to=EDDF, or ?to=EDDF,EDDL for the way round — a link that hands somebody
+  // a flight rather than a place to stand. The index is fetched on demand, so
+  // this waits for it rather than holding up the first frame.
+  const destinations = (params.get('to') ?? '').trim();
+  if (destinations) {
+    loadAirports().then(() => {
+      for (const ident of destinations.split(',').map((part) => part.trim()).filter(Boolean)) {
+        const field = searchAirports(ident, 1)[0];
+        if (field) {
+          addToPlan(
+            {
+              name: `${field.ident} ${field.name}`.trim(),
+              lat: field.lat,
+              lon: field.lon,
+              elevationFt: field.elevationFt,
+            },
+            null,
+          );
+        }
+      }
+      renderPlan();
+      minimap.refreshFields();
+      if (plan.points.length) {
+        const last = plan.points[plan.points.length - 1];
+        panel.notice(`To ${last.name} — ${Math.round(distanceBetween(aircraft, last) / 1000)} km · P to fly it`);
+      }
+    });
   }
 
   setView(view);
@@ -1105,6 +1196,11 @@ async function main() {
     }
 
     const ground = groundHeight(aircraft.lat, aircraft.lon);
+    // Where you are going, whether or not anything is flying you there. The
+    // preview does not sequence the plan, so this is safe to ask every frame
+    // with the autopilot switched off.
+    const target = plan.points.length ? plan.preview(aircraft) : null;
+    const targetKm = target ? target.distance / 1000 : 0;
     panel.update(aircraft, {
       altFt: (aircraft.alt - datum) / FT,
       aglFt: aircraft.agl !== undefined ? aircraft.agl / FT : (aircraft.alt - ground) / FT,
@@ -1128,9 +1224,24 @@ async function main() {
       trafficCount: traffic.list.length,
       rate,
       rateWanted: RATES[rateIndex],
+      // The destination line says where you are going; the autopilot line
+      // says what, if anything, is flying you there. They used to be the same
+      // line, which meant that switching the autopilot off also switched off
+      // the only readout of the thing you had asked for.
+      dest: target
+        ? `${autoMode === 'nav' ? 'NAV' : 'DIRECT'} ${shortName(target.name)} · ` +
+          `${targetKm < 10 ? targetKm.toFixed(1) : Math.round(targetKm)} km · ` +
+          `${String(Math.round(target.bearing) % 360).padStart(3, '0')}° · ` +
+          // Standing on the apron there is no time to arrive: the plan's
+          // forty-metre-a-second floor would otherwise promise an hour and
+          // eighteen minutes to Dusseldorf to an aeroplane that is parked.
+          `${clock((aircraft.speed ?? 0) > 20 ? target.seconds : NaN)}`
+        : '',
+      destBearing: target ? target.bearing : null,
+      destArmed: autoMode === 'nav',
       ap:
         autoMode === 'nav' && navLeg
-          ? `NAV · ${navLeg.name} · ${(navLeg.distance / 1000).toFixed(1)} km · ${clock(navLeg.seconds)}`
+          ? `NAV · ${Math.round((navLeg.alt - datum) / FT / 100) * 100} ft`
           : autoMode === 'route'
           ? `AUTOPILOT · ${route[navState.leg]?.name ?? ''}`
           : autoMode === 'hold'
@@ -1147,7 +1258,10 @@ async function main() {
     minimap.update(aircraft, {
       traffic: traffic.list,
       route: plan.points.length ? plan.points : autoMode === 'route' ? route : [],
-      leg: plan.points.length ? (autoMode === 'nav' ? plan.index : null) : autoMode === 'route' ? navState.leg : null,
+      // The active waypoint is the one the line is drawn to, which is a
+      // question the autopilot does not have to be switched on to answer.
+      leg: plan.points.length ? plan.index : autoMode === 'route' ? navState.leg : null,
+      armed: plan.points.length ? autoMode === 'nav' : autoMode === 'route',
     });
     requestAnimationFrame(frame);
   }

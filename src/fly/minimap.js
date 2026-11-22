@@ -26,7 +26,21 @@ const latToY = (lat, z) => {
   return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * 2 ** z;
 };
 
-export function createMinimap(root, { places = [], airports = [], fieldsNear, onNotice } = {}) {
+/**
+ * A waypoint's name, as short as it can be said: "EDDL Dusseldorf Airport" is
+ * the right thing in the plan and far too much on a 460-pixel map, where the
+ * label would be a third of the way across it.
+ */
+const tag = (name) => (/^[A-Za-z0-9]{3,4}\s/.test(name) ? name.split(/\s/)[0] : name.slice(0, 16));
+
+/** Kilometres between two points, flat-earth: over a leg the error is metres. */
+const kmBetween = (a, b) =>
+  Math.hypot(
+    (b.lat - a.lat) * 111.32,
+    (b.lon - a.lon) * 111.32 * Math.cos(((a.lat + b.lat) / 2) * DEG),
+  );
+
+export function createMinimap(root, { places = [], airports = [], fieldsNear, onTarget, onNotice } = {}) {
   root.innerHTML = `
     <div class="fly-map__head">
       <strong>Map</strong>
@@ -51,6 +65,10 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
   // been zoomed: the index is 28,000 entries and this runs on every draw.
   let fields = [];
   let fieldsAt = null;
+  // Where every field ended up on the canvas, so that tapping one can mean
+  // "there". Rebuilt on each draw; a tap tests against what is on the screen
+  // rather than against 28,000 index entries.
+  let picks = [];
   let zoom = 9;
   // Where the map is looking, when that is not where the aeroplane is. Drag
   // it and it stays put until you ask for the aeroplane back, which is the
@@ -86,7 +104,7 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
   const metresPerPixel = (lat, z) =>
     (156543.03392 * Math.cos(lat * DEG)) / 2 ** z;
 
-  function draw(aircraft, { route = [], leg = null, traffic = [] } = {}) {
+  function draw(aircraft, { route = [], leg = null, armed = false, traffic = [] } = {}) {
     if (!visible) return;
     const { width: w, height: h } = canvas;
     const cx = w / 2;
@@ -135,29 +153,103 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
       ctx.stroke();
     }
 
-    // The route, when one is being flown.
+    // The route, and the leg being flown right now.
+    //
+    // The line that matters is the one from the aeroplane to the next
+    // waypoint, and that was the line missing: a polyline through the
+    // waypoints alone has no segment at all when there is only one of them,
+    // so a single destination drew as a dot and left the only question worth
+    // asking -- which way is it from here -- unanswered. So the plan is drawn
+    // dashed, as intention, and the live leg solid on top of it, from
+    // wherever the aeroplane happens to be.
     if (route.length) {
-      ctx.strokeStyle = 'rgba(122, 240, 176, 0.8)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([8, 6]);
+      const active = Math.min(Math.max(leg ?? 0, 0), route.length - 1);
+      const live = armed ? '#ffd166' : '#7cd7ff';
+      const [px, py] = project(aircraft.lat, aircraft.lon);
+      const [tx, ty] = project(route[active].lat, route[active].lon);
+
+      if (route.length > 1) {
+        ctx.strokeStyle = 'rgba(122, 240, 176, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        route.forEach((point, i) => {
+          const [x, y] = project(point.lat, point.lon);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      ctx.strokeStyle = live;
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      route.forEach((point, i) => {
-        const [x, y] = project(point.lat, point.lon);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
+      ctx.moveTo(px, py);
+      ctx.lineTo(tx, ty);
       ctx.stroke();
-      ctx.setLineDash([]);
+
+      // The last waypoint gets a ring. On a plan of six, the one that is the
+      // point of the flight should not look like the other five.
+      const [lastX, lastY] = project(route[route.length - 1].lat, route[route.length - 1].lon);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, 11, 0, Math.PI * 2);
+      ctx.stroke();
+
       ctx.font = '600 15px ui-monospace, monospace';
       route.forEach((point, i) => {
         const [x, y] = project(point.lat, point.lon);
         if (x < -40 || y < -40 || x > w + 40 || y > h + 40) return;
-        ctx.fillStyle = i === leg ? '#ffd166' : 'rgba(122, 240, 176, 0.9)';
+        ctx.fillStyle = i === active ? live : 'rgba(122, 240, 176, 0.9)';
         ctx.beginPath();
-        ctx.arc(x, y, i === leg ? 6 : 4, 0, Math.PI * 2);
+        ctx.arc(x, y, i === active ? 6 : 4, 0, Math.PI * 2);
         ctx.fill();
-        label(point.name, x + 9, y + 5, i === leg ? '#ffd166' : 'rgba(230, 255, 240, 0.85)');
+        label(tag(point.name), x + 9, y + 5, i === active ? live : 'rgba(230, 255, 240, 0.85)');
       });
+
+      // A target off the edge of the map is the normal case rather than the
+      // exception -- the map shows tens of kilometres and a destination is
+      // rarely that close -- so it gets an arrow on the edge where the line
+      // leaves, with the name and the distance on it.
+      if (tx < 0 || ty < 0 || tx > w || ty > h) {
+        const margin = 30;
+        const ax = tx - px;
+        const ay = ty - py;
+        let t = Infinity;
+        if (ax > 0) t = Math.min(t, (w - margin - px) / ax);
+        if (ax < 0) t = Math.min(t, (margin - px) / ax);
+        if (ay > 0) t = Math.min(t, (h - margin - py) / ay);
+        if (ay < 0) t = Math.min(t, (margin - py) / ay);
+        if (Number.isFinite(t) && t > 0 && t < 1) {
+          const ex = Math.max(margin, Math.min(w - margin, px + ax * t));
+          const ey = Math.max(margin, Math.min(h - margin, py + ay * t));
+          ctx.save();
+          ctx.translate(ex, ey);
+          ctx.rotate(Math.atan2(ay, ax));
+          ctx.fillStyle = live;
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(14, 0);
+          ctx.lineTo(-9, 9);
+          ctx.lineTo(-9, -9);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+          const km = kmBetween(aircraft, route[active]);
+          const right = ex > w / 2;
+          ctx.textAlign = right ? 'right' : 'left';
+          label(
+            `${tag(route[active].name)} ${km < 10 ? km.toFixed(1) : Math.round(km)} km`,
+            ex + (right ? -18 : 18),
+            ey + 5,
+            live,
+          );
+          ctx.textAlign = 'left';
+        }
+      }
     }
 
     // Every field under the map gets the same runway tick as the built ones,
@@ -177,6 +269,7 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
       fields = fieldsNear(view.lat, view.lon, reach, mpp * 6) ?? [];
     }
     const built = new Set(airports.map((field) => field.icao));
+    picks = [];
     ctx.font = '600 13px ui-monospace, monospace';
     for (const field of fields) {
       if (built.has(field.icao)) continue;
@@ -198,19 +291,17 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
           index === 0 ? field.icao : null,
         );
       });
+      const [fx, fy] = project(field.lat, field.lon);
+      picks.push({ x: fx, y: fy, field });
     }
 
     // The surveyed airports on top, brighter: those have a runway you can
     // actually land on rather than a line on a map.
     ctx.font = '600 14px ui-monospace, monospace';
     for (const field of airports) {
-      runway(
-        project(field.lat, field.lon),
-        field,
-        Math.max(9, field.length / mpp / 2),
-        '#ffffff',
-        field.icao,
-      );
+      const at = project(field.lat, field.lon);
+      runway(at, field, Math.max(9, field.length / mpp / 2), '#ffffff', field.icao);
+      picks.push({ x: at[0], y: at[1], field });
     }
 
     /**
@@ -416,7 +507,31 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
     }
     drag = null;
   };
-  canvas.addEventListener('pointerup', endDrag);
+  // A tap on a field is how you say where you want to go. It has to be a tap
+  // and not a drag -- the same pointer pans the map -- and it has to land
+  // within twenty canvas pixels of a field, so that tapping the sea does
+  // nothing at all rather than something surprising. The last pick is
+  // remembered for half a second, because the double tap that recentres the
+  // map is also two taps, and a destination should not be added twice.
+  let pickedAt = 0;
+  canvas.addEventListener('pointerup', (event) => {
+    const tapped = drag && !drag.moved;
+    endDrag(event);
+    if (!tapped || !onTarget || performance.now() - pickedAt < 500) return;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const x = (event.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (event.clientY - rect.top) * (canvas.height / rect.height);
+    let best = null;
+    for (const pick of picks) {
+      const d = Math.hypot(pick.x - x, pick.y - y);
+      if (d < 20 && (!best || d < best.d)) best = { d, field: pick.field };
+    }
+    if (!best) return;
+    pickedAt = performance.now();
+    onTarget(best.field);
+    lastDraw = 0;
+  });
   canvas.addEventListener('pointercancel', endDrag);
   canvas.addEventListener('dblclick', (event) => {
     event.stopPropagation();

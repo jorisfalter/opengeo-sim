@@ -165,8 +165,14 @@ export function createPanel(root, { title, subtitle, attribution }) {
         </g></g>
         <polygon points="500,552 490,538 510,538" class="g-fill"/>
         <text x="500" y="532" class="g-mid" text-anchor="middle" data-el="hdg">000</text>
+        <!-- Where the destination lies, on the tape that says where the nose
+             is pointing: the gap between the two is the turn you still owe. -->
+        <g data-el="destBug" class="g-dest is-off">
+          <polygon points="0,602 -10,617 10,617"/>
+        </g>
 
-        <!-- what the aeroplane is set to -->
+        <!-- where you are going, and what the aeroplane is set to -->
+        <text x="40" y="468" class="g-dest-label" data-el="dest"></text>
         <text x="40" y="500" class="g-mid" data-el="power">N1 0%</text>
         <text x="40" y="526" class="g-label" data-el="config">gear · flaps 0</text>
         <text x="40" y="548" class="g-label" data-el="trim">trim 0</text>
@@ -235,6 +241,14 @@ export function createPanel(root, { title, subtitle, attribution }) {
             <kbd>space</kbd> pause · <kbd>1</kbd><kbd>2</kbd> time up to 8× ·
             <kbd>click</kbd> mouse yoke, <kbd>Esc</kbd> releases
           </p>
+          <h3>Where you are going</h3>
+          <p class="fly-hud__keys">
+            Tap a runway on the map, or open <kbd>R</kbd> Plan and search for one. The
+            line to it is drawn from the aeroplane, cyan while you fly it yourself
+            and amber once <kbd>P</kbd> has handed it to the autopilot; the bug under
+            the compass is the turn you still owe it. A link can carry one:
+            <code>?to=EDDL</code>.
+          </p>
           <h3>Data</h3>
           <p class="fly-hud__credit">${attribution}</p>
         </div>
@@ -253,6 +267,8 @@ export function createPanel(root, { title, subtitle, attribution }) {
     hdgTape: el('hdgTape'),
     vsPointer: el('vsPointer'),
     vref: el('vref'),
+    destBug: el('destBug'),
+    destLabel: el('dest'),
     notice: el('notice'),
     // `text()` looks elements up by name on its own, so most of the glass
     // never needs an entry here. These three do, because they are changed by
@@ -426,6 +442,22 @@ export function createPanel(root, { title, subtitle, attribution }) {
       text('law', extra.law === 'direct' ? 'direct' : 'assisted');
       text('input', extra.input ?? '');
       text('ap', extra.ap ?? '');
+      // The destination: the line reads it out, the bug on the compass shows
+      // where it is relative to the nose. Clamped to the ends of the tape, so
+      // a target behind you parks the bug at the edge it is nearest rather
+      // than disappearing off the glass.
+      text('dest', extra.dest ?? '');
+      nodes.destLabel.classList.toggle('is-armed', Boolean(extra.destArmed));
+      if (extra.destBearing === null || extra.destBearing === undefined) {
+        nodes.destBug.classList.add('is-off');
+      } else {
+        let off = extra.destBearing - heading;
+        while (off > 180) off -= 360;
+        while (off < -180) off += 360;
+        nodes.destBug.classList.remove('is-off');
+        nodes.destBug.classList.toggle('is-armed', Boolean(extra.destArmed));
+        nodes.destBug.setAttribute('transform', `translate(${clamp(500 + off * 4.2, 318, 682)} 0)`);
+      }
       // Two numbers only when they differ: what you asked for and what the
       // simulation is actually giving you.
       const rate = extra.rate ?? 1;
