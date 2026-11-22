@@ -133,7 +133,13 @@ const AT_RECTANGLE = Rectangle.fromDegrees(9.4, 46.3, 17.2, 49.1);
 // enforced the third way, with blankBelow: no request at all under zoom 13,
 // where Sentinel-2 is finer than these would be anyway.
 const GERMANY = [
-  ['NW', 'wms.nrw.de/geobasis/wms_nw_dop', 'nw_dop_rgb', 5.86, 50.32, 9.47, 52.54],
+  // www., and it has to be: on 16 November 2026 North Rhine-Westphalia
+  // renewed the certificate for wms.nrw.de with only www.wms.nrw.de in it, so
+  // the bare name now fails hostname verification and every browser refuses
+  // the connection outright — ERR_CERT_COMMON_NAME_INVALID, 68 of them in one
+  // pass over Düsseldorf. Nothing to do with the service, which answers in
+  // 200 ms under the other name.
+  ['NW', 'www.wms.nrw.de/geobasis/wms_nw_dop', 'nw_dop_rgb', 5.86, 50.32, 9.47, 52.54],
   ['NI', 'opendata.lgln.niedersachsen.de/doorman/noauth/dop_wms', 'ni_dop20', 6.44, 51.29, 11.60, 53.90],
   ['HE', 'www.gds-srv.hessen.de/cgi-bin/lika-services/ogc-free-images.ows', 'he_dop20_rgb', 7.77, 49.39, 10.24, 51.66],
   ['RP', 'geo4.service24.rlp.de/wms/rp_dop20.fcgi', 'rp_dop20', 6.11, 48.96, 8.51, 50.95],

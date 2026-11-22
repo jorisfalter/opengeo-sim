@@ -47,7 +47,7 @@ canned tile measures 0, the photographs below measure 15 to 72.
 | --- | --- | --- | --- | --- | --- |
 | Luxembourg | `wmts1.geoportail.lu` `ortho_latest` | WMTS, z/x/y on `GLOBAL_WEBMERCATOR_4_V3` | — | 32 kB | 63.0 |
 | Wallonia | `geoservices.wallonie.be` `ORTHO_LAST` | WMS 1.3.0, EPSG:3857 | — | 491 kB | 45.5 |
-| DE North Rhine-Westphalia | `wms.nrw.de/geobasis/wms_nw_dop` `nw_dop_rgb` | WMS | 10 cm | 481 kB | 36.5 |
+| DE North Rhine-Westphalia | `www.wms.nrw.de/geobasis/wms_nw_dop` `nw_dop_rgb` | WMS | 10 cm | 481 kB | 36.5 |
 | DE Bavaria | `geoservices.bayern.de/od/wms/dop/v1/dop40` `by_dop40c` | WMS | 40 cm | 643 kB | 48.3 |
 | DE Baden-Württemberg | `owsproxy.lgl-bw.de` `IMAGES_DOP_20_RGB` | WMS | 20 cm | 224 kB | 35.5 |
 | DE Hesse | `gds-srv.hessen.de` `he_dop20_rgb` | WMS | 20 cm | 495 kB | 20.1 |
@@ -119,3 +119,30 @@ Germany at keyword difficulty 10; `simulateur de vol` is 3,600 in France at 0;
 the English `flight simulator` is 60 to 94. Germany is at once the largest
 imagery gap and the cheapest audience, which is an unusually clean argument for
 doing one thing next.
+
+## A hostname that stopped being the hostname
+
+North Rhine-Westphalia is 10 cm imagery over Düsseldorf, Cologne, Dortmund
+and Essen, and on 22 November 2026 it was not there at all: a flight over
+Düsseldorf showed the Sentinel-2 base, ten metres a pixel, smeared.
+
+Nothing was wrong with the service. On 16 November 2026 the state renewed the
+certificate for `wms.nrw.de` and put only `www.wms.nrw.de` in the subject
+alternative name, so the bare host now fails hostname verification and every
+browser refuses the connection before a request is made:
+`ERR_CERT_COMMON_NAME_INVALID`, 68 of them in one pass over the airport.
+Under `www.` the same service answers in about 200 ms with a real photograph
+at every zoom to 19.
+
+Two things worth keeping from this. A TLS failure is invisible from inside the
+page — the fetch fails opaquely, the layer has no ancestor that loaded, and
+the layer beneath it simply shows through, which looks exactly like a slow
+connection and is how this was reported. And the check is one line per host:
+
+```sh
+echo | openssl s_client -connect $h:443 -servername $h -verify_hostname $h \
+  -verify_return_error 2>&1 >/dev/null | grep -i 'verify error'
+```
+
+Run over all 22 imagery hosts this project uses, North Rhine-Westphalia was
+the only one failing.
