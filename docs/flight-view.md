@@ -281,11 +281,73 @@ ends are a `MEASURED` table in `src/fly/airports.js`, applied as the index is
 read so that the map and the start cannot disagree, and the take-off roll is
 now on asphalt at every station from the piano keys to the far threshold.
 
-Three more Spanish fields fail the same way and are not corrected yet: El
-Castaño (LECT), Beas de Segura (LEBE) and El Tietar (LETI), each with its
-airport position on the strip and its surveyed ends beside it. Their pavement
-is darker and patchier than Rozas' and the fit did not converge on a run of
-the declared length, so they are measured by hand or not at all.
+**Then all of Spain.** Rozas is unlikely to be alone, so all 137 Spanish
+fields in the index went through the same mill: score the line the record
+gives, search the neighbourhood for the best runway-shaped line, draw both on
+the photograph, and look.
+
+Runway-shaped is defined without colour — a band of one material flanked on
+both sides by another — because Spanish asphalt runs from Rozas' pale grey
+through El Castaño's blue to Beas de Segura's warm sand. Two further tests
+were tried and thrown away. Measuring the band's width should tell a 23 m
+taxiway from a 45 m runway; it wanders onto the shoulders and reported 193 m
+for Ciudad Real's runway. Looking for the painted centreline should be
+decisive, since a runway is marked and a taxiway is not; at 1.75 m to the
+pixel the markings are under the resolution, and the test fired on a bright
+apron instead.
+
+So the search cannot be trusted to decide. Worse, it is biased the wrong way:
+**a taxiway is more uniform than a runway**, having no markings, no rubber and
+no patched thresholds, so it scores higher. At Ciudad Real, Bilbao, Albacete
+and Alicante that is exactly what it picked — the parallel taxiway, 200 to 330
+m from a perfectly good runway. The search only draws; the eye decides, on
+twenty-three contact sheets.
+
+Twelve fields were wrong, and every one of them is small. All the large
+airports are right — Madrid, Barcelona, Palma, Seville, Bilbao, Málaga,
+Santiago, the Canaries — which is what you would expect of fields a thousand
+people have looked at. That includes Getafe and Zaragoza, where PNOA blurs the
+photograph for being military and the line still lands on the strip under the
+blur.
+
+| | shift | what the record had you on |
+| --- | --- | --- |
+| LECT El Castaño | 1301 m, 106° | the same threshold, then off into the hills |
+| LEBE Beas de Segura | 516 m | the olive terraces north of the field |
+| LEMR La Morgal | 344 m | the grass south of the runway |
+| LECD La Cerdanya | 307 m | the grass beside the strip |
+| LETI El Tietar | 215 m | the scrub east of it |
+| ES-0219 Camarenilla | 202 m | the dirt short of the threshold |
+| ES-0069 Air Marugán | 176 m, 58° | across the runway, not along it |
+| LEGY Garray | 135 m | the apron, among the parked aeroplanes |
+| LEOC Ocaña | 116 m, 10° | on at the west end, in the fields by the east |
+| LECF Calaf-Sallavinera | 92 m, 8° | crossing the strip diagonally |
+| ES-0088 Benagéber | 57 m, 19° | crossing the cleared strip |
+| LERE Requena | 33 m, 10° | crossing the strip near its middle |
+
+Each line was read off the orthophoto at zoom 18, about 1.3 m to the pixel,
+threshold to threshold, and checked by drawing it back over the photograph
+with the start point marked. Ten of the twelve come out within 4% of the
+declared length. Headings mostly agree with the runway number; where they do
+not — Beas de Segura measures 101 for a runway called 09, Benagéber 102 for
+one called 12 — the photograph wins, because a painted number is rounded to
+ten degrees and sometimes to the magnetic north of decades ago.
+
+One thing had to change in the code beyond the table. A measured line must not
+be corrected towards anything: rule 2 slides a suspect line onto the airport
+position, and at Garray and Air Marugán the airport position *is* the apron,
+so it dragged the aeroplane straight back off the runway it had just been put
+on. Runways from the table are now marked, and the four corrections leave them
+alone.
+
+Two Spanish fields are still open. At Los Martínez del Puerto the record's
+line is clearly not on anything, but neither is anything else obviously a
+runway — the candidate strip runs 170 for a runway called 15. La Llosa is a
+microlight strip in a marsh where half the record's line is in the water and
+the dry part is 280 m against a declared 350. Both are noted in `TODO.md`
+rather than guessed at. Only each field's *first* runway was checked, which is
+the one `?start=` puts you on; second strips are drawn on the map from the
+record as they always were.
 
 This is also why it is OurAirports and not X-Plane's `apt.dat`: `apt.dat` is
 GPL and shipping it would pull the GPL over everything here, while OurAirports

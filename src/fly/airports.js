@@ -30,23 +30,64 @@ const FT = 0.3048;
  *   indistinguishable from the record.
  * - A runway is flat, so a line that crosses a slope is not on one. Sampled
  *   at twenty-five stations on the Terrarium DEM, Rozas' wrong line spreads
- *   11.9 m and the real one 9.7 m, while Burgos' correct line spreads 12.2 m. Rolling
- *   Galician heath at 30 m postings is as flat as a runway. The test does work
- *   on the gross cases — El Castaño's line spreads 73.9 m against its real
- *   16 m — but it cannot see this one.
+ *   11.9 m and the real one 9.7 m, while Burgos' correct line spreads 12.2 m.
+ *   Rolling Galician heath at 30 m postings is as flat as a runway. The test
+ *   does work on the gross cases — El Castaño's line spreads 73.9 m against
+ *   its real 16 m — but it cannot see this one.
  *
- * So the photograph settles it, and the photograph is 25 cm PNOA. The
- * centreline was fitted by principal axis to the pavement pixels inside a
- * corridor and the thresholds read off the coverage profile along it: 1202 m
- * of pavement against a declared 1200, 45–48 m wide against a declared 45, on
- * a bearing of 35.1. Its midpoint lands 2 m from the published airport
- * position, which is the second measurement agreeing with the first.
+ * So the photograph settles it. All 137 Spanish fields in the index were put
+ * to it: score the line the record gives, search the neighbourhood for the
+ * best runway-shaped line — a band of one material flanked on both sides by
+ * another, which is colour-free, because Spanish asphalt runs from Rozas'
+ * pale grey through El Castaño's blue to Beas de Segura's warm sand — and
+ * draw both on the photograph. The search cannot be trusted on its own: it
+ * prefers a parallel taxiway to the runway beside it, because a taxiway is
+ * unmarked, unworn and therefore more uniform than a runway. At Ciudad Real,
+ * Bilbao, Albacete and Alicante that is exactly what it chose. So the search
+ * only draws, and every one of the 137 was looked at.
+ *
+ * Twelve were wrong. They are all small: the big airports have been surveyed
+ * by many eyes and every one of them is right, down to Getafe and Zaragoza,
+ * where the photograph is blurred for being military and the line still lands
+ * on the strip under the blur.
+ *
+ * Each line below was read off the orthophoto at zoom 18, about 1.3 m to the
+ * pixel, from threshold to threshold, and checked by drawing it back over the
+ * photograph with the start point marked. Lengths come out within 4% of the
+ * declared length at ten of the twelve. Headings mostly agree with the runway
+ * number; where they do not — Beas de Segura measures 101 for a runway called
+ * 09, Benagéber 102 for one called 12 — the photograph wins, because a
+ * painted number is rounded to ten degrees and sometimes to the magnetic
+ * north of decades ago.
  *
  * Keyed by the runway's low-end identifier, so a field with two strips only
  * has the measured one replaced.
  */
 const MEASURED = {
+  // Rozas, by Lugo: 1202 m of pavement against a declared 1200, 45-48 m wide
+  // against a declared 45, bearing 35.1, midpoint 2 m from the published
+  // airport position.
   LERO: { '04': [43.11158, -7.46785, 43.1204, -7.45936] },
+  // El Castaño: the record's line shares the south-east threshold and then
+  // runs off into the hills on a bearing 106 degrees out.
+  LECT: { '14': [39.0183, -4.39363, 39.0089, -4.38065] },
+  LEBE: { '09': [38.27304, -2.96105, 38.27058, -2.9453] },
+  LETI: { '05': [40.24441, -4.79332, 40.25094, -4.78563] },
+  LEMR: { '10': [43.43082, -5.83332, 43.43048, -5.82028] },
+  LEOC: { '11': [39.93803, -3.50751, 39.93658, -3.4935] },
+  LERE: { '12': [39.47606, -1.03987, 39.47327, -1.02976] },
+  LECD: { '07': [42.38488, 1.85663, 42.3889, 1.86936] },
+  LECF: { '13': [41.74647, 1.55392, 41.7428, 1.56184] },
+  // Garray parks you on the apron among the parked aeroplanes; the strip is
+  // 135 m north of it.
+  LEGY: { '09': [41.82124, -2.47831, 41.82119, -2.47449] },
+  'ES-0219': { '06': [40.02471, -4.0714, 40.02666, -4.06702] },
+  'ES-0088': { '12': [39.73586, -1.14414, 39.73416, -1.13335] },
+  // Air Marugán's strip is marked and unmistakable, and it runs 112, not the
+  // 170 its number claims; the record's line crosses it at 58 degrees. Its
+  // declared 668 m is also half as long again as the 470 m of pavement, so
+  // the start lands short of the threshold on the grass, lined up with it.
+  'ES-0069': { '17': [40.91079, -4.372, 40.90924, -4.3668] },
 };
 
 let loading = null;
@@ -75,6 +116,7 @@ export function loadAirports() {
               const [a, b, c, d] = measured ?? [leLat, leLon, heLat, heLon];
               return {
                 leLat: a, leLon: b, heLat: c, heLon: d,
+                measured: Boolean(measured),
                 lengthFt, widthFt, surface, leId, heId,
                 leDisplacedFt: leDisp ?? 0,
                 heDisplacedFt: heDisp ?? 0,
@@ -175,7 +217,7 @@ export function runwayLine(airport) {
   //    magnetic and this is drawn true.
   const numbered = /^\s*(\d{1,2})/.exec(runway.leId ?? '');
   const bearing = numbered ? Number(numbered[1]) * 10 : NaN;
-  if (!(span > 1) || off > Math.max(150, length * 0.35)) {
+  if (!runway.measured && (!(span > 1) || off > Math.max(150, length * 0.35))) {
     if (!(bearing >= 10 && bearing <= 360)) return null;
     const radians = (bearing * Math.PI) / 180;
     return {
@@ -202,7 +244,11 @@ export function runwayLine(airport) {
 
   let lat = (runway.leLat + runway.heLat) / 2;
   let lon = (runway.leLon + runway.heLon) / 2;
-  const suspect = off > 40;
+  // A measured line is not corrected towards anything. The two rules below
+  // exist to rescue a line whose own numbers betray it; these ends were read
+  // off the photograph, and at Garray and Air Marugán the airport position
+  // they would slide towards is the apron.
+  const suspect = !runway.measured && off > 40;
   let moved = 0;
   if (suspect) {
     const offset =
