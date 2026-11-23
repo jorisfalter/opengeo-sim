@@ -9,6 +9,46 @@ import { asset } from '../base.js';
 const METERS_PER_DEGREE = 111320;
 const FT = 0.3048;
 
+/**
+ * Runway ends measured off the orthophoto, for the fields where no rule can
+ * reach them.
+ *
+ * The four corrections in `runwayLine` below all work by playing the record's
+ * own numbers off against each other: a length that contradicts the ends, a
+ * pair of ends that are not ends. Rozas, by Lugo, contradicts nothing. Its two
+ * ends are internally perfect — 1193 m against a declared 1200, bearing 36 for
+ * a runway called 04 — and both of them are in the heath, 550 m
+ * west-north-west of the asphalt. The whole line is simply translated.
+ *
+ * Nothing in the data gives it away, and this was tested rather than assumed:
+ *
+ * - The airport position is 501 m to one side of the line, which is the
+ *   signature of a displaced line. It is also the signature of a terminal
+ *   building. At Burgos — single runway, 2100 m, 444 m to one side, the same
+ *   numbers to within a tenth — the line is right and the airport point is the
+ *   apron. 327 single-runway fields sit in that band and the two cases are
+ *   indistinguishable from the record.
+ * - A runway is flat, so a line that crosses a slope is not on one. Sampled
+ *   at twenty-five stations on the Terrarium DEM, Rozas' wrong line spreads
+ *   11.9 m and the real one 9.7 m, while Burgos' correct line spreads 12.2 m. Rolling
+ *   Galician heath at 30 m postings is as flat as a runway. The test does work
+ *   on the gross cases — El Castaño's line spreads 73.9 m against its real
+ *   16 m — but it cannot see this one.
+ *
+ * So the photograph settles it, and the photograph is 25 cm PNOA. The
+ * centreline was fitted by principal axis to the pavement pixels inside a
+ * corridor and the thresholds read off the coverage profile along it: 1202 m
+ * of pavement against a declared 1200, 45–48 m wide against a declared 45, on
+ * a bearing of 35.1. Its midpoint lands 2 m from the published airport
+ * position, which is the second measurement agreeing with the first.
+ *
+ * Keyed by the runway's low-end identifier, so a field with two strips only
+ * has the measured one replaced.
+ */
+const MEASURED = {
+  LERO: { '04': [43.11158, -7.46785, 43.1204, -7.45936] },
+};
+
 let loading = null;
 let index = null;
 
@@ -27,11 +67,19 @@ export function loadAirports() {
           elevationFt,
           country,
           runways: runways.map(
-            ([leLat, leLon, heLat, heLon, lengthFt, widthFt, surface, leId, heId, leDisp, heDisp]) => ({
-              leLat, leLon, heLat, heLon, lengthFt, widthFt, surface, leId, heId,
-              leDisplacedFt: leDisp ?? 0,
-              heDisplacedFt: heDisp ?? 0,
-            }),
+            ([leLat, leLon, heLat, heLon, lengthFt, widthFt, surface, leId, heId, leDisp, heDisp]) => {
+              // The index is a faithful copy of OurAirports; the handful of
+              // rows measured off an orthophoto are corrected here, on the way
+              // in, so that every reader of it sees the same runway.
+              const measured = MEASURED[ident]?.[leId];
+              const [a, b, c, d] = measured ?? [leLat, leLon, heLat, heLon];
+              return {
+                leLat: a, leLon: b, heLat: c, heLon: d,
+                lengthFt, widthFt, surface, leId, heId,
+                leDisplacedFt: leDisp ?? 0,
+                heDisplacedFt: heDisp ?? 0,
+              };
+            },
           ),
         }));
         return index;

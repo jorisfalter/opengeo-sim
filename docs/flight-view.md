@@ -252,6 +252,41 @@ shifts 18 m, the ninetieth percentile 54 m, and for every field whose line was
 left alone the start is still exactly on it. At LFMA it is the difference
 between the grass and the centreline.
 
+**Rozas, where the record is consistent and wrong.** `?start=LERO` put the
+aeroplane in a field 550 m west-north-west of the runway at Rozas, by Lugo.
+None of the four corrections fires there, and none of them should: the two
+ends measure 1193 m against a declared 1200 and bear 36 for a runway called
+04. The line is internally perfect, and translated as a unit.
+
+The airport position is 501 m to one side of it, which looks like the
+signature of exactly that — until you look at Burgos. Single runway, 2100 m,
+airport position 444 m to one side, the same numbers to within a tenth, and
+there the line is on the asphalt and the airport position is the apron. 327
+single-runway fields sit in that band with their length agreeing, and nothing
+in the record separates the two cases.
+
+Nor does the terrain. A runway is flat, so a line across a slope is not on
+one; sampled at twenty-five stations on the Terrarium DEM, Rozas' wrong line
+spreads 11.9 m, its real line 9.7 m, and Burgos' correct line 12.2 m. Galician
+heath at 30 m postings is as flat as a runway. The test is not useless — El
+Castaño's line spreads 73.9 m against its real 16 m — but it cannot see this.
+
+What settles it is the photograph, now that Spain has one at 25 cm. The
+centreline was fitted by principal axis to the pavement pixels in a corridor
+around the strip and the thresholds read off the coverage profile along it:
+**1202 m of pavement against a declared 1200, 45–48 m wide against a declared
+45, bearing 35.1**. Its midpoint falls 2 m from the published airport
+position, which is the second measurement agreeing with the first. Those two
+ends are a `MEASURED` table in `src/fly/airports.js`, applied as the index is
+read so that the map and the start cannot disagree, and the take-off roll is
+now on asphalt at every station from the piano keys to the far threshold.
+
+Three more Spanish fields fail the same way and are not corrected yet: El
+Castaño (LECT), Beas de Segura (LEBE) and El Tietar (LETI), each with its
+airport position on the strip and its surveyed ends beside it. Their pavement
+is darker and patchier than Rozas' and the fit did not converge on a run of
+the declared length, so they are measured by hand or not at all.
+
 This is also why it is OurAirports and not X-Plane's `apt.dat`: `apt.dat` is
 GPL and shipping it would pull the GPL over everything here, while OurAirports
 is public domain under the Unlicense — nothing to carry at all.
