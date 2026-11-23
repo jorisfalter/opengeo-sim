@@ -91,6 +91,13 @@ words rather than in a summary of them, because that is where openAIP failed:
   basemap.at"* — so the attribution string carries exactly that rather than a
   paraphrase.
 
+- **PNOA máxima actualidad**, Spain's national orthophoto at 25 cm, through
+  the WMTS of the Infraestructura de Datos Espaciales de España. Its own
+  capabilities document answers both questions in two lines: `ows:Fees` is
+  *"No se aplican condiciones"* and `ows:AccessConstraints` is *"CC BY 4.0
+  scne.es"*. Attribution-only, and the credit names the Instituto Geográfico
+  Nacional, which is who the Sistema Cartográfico Nacional asks for.
+
 - **GeoBasis-DE**, thirteen separate state services covering fourteen of
   Germany's sixteen states, between 10 cm (North Rhine-Westphalia) and 40 cm
   (Bavaria). There is no one licence to quote, because there is no one

@@ -164,3 +164,21 @@ North Rhine-Westphalia and Lower Saxony answer the same 667-byte sheet of
 pure 255,255,255 that the no-data key already removes, and PDOK shows
 through. Measured from 2,600 m over EDLV, the seam went from 1.27% of the
 frame to none of it.
+
+## Spain, from one service
+
+PNOA máxima actualidad, through the WMTS of the Infraestructura de Datos
+Espaciales de España: 25 cm over the whole country including the Balearics
+and the Canaries, CC BY 4.0, keyless, CORS open, 70 to 100 ms a tile. The
+INSPIRE WMS serves the same ground with proper transparency outside it, and
+takes 4 to 30 seconds a tile, which is not a service you can fly over.
+
+Its pyramid fuses PNOA with a Sentinel-2 base, so outside Spain it answers
+with stretched satellite rather than with a gap — there is no no-data colour
+to key, and the layer has to be told where the country is. That was measured:
+walking a real-versus-stretched test west to east for every tenth of a degree
+of latitude. `docs/flight-view.md`, "Spain, and a border measured by walking
+it", has the method and what it cost to get wrong.
+
+Still open on the peninsula: Portugal. DGT publishes orthophotography and it
+has not been tried yet.

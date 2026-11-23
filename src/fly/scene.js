@@ -4,12 +4,14 @@
 import { Ion, JulianDate, PostProcessStage, RequestScheduler, Viewer } from 'cesium';
 import {
   austrianLayer,
+  canaryLayer,
   baseLayer,
   dutchAerialLayer,
   flemishLayer,
   germanLayers,
   orthoLayer,
   southTyrolLayer,
+  spanishLayer,
   swissLayer,
   terrainProvider,
 } from './providers.js';
@@ -109,6 +111,14 @@ export async function createScene(container, { time }) {
   // Order is coarse to fine, because the one on top wins where two overlap:
   // basemap.at's 30 cm first, then South Tyrol's 20 cm over the Brenner
   // ridge, then SWISSIMAGE's 10 cm over the Engadin and Val Müstair.
+  // Spain goes under France for the same reason the Netherlands goes under
+  // Germany: IGN's rectangle reaches to 9.7 E so Corsica fits in it, which
+  // puts Catalonia and Navarre inside it too, and PNOA's box holds the
+  // Pyrenees and a corner of Languedoc. Each layer wins over its own country
+  // — IGN answers its canned white over Spain, which keys out, and Spanish
+  // tiles that stray into France are covered by French photography.
+  viewer.imageryLayers.add(spanishLayer());
+  viewer.imageryLayers.add(canaryLayer());
   viewer.imageryLayers.add(orthoLayer());
   // The Low Countries go on before Germany, and resolution is not what
   // decides it. PDOK is 8 cm against North Rhine-Westphalia's 10, so by the

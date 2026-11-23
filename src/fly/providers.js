@@ -30,6 +30,12 @@ const SOUTH_TYROL =
 // basemap.at numbers its tiles row before column, so this is {z}/{y}/{x} and
 // not the {z}/{x}/{y} every other service here uses. Asking the usual way
 // answers 404 on every tile, which looks exactly like no coverage at all.
+// Spain's national orthophoto, through the IDEE's WMTS. The layer's own title
+// says what it is: "satélite Sentinel2 y ortofotos del PNOA máxima
+// actualidad" — PNOA photography where there is any, Sentinel-2 underneath it
+// everywhere else, fused into one pyramid. That second half is why this layer
+// needs a mask rather than a bounding box.
+const PNOA = 'https://www.ign.es/wmts/pnoa-ma';
 const BASEMAP_AT =
   'https://maps.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/{z}/{y}/{x}.jpeg';
 
@@ -132,6 +138,66 @@ const AT_RECTANGLE = Rectangle.fromDegrees(9.4, 46.3, 17.2, 49.1);
 // for a ten-kilometre square renders a ten-kilometre square. So the floor is
 // enforced the third way, with blankBelow: no request at all under zoom 13,
 // where Sentinel-2 is finer than these would be anyway.
+// Spain, which is not a rectangle either, and whose neighbour is inside its
+// box. PNOA's pyramid falls back to Sentinel-2 outside the photographed area
+// instead of to a no-data colour, so there is nothing to key out: beyond the
+// border it hands back a stretched satellite image, and stretched is the
+// operative word — at zoom 17 over Porto a tile is 1 kB and 81% of it is one
+// colour, against 5 to 23 kB of real detail on the Spanish side.
+//
+// So the coverage was measured instead of guessed. A tile is real PNOA if it
+// is over 4 kB and its edge energy is over 6; the separation is clean, 9.4 at
+// worst on the Spanish side against 3.1 at best on the Portuguese. Walking
+// that test west to east in 0.1° steps gives the longitude where Spanish
+// photography starts, for each 0.1° of latitude from 36.8 N up.
+//
+// Walking rather than binary search, because along a parallel the coverage is
+// not monotonic: at 41.9 N you cross Spain, Portugal and Spain again, and a
+// binary search settles on whichever edge it meets first — it put the limit
+// at 8.2 W and lost A Guarda, Tui and O Rosal, which are Galicia. It also
+// cost Verín a 0.2° band earlier, where a band that starts in Portugal ends
+// in Spain.
+//
+// What the walk also shows is that PNOA does not stop at the frontier: both
+// banks of the Minho are photographed, so Caminha, Valença, Vila Nova de
+// Cerveira and Melgaço get 25 cm Portuguese ground out of a Spanish service.
+// That is a gift rather than a leak, and the one thing this mask must not do
+// is refuse it.
+const SPAIN_FIRST = 36.8;
+const SPAIN_STEP = 0.1;
+const SPAIN_WEST = [
+  -6.45, -6.45, -6.65, -6.75, -7.45, -7.45, -7.45, -7.55, -7.45, -7.45,
+  -7.35, -7.35, -7.25, -7.05, -7.15, -7.25, -7.35, -7.35, -7.25, -7.25,
+  -7.15, -7.05, -7.05, -7.15, -7.25, -7.35, -7.35, -7.35, -7.55, -7.05,
+  -7.05, -6.95, -6.85, -6.95, -7.05, -6.85, -6.85, -6.85, -6.85, -6.85,
+  -6.85, -6.85, -6.95, -6.85, -6.75, -6.55, -6.35, -6.35, -6.25, -6.55,
+  -8.15, -8.85, -8.85, -8.95, -8.95, -8.85, -8.85, -8.85, -9.05, -9.05,
+  -9.15, -9.15, -9.25,
+];
+const SPAIN_TOP = SPAIN_FIRST + SPAIN_STEP * SPAIN_WEST.length;
+// The table is read a tenth of a degree west of what it says, twice over: the
+// walk steps 0.1° at a time, so the true edge is somewhere inside the step,
+// and a tile that is mostly sea reads as no-data however much Spain is in the
+// corner of it. Without the margin the cape at Fisterra and the town of A
+// Guarda fall outside their own country's photography by about two
+// kilometres. Twelve kilometres the other way costs nothing: it is either
+// PNOA's own border overlap, which is real 25 cm imagery, or sea.
+const SPAIN_MARGIN = 0.15;
+// The box around the mainland and the Balearics, and a second one for the
+// Canaries, 1,400 km off Morocco. France is inside the first box and is not
+// masked out, because the French layer sits above this one and wins over its
+// own ground — the same rule the Dutch layer taught us at Weeze.
+const SPAIN_RECTANGLE = Rectangle.fromDegrees(-9.5, 35.9, 4.4, 44.0);
+const CANARIES_RECTANGLE = Rectangle.fromDegrees(-18.4, 27.4, -13.2, 29.6);
+// The sea, as this service draws it where it has no photograph: a flat
+// (32,26,38), 100% of every offshore tile sampled. Keying it out is what lets
+// Sentinel-2's blue through around the coast. Measured before trusting it:
+// within ±4 of that colour, real Spanish tiles are 0.000% — over Lugo, a
+// Galician forest, the Belesar reservoir, Rozas aerodrome, the bay of Vigo and
+// the Sierra Nevada snowfield — and 0.075% over central Madrid.
+const SEA = Color.fromBytes(32, 26, 38);
+const SEA_THRESHOLD = 0.012;
+
 const GERMANY = [
   // www., and it has to be: on 16 November 2026 North Rhine-Westphalia
   // renewed the certificate for wms.nrw.de with only www.wms.nrw.de in it, so
@@ -273,6 +339,67 @@ export function dutchAerialLayer() {
   layer.saturation = 1.04;
   return layer;
 }
+
+/**
+ * Keeps a provider to the ground Spain has actually photographed: a tile is
+ * asked for only if its eastern edge reaches the measured coverage, so a tile
+ * that straddles the border is still fetched and the leak is never wider than
+ * one tile. Above and below the table the box itself is the limit.
+ */
+function onlyOverSpain(provider, scheme) {
+  const inner = provider.requestImage.bind(provider);
+  const WEST = -9.5;
+  provider.requestImage = (x, y, level, request) => {
+    const tile = scheme.tileXYToRectangle(x, y, level);
+    const east = (tile.east * 180) / Math.PI;
+    const south = (tile.south * 180) / Math.PI;
+    const north = (tile.north * 180) / Math.PI;
+    let limit = south < SPAIN_FIRST || north > SPAIN_TOP ? WEST : Infinity;
+    const from = Math.max(0, Math.floor((south - SPAIN_FIRST) / SPAIN_STEP));
+    const to = Math.min(SPAIN_WEST.length - 1, Math.floor((north - SPAIN_FIRST) / SPAIN_STEP));
+    for (let i = from; i <= to; i += 1) limit = Math.min(limit, SPAIN_WEST[i] - SPAIN_MARGIN);
+    return east < limit ? Promise.resolve(BLANK) : inner(x, y, level, request);
+  };
+  return provider;
+}
+
+/**
+ * Spain at 25 cm, from the national PNOA through the IDEE's WMTS: keyless,
+ * CC BY 4.0, CORS open to everyone, and quick — 70 to 100 ms a tile from a
+ * cached pyramid, where the same ground through the INSPIRE WMS took 4 to 30
+ * seconds, which is not a service you can fly over.
+ *
+ * The pyramid goes to zoom 20 and this stops at 19, because 19 is 22 cm a
+ * pixel at this latitude and the photography is 25. Anything above that is
+ * the server upsampling its own pixels.
+ */
+export function spanishLayer(rectangle = SPAIN_RECTANGLE, masked = true) {
+  const scheme = new WebMercatorTilingScheme();
+  const provider = new WebMapTileServiceImageryProvider({
+    url:
+      `${PNOA}?service=WMTS&request=GetTile&version=1.0.0&layer=OI.OrthoimageCoverage` +
+      '&style=default&format=image/jpeg&tilematrixset=GoogleMapsCompatible' +
+      '&TileMatrix={TileMatrix}&TileRow={TileRow}&TileCol={TileCol}',
+    layer: 'OI.OrthoimageCoverage',
+    style: 'default',
+    format: 'image/jpeg',
+    tileMatrixSetID: 'GoogleMapsCompatible',
+    tilingScheme: scheme,
+    maximumLevel: 19,
+    rectangle,
+    credit: 'PNOA © Instituto Geográfico Nacional de España',
+  });
+  provider.errorEvent.addEventListener(() => {});
+  const layer = new ImageryLayer(
+    blankBelow(masked ? onlyOverSpain(provider, scheme) : provider, 13),
+  );
+  layer.colorToAlpha = SEA;
+  layer.colorToAlphaThreshold = SEA_THRESHOLD;
+  return layer;
+}
+
+/** The Canaries, where the mainland's border table says nothing useful. */
+export const canaryLayer = () => spanishLayer(CANARIES_RECTANGLE, false);
 
 /**
  * Flanders at 25 cm, from the Flemish government's own winter orthomosaic.

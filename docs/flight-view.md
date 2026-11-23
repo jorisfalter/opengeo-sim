@@ -300,6 +300,7 @@ backs off and retries rather than giving up.
 | South Tyrol imagery | Orthofoto Südtirol 2023, 20 cm | CC BY 4.0 |
 | Austria imagery | basemap.at Orthofoto, 30 cm | CC BY 4.0 |
 | Netherlands imagery | PDOK luchtfoto, 8 cm | CC BY 4.0 |
+| Spain imagery | PNOA máxima actualidad, 25 cm, via the IDEE's WMTS | CC BY 4.0 scne.es |
 | Netherlands buildings | PDOK 3D Basisvoorziening, LoD 2.2 as 3D Tiles | CC BY 4.0 |
 | Runway heights | IGN RGE ALTI (1 m) via the Géoplateforme elevation API | open licence |
 | Airport geometry | OpenStreetMap `aeroway=*` | ODbL |
@@ -1044,6 +1045,75 @@ does not buy is sharpness — edge energy in that half is slightly *higher* in
 the Dutch image, because it is a leafless winter mosaic and NRW's is summer
 canopy. The gain is that the aerodrome is one photograph, of the country it
 is in, taken on one day.
+
+### Spain, and a border measured by walking it
+
+Spain publishes PNOA — the Plan Nacional de Ortofotografía Aérea — at 25 cm,
+CC BY 4.0, with no key and `Access-Control-Allow-Origin: *`. Galicia, Castile,
+Andalusia, the Balearics and the Canaries all come from the one service, and
+over Rozas aerodrome at Lugo the ground goes from Sentinel-2's ten metres to
+twenty-five centimetres: edge energy in the same frame, 1.33 against 13.31.
+
+**WMTS, not the INSPIRE WMS.** Both are open and both answer. The WMS is the
+better-behaved of the two — `TRANSPARENT=TRUE` gives a 334-byte fully
+transparent PNG outside the coverage, and in JPEG it answers the same
+667-byte sheet of white as the German states. It is also the slower by two
+orders of magnitude: 4 to 30 seconds a tile against the WMTS's 70 to 100
+milliseconds from a cached pyramid. You cannot fly over a service that takes
+half a minute to draw a field, so the WMTS it is, and the coverage has to be
+solved another way.
+
+**There is no no-data colour to key.** The layer's own title says what it is:
+*"satélite Sentinel2 y ortofotos del PNOA máxima actualidad"* — one pyramid
+with the photography laid over a satellite base. Ask it for Porto and it
+answers, with Sentinel-2 stretched past its own resolution: a 1 kB tile at
+zoom 17, 81% of it a single colour. Nothing to key out, and nothing that
+looks like a gap. The layer simply has to be told where Spain is.
+
+**So the coverage was walked.** A tile is real PNOA if it is over 4 kB and its
+edge energy is over 6 — measured first on sixteen known tiles, where the
+separation is 9.36 at worst on the Spanish side against 3.13 at best outside
+it. Walking that test west to east in tenth-of-a-degree steps, for every
+tenth of a degree of latitude from 36.8 N to 43.0 N, gives the longitude where
+Spanish photography starts. Sixty-three numbers, in `SPAIN_WEST`.
+
+Walking, and not binary search, because the predicate is not monotonic.
+Binary search was tried first and it is wrong in exactly the place this
+project was asked about: along 41.9 N you cross Spain, Portugal and Spain
+again, so the search settles on whichever edge it meets first. It put the
+limit at 8.2 W and quietly cut A Guarda, Tui and O Rosal out of their own
+country. A coarser 0.2° band did the same to Verín, where a band that starts
+in Portugal ends in Galicia.
+
+The table is then read a tenth of a degree further west than it says. The walk
+steps 0.1°, so the true edge is somewhere inside that step, and a tile that is
+mostly sea reads as no-data however much Spain is in the corner of it — at
+Fisterra and A Guarda that is the difference between coverage and none. Twelve
+kilometres the other way costs nothing, because PNOA does not stop at the
+frontier either: both banks of the Minho are photographed, so Caminha,
+Valença, Vila Nova de Cerveira and Melgaço get 25 cm Portuguese ground out of
+a Spanish service. The one thing the mask must not do is refuse that.
+
+The mask keeps a tile whose eastern edge reaches the limit, so a tile
+straddling the border is still fetched and the leak is never wider than one
+tile. Checked against 24 Spanish towns and aerodromes and 11 Portuguese ones:
+every Spanish one covered, every Portuguese one beyond the overlap left to
+Sentinel-2. Over Porto the layer now makes no request at all.
+
+Two smaller things. **The sea is keyed**, because offshore the service answers
+a flat (32,26,38) — 100% of every offshore tile sampled, and within ±4 of it,
+0.000% of real tiles over Lugo, a Galician forest, the Belesar reservoir, the
+bay of Vigo and the Sierra Nevada snowfield, 0.075% over central Madrid. And
+**the layer stops at zoom 19**, though the pyramid offers 20: 19 is 22 cm a
+pixel at this latitude and the photography is 25. Zoom 20 is the server
+upsampling its own pixels.
+
+Spain goes **under** France in the stack, by the rule Weeze taught: IGN's
+rectangle reaches to 9.7 E for Corsica, which puts Catalonia inside it, and
+PNOA's box holds a corner of Languedoc. Each wins over its own ground. The one
+place neither has photography is Andorra, which gets the stretched satellite
+base — 468 km² and no aerodrome, so it stays on the list rather than in the
+code.
 
 ### Feeding it the ground, anywhere
 
