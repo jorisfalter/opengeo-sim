@@ -18,6 +18,17 @@ Open punten van dit project. Klaar = weg of afgevinkt met datum.
 - [ ] **Taxi: geen route zonder OSM-taxibanen** (2026-11-24)
   Bij een veld zonder `aeroway=taxiway` in OpenStreetMap zegt hij dat eerlijk en tekent niets. Een terugval op "rij rechtdoor van de baan af" is denkbaar.
 
+## Portugal
+
+- [x] **Alle 44 vastelandvelden nagelopen op de DGT-luchtfoto van 2018** (2026-11-24)
+  Zeven banen lagen naast hun asfalt en zijn opnieuw ingemeten: LPAV (536 m), LPCO (246), LPVL (177), LPIN (155), LP77 (108 m en 8,2°), LPSO (59 m en 5,0°), LPVR (51). Staan in `MEASURED` in src/fly/airports.js.
+- [ ] **LPMI Mirandela: de lijn loopt over de oostrand van het asfalt** (2026-11-24)
+  Ongeveer tien meter naast de middenstreep van een baan van twintig meter breed, met een graad koersfout. Je staat op de verharding maar niet in het midden. De zoeker vond hier een weg (586 m) en is dus geen hulp; met de hand inmeten.
+- [ ] **Madeira en de Azoren hebben geen orthofoto** (2026-11-24)
+  DGT's dekking is het vasteland. Elf Portugese velden liggen buiten de foto en zijn niet gecontroleerd. Madeira heeft eigen orthofoto's 1:2000 van 2018-19 in de SNIG-catalogus; dat is wat er te proberen valt.
+- [ ] **De vlieglaag is van 2018** (2026-11-24)
+  Bij Ponte de Sor (LPSO) is de baan op de foto nog een bouwput; die is op de satellietlaag van 2023 ingemeten. Waar nog meer na 2018 gebouwd is, is niet nagegaan. De satellietlaag `ortoSat2023-CorVerdadeira` op geo.dgterritorio.gov.pt is het alternatief: actueler, 30 cm, zachter.
+
 ## Spanje
 
 - [x] **Alle 137 Spaanse velden nagelopen op de PNOA-foto** (2026-11-23)

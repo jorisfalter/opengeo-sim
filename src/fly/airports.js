@@ -88,6 +88,19 @@ const MEASURED = {
   // declared 668 m is also half as long again as the 470 m of pavement, so
   // the start lands short of the threshold on the grass, lined up with it.
   'ES-0069': { '17': [40.91079, -4.372, 40.90924, -4.3668] },
+  // Portugal, measured on DGT's 25 cm aerial mosaic the same way.
+  LPAV: { '17': [40.66326, -8.7436, 40.65339, -8.74036] },
+  LPCO: { '16': [40.16292, -8.47358, 40.15553, -8.46865] },
+  // Espinho's line lies in the grass east of the strip; the threshold bars
+  // and the 35 are on the pavement the measured line runs down.
+  LPIN: { '17': [40.97717, -8.64576, 40.97317, -8.64493] },
+  // Ponte de Sor is the one field measured on the 2023 satellite layer
+  // instead: in the 2018 aerial photography the runway is still a building
+  // site, and a strip of bare earth has no centreline to measure to.
+  LPSO: { '03': [39.20592, -8.0612, 39.22021, -8.0526] },
+  LPVL: { '16': [41.28599, -8.5217, 41.2716, -8.51236] },
+  LPVR: { '02': [41.27031, -7.72277, 41.27721, -7.71968] },
+  LP77: { '15': [39.40494, -8.29323, 39.39747, -8.28453] },
 };
 
 let loading = null;

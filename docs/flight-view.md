@@ -626,6 +626,45 @@ dead still. Zwartberg is the one that still moves, 2.08 → 2.02 with a tenth of
 a metre of ringing afterwards; the aeroplane there appears not to come to rest
 at all, which is a slope and a locked wheel and not this.
 
+### And Portugal
+
+Added 2026-11-24, the same sweep as Spain, on DGT's 25 cm aerial mosaic:
+**44 mainland fields, seven runways in the wrong place.** Madeira and the
+Azores are not in it, because the photography is not.
+
+| | shift | where you were standing |
+| --- | --- | --- |
+| LPAV São Jacinto | 536 m | the dunes west of the field |
+| LPCO Coimbra | 246 m | past the threshold onto the apron road |
+| LPVL Vilar de Luz | 177 m | the same strip, 177 m up it |
+| LPIN Espinho | 155 m | the grass east of the runway |
+| LP77 Santa Margarida | 108 m, 8.2° | across the strip, on at the middle only |
+| LPSO Ponte de Sor | 59 m, 5.0° | diagonally across the runway |
+| LPVR Vila Real | 51 m | the grass beside it |
+
+Three things this round taught that Spain's did not:
+
+- **The search was right every time it was confident.** In Spain it chose the
+  parallel taxiway at four fields and all 137 had to be reviewed by eye. Here
+  all six of its confident answers were the runway, and the eye review added
+  a seventh — Espinho, which the run-length test had put in the "doubtful"
+  pile because the pavement runs 626 m against a declared 427.
+- **Two of the seven are shifts along the runway rather than across it.**
+  Coimbra and Vilar de Luz have their line on the right asphalt, in the wrong
+  place on it, and since `runwayLine()` trims to the *declared* length about
+  the stored midpoint, that is the difference between starting at the
+  threshold and starting a quarter of the way down.
+- **The photograph is from 2018 and one field had not been built yet.** At
+  Ponte de Sor the 2018 aerial shows a strip of bare earth with no centreline
+  to measure to; the runway was finished afterwards. That one was measured on
+  DGT's 2023 satellite layer instead, and it is the only entry in `MEASURED`
+  that did not come off the aerial mosaic. It is also the reason the flying
+  layer's age is worth knowing: at Ponte de Sor you land on a building site.
+
+Left alone, and in `TODO.md`: Mirandela, whose line runs down the eastern
+edge of the pavement rather than the centreline — about ten metres on a
+twenty-metre runway, which is on the asphalt but not on the middle of it.
+
 ### Off the runway, and onto a stand
 
 Added 2026-11-24, asked for from La Seu d'Urgell: you land, you roll out, you
