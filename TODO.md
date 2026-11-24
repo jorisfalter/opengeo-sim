@@ -9,6 +9,15 @@ Open punten van dit project. Klaar = weg of afgevinkt met datum.
 - [ ] **Dataforsyningen-token voor Denemarken (gratis)** (wacht op Joris, sinds 2026-11-10)
   api.dataforsyningen.dk levert capabilities maar antwoordt 403 op GetMap: orto_foraar vereist een gratis token van dataforsyningen.dk. Alleen nodig als Denemarken in de dekking moet. Lage prioriteit.
 
+## Cockpit (2026-11-24)
+
+- [ ] **Rondkijken ontbreekt op de telefoon** (2026-11-24)
+  Shift+pijl, rechtermuisknop en de LOOK-knoppen in de strip werken; de strip is op een telefoon verborgen en in de touch-rij passen geen twee knoppen meer (zes van 108 px vanaf 96 px is al 794 van de 844). Een tweevingersleep op het stickvlak is de logische plek en is niet geschreven.
+- [ ] **Taxiroute kent geen holding points en geen verkeer** (2026-11-24)
+  De route gaat van de baan naar een stand en zegt niets over hold short, volgorde of ander verkeer. Er is hier geen ATC en dit is het niet.
+- [ ] **Taxi: geen route zonder OSM-taxibanen** (2026-11-24)
+  Bij een veld zonder `aeroway=taxiway` in OpenStreetMap zegt hij dat eerlijk en tekent niets. Een terugval op "rij rechtdoor van de baan af" is denkbaar.
+
 ## Spanje
 
 - [x] **Alle 137 Spaanse velden nagelopen op de PNOA-foto** (2026-11-23)

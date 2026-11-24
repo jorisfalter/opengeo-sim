@@ -59,6 +59,7 @@ export function createPanel(root, { title, subtitle, attribution, limits = {} })
         <button data-action="gear" data-el="gearButton">Gear</button>
         <button data-action="flaps" data-el="flapsButton">Flaps 0</button>
         <button data-action="ap" data-el="apButton">Autopilot</button>
+        <button data-action="taxi" data-el="taxiButton">Taxi</button>
         <div class="fly-rate">
           <button data-action="rate-down" title="Slower (1)">«</button>
           <span data-el="rateLabel">1×</span>
@@ -203,6 +204,9 @@ export function createPanel(root, { title, subtitle, attribution, limits = {} })
         </g>
 
         <!-- where you are going, and what the aeroplane is set to -->
+        <!-- The taxi route, which exists only on the ground and so shares no
+             space with anything that matters in the air. -->
+        <text x="40" y="440" class="g-taxi" data-el="taxi"></text>
         <text x="40" y="468" class="g-dest-label" data-el="dest"></text>
         <text x="40" y="500" class="g-mid" data-el="power">N1 0%</text>
         <text x="40" y="526" class="g-label" data-el="config">gear · flaps 0</text>
@@ -268,7 +272,7 @@ export function createPanel(root, { title, subtitle, attribution, limits = {} })
             <kbd>↑</kbd><kbd>↓</kbd> pitch · <kbd>←</kbd><kbd>→</kbd> roll · <kbd>Q</kbd><kbd>E</kbd> rudder ·
             <kbd>W</kbd><kbd>S</kbd> throttle · <kbd>[</kbd><kbd>]</kbd> trim · <kbd>G</kbd> gear ·
             <kbd>F</kbd> flaps · <kbd>B</kbd> brakes · <kbd>V</kbd> speedbrake · <kbd>M</kbd> control law ·
-            <kbd>P</kbd> autopilot · <kbd>C</kbd> camera · <kbd>J</kbd> sound · <kbd>N</kbd> map · <kbd>T</kbd> traffic · <kbd>L</kbd> start · <kbd>R</kbd> plan ·
+            <kbd>P</kbd> autopilot · <kbd>X</kbd> taxi route · <kbd>C</kbd> camera · <kbd>J</kbd> sound · <kbd>N</kbd> map · <kbd>T</kbd> traffic · <kbd>L</kbd> start · <kbd>R</kbd> plan ·
             <kbd>shift</kbd>+<kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> look out of the window (or drag with the right mouse button) ·
             <kbd>space</kbd> pause · <kbd>1</kbd><kbd>2</kbd> time up to 8× ·
             <kbd>click</kbd> mouse yoke, <kbd>Esc</kbd> releases
@@ -508,6 +512,7 @@ export function createPanel(root, { title, subtitle, attribution, limits = {} })
       // where it is relative to the nose. Clamped to the ends of the tape, so
       // a target behind you parks the bug at the edge it is nearest rather
       // than disappearing off the glass.
+      text('taxi', extra.taxi ?? '');
       text('dest', extra.dest ?? '');
       nodes.destLabel.classList.toggle('is-armed', Boolean(extra.destArmed));
       if (extra.destBearing === null || extra.destBearing === undefined) {

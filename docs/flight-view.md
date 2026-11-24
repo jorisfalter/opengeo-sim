@@ -626,6 +626,58 @@ dead still. Zwartberg is the one that still moves, 2.08 → 2.02 with a tenth of
 a metre of ringing afterwards; the aeroplane there appears not to come to rest
 at all, which is a slope and a locked wheel and not this.
 
+### Off the runway, and onto a stand
+
+Added 2026-11-24, asked for from La Seu d'Urgell: you land, you roll out, you
+stop on the centreline — and there is nothing to do and nowhere to go, which
+is the one moment a real flight is busiest, because the runway behind you
+belongs to somebody else now.
+
+Press **X**, or the **Taxi** button, and a route is drawn on the ground: off
+the runway at the first exit ahead of you, along the taxiways, to a parking
+position. The glass says `TAXI 21 · 603 m · left in 270 m` and the line is
+amber, the same amber, because the two are one instruction seen from two
+places. Press it again to put it away.
+
+The ground layout is **OpenStreetMap**, fetched for the field you are
+standing on rather than built in advance — there are 28,375 fields in the
+index and the one that matters is whichever one you just landed at. OSM maps
+taxiways, aprons and stands at most airports that have them, worldwide, under
+the ODbL this project already honours. La Seu d'Urgell has 13 taxiways, 22
+parking positions, an apron and a terminal in it.
+
+Four things are less obvious than they look:
+
+- **The graph has to be built from node ids, not geometry.** Overpass will
+  hand you each way's coordinates for free, but then two taxiways crossing at
+  a junction are two lines that happen to touch, and nothing can turn from one
+  onto the other. So the query asks `out body; >; out skel qt;` and the ways
+  are joined where they share a node.
+- **You start from a point on an edge, not from a node.** A runway in OSM is
+  often two points a kilometre apart, so the nearest *node* to an aeroplane
+  that has just rolled out is a threshold — and a route from there begins by
+  sending you back to it. The aeroplane's position is projected onto the
+  nearest edge and spliced into the graph as a temporary node.
+- **An aeroplane cannot reverse.** Leaving that temporary node in the
+  direction you are not facing costs an extra 1,200 m, so the route uses the
+  next exit ahead rather than the one just behind your tail. Measured at
+  LESU from the 03 threshold: 234 m forward to the junction and 370 m back
+  down the parallel taxiway, which is what you would actually do.
+- **A runway is a road you are trying to get off**, so every metre of it
+  costs four. At a field whose only taxiway is at the far end, rolling out is
+  still the only way off, and the route says so.
+
+Stands that OSM does not join to the taxiways — which is most of them,
+because an apron is mapped as an area and an area is not a route — are
+reached by the straight line across the apron, up to 160 m. Beyond that they
+are not offered.
+
+It re-routes if you wander more than 70 m off the line, and says `Parked`
+when you stop within 16 m of the stand.
+
+What it does not do: hold short of anything, sequence you behind anyone, or
+talk. There is no ATC here and this is not it.
+
 ### Looking out of the window
 
 Added 2026-11-24. A cockpit view points where the nose points, and a runway

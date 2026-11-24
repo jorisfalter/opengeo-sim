@@ -356,6 +356,17 @@ body {
   font-size: 17px;
 }
 
+/* The taxi route: amber, the colour of the line drawn on the ground, because
+   the two are the same instruction seen from two places. */
+.fly-glass .g-taxi {
+  font-size: 18px;
+  fill: #ffd166;
+  letter-spacing: 0.04em;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 3;
+}
+
 /* Where the head is pointing, beside the compass. Cyan rather than green:
    this is not a state of the aeroplane, it is a state of you. */
 .fly-glass .g-look {

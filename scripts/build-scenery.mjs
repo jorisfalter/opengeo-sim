@@ -42,6 +42,11 @@ const AREAS = {
   geneve: { name: 'Genève', bbox: [46.20, 6.08, 46.26, 6.18] },
   annemasse: { name: 'Annemasse', bbox: [46.17, 6.21, 46.22, 6.28] },
   alpedhuez: { name: "Alpe d'Huez", bbox: [45.07, 6.05, 45.11, 6.10] },
+  // The Pyrenees: Andorra's airport, the town five kilometres up the valley,
+  // and the villages between them. Asked for because somebody landed there
+  // and found an empty valley — which is what every field outside these
+  // boxes still looks like.
+  seudurgell: { name: "La Seu d'Urgell en LESU", bbox: [42.31, 1.36, 42.40, 1.52] },
 };
 
 const args = process.argv.slice(2);

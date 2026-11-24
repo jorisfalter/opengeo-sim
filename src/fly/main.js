@@ -23,6 +23,7 @@ import { createTerrainService } from './terrain.js';
 import { createControls } from './controls.js';
 import { createPanel } from './panel.js';
 import { createMinimap } from './minimap.js';
+import { createTaxi } from './taxi.js';
 import { createLookahead } from './lookahead.js';
 import { createPlan, distanceBetween } from './plan.js';
 import { createScenery } from './scenery.js';
@@ -504,6 +505,10 @@ async function main() {
     limits: { vle: type.vle, vlo: type.vlo, vfe: type.vfe },
   });
 
+  // Where to go once you are down: a route off the runway and onto a stand,
+  // from OpenStreetMap's own ground layout. See src/fly/taxi.js.
+  const taxi = createTaxi(viewer, { onNotice: (message) => panel.notice(message) });
+
   // Buildings and villages, loaded as the aeroplane comes near them. The
   // boxes match scripts/build-scenery.mjs; anything not built yet simply
   // never loads and nothing breaks.
@@ -522,6 +527,7 @@ async function main() {
     kiewit: [50.92, 5.33, 50.99, 5.43],
     genk: [50.94, 5.46, 51.00, 5.56],
     lommel: [51.19, 5.25, 51.27, 5.38],
+    seudurgell: [42.31, 1.36, 42.40, 1.52],
   };
   const scenery = createScenery(viewer, { datum });
   const sound = createSound({ onNotice: (message) => panel.notice(message), voice: type.voice });
@@ -964,6 +970,9 @@ async function main() {
         case 'KeyT':
           traffic.toggle();
           break;
+        case 'KeyX':
+          taxi.request(aircraft);
+          break;
         default:
           break;
       }
@@ -1223,6 +1232,7 @@ async function main() {
     // Where you are going, whether or not anything is flying you there. The
     // preview does not sequence the plan, so this is safe to ask every frame
     // with the autopilot switched off.
+    const taxiState = taxi.update(aircraft);
     const target = plan.points.length ? plan.preview(aircraft) : null;
     const targetKm = target ? target.distance / 1000 : 0;
     panel.update(aircraft, {
@@ -1244,6 +1254,7 @@ async function main() {
       tiltLive: controls.tiltLive,
       stick: controls.stick,
       lookDeg: view === 'cockpit' ? controls.lookDeg : 0,
+      taxi: taxiState?.text ?? '',
       sound: sound.enabled,
       traffic: traffic.enabled,
       trafficCount: traffic.list.length,
@@ -1367,6 +1378,9 @@ async function main() {
         key.setAttribute('aria-expanded', String(!sheet.hidden));
         break;
       }
+      case 'taxi':
+        taxi.request(aircraft);
+        break;
       case 'plan':
         showPlan(true);
         break;
@@ -1485,6 +1499,7 @@ async function main() {
     viewer,
     controls,
     panel,
+    taxi,
     lookahead,
     plan,
     armPlan,
