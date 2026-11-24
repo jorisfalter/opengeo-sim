@@ -153,6 +153,19 @@ export function createPanel(root, { title, subtitle, attribution }) {
         <polygon points="978,0 994,-9 994,9" class="g-fill" data-el="vsPointer"/>
         <text x="996" y="452" class="g-label" text-anchor="end" data-el="vs">0</text>
 
+        <!-- fuel: how much is left, and how long that lasts at this moment's
+             flow. The bar is the honest part — a number alone does not say
+             whether 900 kg is most of the tank or the last of it.
+             It sits here, in the gap between the pitch ladder and the
+             altitude tape, because that is the one part of the glass nothing
+             else uses: under the altitude tape, where it went first, the
+             moving map covers it. -->
+        <text x="706" y="396" class="g-label">FUEL</text>
+        <rect x="706" y="406" width="124" height="13" class="g-box"/>
+        <rect x="708" y="408" width="120" height="9" class="g-fuelbar" data-el="fuelBar"/>
+        <text x="830" y="446" class="g-mid" text-anchor="end" data-el="fuel">—</text>
+        <text x="830" y="468" class="g-label" text-anchor="end" data-el="fuelTime"></text>
+
         <!-- heading -->
         <rect x="310" y="556" width="380" height="46" class="g-box"/>
         <g clip-path="url(#hdgClip)"><g data-el="hdgTape">
@@ -275,6 +288,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
     // something other than their text: the N1 figure goes amber, and the lever
     // carries a fill and a limit mark.
     power: el('power'),
+    fuelBar: el('fuelBar'),
     leverFill: el('leverFill'),
     leverCap: el('leverCap'),
     leverText: el('leverText'),
@@ -375,6 +389,28 @@ export function createPanel(root, { title, subtitle, attribution }) {
       const limited = Boolean(a.thrustLimited);
       text('power', limited ? `N1 ${n1}% · VMO LIMIT` : `N1 ${n1}%`);
       nodes.power.classList.toggle('is-limited', limited);
+      // The fuel. Everything here comes off the flight model's own tanks, so
+      // the simple point-mass model — which has no tanks — shows a dash
+      // rather than a plausible-looking zero.
+      const left = a.fuelFraction ?? null;
+      if (left === null) {
+        text('fuel', '—');
+        text('fuelTime', '');
+        nodes.fuelBar.setAttribute('width', '0');
+      } else {
+        nodes.fuelBar.setAttribute('width', String(clamp(left, 0, 1) * 120));
+        nodes.fuelBar.classList.toggle('is-low', left < 0.2);
+        nodes.fuelBar.classList.toggle('is-out', left < 0.08);
+        const kg = Math.max(0, a.fuelKg ?? 0);
+        text('fuel', kg >= 10000 ? `${(kg / 1000).toFixed(1)} t` : `${Math.round(kg)} kg`);
+        // Endurance at the flow of this second, which is the only flow anyone
+        // can know: throttled back it reads hours, firewalled it reads what
+        // firewalled costs. Below a kilogram an hour there is no sensible
+        // answer — engines off, or idling on the stand — so it says nothing.
+        const flow = a.fuelFlowKgH ?? 0;
+        const pct = `${Math.round(left * 100)}%`;
+        text('fuelTime', flow > 1 ? `${pct} · ${endurance(kg / flow)}` : pct);
+      }
       const lever = Math.round((extra.lever ?? a.throttle ?? 0) * 100);
       nodes.leverFill.style.height = `${lever}%`;
       nodes.leverText.textContent = `${lever}%`;
@@ -475,6 +511,9 @@ export function createPanel(root, { title, subtitle, attribution }) {
       // for exactly as long as nobody tells you the brake is on.
       if (a.onGround && extra.brakes && (a.throttle ?? 0) > 0.25) warnings.push('BRAKE ON · B or click');
       if (a.stall) warnings.push('STALL');
+      // Empty tanks are not a caution, they are why the engines stopped.
+      if (left !== null && (a.fuelKg ?? 0) <= 0.5) warnings.push('FUEL EMPTY');
+      else if (left !== null && left < 0.08) warnings.push('FUEL LOW');
       // Two knots of slack over VMO: the thrust limit settles the aeroplane
       // on 290, and a warning that flickers at the speed you are being held
       // at is noise rather than information.
@@ -528,3 +567,10 @@ export function createPanel(root, { title, subtitle, attribution }) {
 }
 
 const clamp = (value, lo, hi) => Math.max(lo, Math.min(hi, value));
+
+/** Hours as a cockpit clock: 1:24. Past ten hours the minutes are noise. */
+const endurance = (hours) => {
+  if (hours >= 10) return `${Math.round(hours)} h`;
+  const minutes = Math.round(hours * 60);
+  return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`;
+};

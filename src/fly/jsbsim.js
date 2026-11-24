@@ -23,6 +23,10 @@ const DT = 1 / 120; // JSBSim runs at a fixed rate; frames are split into steps.
 const MAX_STEPS = 160;
 const FT = 0.3048;
 const KT = 0.514444;
+const LB = 0.45359237; // kilograms in a pound, for the fuel
+// How many tanks to look for. JSBSim answers 0 for a tank that is not there,
+// so this is a ceiling rather than a count: the A380 has four, the PC-24 two.
+const TANKS = 12;
 const DEG = Math.PI / 180;
 
 /**
@@ -81,6 +85,12 @@ class Fdm {
     this.overTrend = 0;
     this.aircraft = { type: type.id };
     this.notches = type.flapDeg.length - 1;
+    // The fuel, read from the model rather than declared here. The tanks are
+    // in the aircraft file with a capacity and a load, and neither number is
+    // worth writing down twice: JSBSim will tell us what it loaded, and what
+    // fraction of full that is, which between them give the capacity.
+    this.tanks = [];
+    this.fuelCapacityLb = 0;
   }
 
   get(prop) {
@@ -95,6 +105,30 @@ class Fdm {
   throttle(value) {
     for (let i = 0; i < this.type.engines; i += 1) {
       this.set(`fcs/throttle-cmd-norm[${i}]`, value);
+    }
+  }
+
+  /** The property path for a tank, which JSBSim writes without the [0]. */
+  tank(i, leaf) {
+    return i === 0 ? `propulsion/tank/${leaf}` : `propulsion/tank[${i}]/${leaf}`;
+  }
+
+  /**
+   * Reads the tanks the aircraft file loaded, once, and works out how big
+   * they are. There is no capacity property to ask — `capacity-lbs` reads 0 —
+   * but `pct-full` is the load as a percentage of it, so the two together
+   * give the full tank: the PC-24 starts with 3,600 lb at 69.2%, which is the
+   * 5,200 lb its file declares.
+   */
+  readTanks() {
+    this.tanks = [];
+    this.fuelCapacityLb = 0;
+    for (let i = 0; i < TANKS; i += 1) {
+      const contents = this.get(this.tank(i, 'contents-lbs'));
+      const pct = this.get(this.tank(i, 'pct-full'));
+      if (pct <= 0) continue;
+      this.tanks.push({ index: i, load: contents });
+      this.fuelCapacityLb += (contents / pct) * 100;
     }
   }
 
@@ -123,6 +157,12 @@ class Fdm {
     }
     this.cmdPitch = this.get('attitude/theta-rad');
     this.cmdBank = 0;
+    // Every flight starts with the fuel the aircraft file loads. Running the
+    // initial conditions again does not refill the tanks — fuel is state, not
+    // a condition — so arriving at a new airport after burning two hours of
+    // it would otherwise leave you to take off on what was left.
+    if (!this.tanks.length) this.readTanks();
+    else for (const tank of this.tanks) this.set(this.tank(tank.index, 'contents-lbs'), tank.load);
     this.sample();
     if (start.onGround) this.settle();
   }
@@ -199,9 +239,26 @@ class Fdm {
       this.get('gear/unit[1]/WOW') > 0.5 ||
       this.get('gear/unit[2]/WOW') > 0.5;
     a.thrust = 0;
+    let flow = 0;
     for (let i = 0; i < this.type.engines; i += 1) {
       a.thrust += this.get(i === 0 ? 'propulsion/engine/thrust-lbs' : `propulsion/engine[${i}]/thrust-lbs`);
+      flow += this.get(
+        i === 0 ? 'propulsion/engine/fuel-flow-rate-pps' : `propulsion/engine[${i}]/fuel-flow-rate-pps`,
+      );
     }
+    // What is left in the tanks, added up here rather than read from
+    // `propulsion/total-fuel-lbs`, which is only recomputed on a step — so
+    // after a reset that total is a lap behind and the glass would show the
+    // fuel of the flight before this one.
+    let fuel = 0;
+    for (const tank of this.tanks) fuel += this.get(this.tank(tank.index, 'contents-lbs'));
+    a.fuelKg = fuel * LB;
+    a.fuelCapacityKg = this.fuelCapacityLb * LB;
+    a.fuelFraction = this.fuelCapacityLb > 0 ? fuel / this.fuelCapacityLb : null;
+    // Pounds a second from every engine together, as kilograms an hour: the
+    // figure a fuel log is kept in, and the one that turns what is left into
+    // how long it lasts.
+    a.fuelFlowKgH = flow * 3600 * LB;
     // Angle of attack means nothing without air going over the wing. JSBSim
     // works it out from the velocity vector, so a parked aeroplane settling a
     // millimetre onto its gear is flying straight down at 127 degrees alpha —

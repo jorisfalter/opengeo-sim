@@ -356,6 +356,20 @@ body {
   font-size: 17px;
 }
 
+/* The fuel bar: green while there is fuel, amber at a fifth of a tank, red
+   at the last twelfth — the point at which a diversion stops being optional. */
+.fly-glass .g-fuelbar {
+  fill: rgba(122, 240, 176, 0.75);
+}
+
+.fly-glass .g-fuelbar.is-low {
+  fill: #ffb08a;
+}
+
+.fly-glass .g-fuelbar.is-out {
+  fill: #ff8a5c;
+}
+
 .fly-glass .g-label {
   font-size: 16px;
   fill: rgba(122, 240, 176, 0.75);

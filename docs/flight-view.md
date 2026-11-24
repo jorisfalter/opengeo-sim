@@ -626,6 +626,53 @@ dead still. Zwartberg is the one that still moves, 2.08 → 2.02 with a tenth of
 a metre of ringing afterwards; the aeroplane there appears not to come to rest
 at all, which is a slope and a locked wheel and not this.
 
+### Fuel, which was being burned where nobody could see it
+
+Added 2026-11-24. JSBSim has been burning fuel all along — the tanks are in
+the aircraft file, the turbines draw from them, and an aeroplane left at the
+stop with the engines running gets lighter — but nothing on the glass said
+how much was left, and nothing refilled the tanks between flights.
+
+What the glass shows now, in the gap between the pitch ladder and the
+altitude tape: a bar, the mass remaining, and the percentage with an
+endurance beside it. The bar is the part that earns its place. A number alone
+does not say whether 900 kg is most of the tank or the last of it, and the
+two aeroplanes here differ by a factor of forty — the PC-24 holds 5,200 lb
+and the A380 280,000, which is why the readout switches to tonnes above ten.
+
+Three things had to be read out of JSBSim rather than written down here:
+
+- **How big the tanks are.** There is no capacity property to ask;
+  `propulsion/tank[i]/capacity-lbs` reads 0. But `pct-full` is the load as a
+  percentage of capacity, so the load and the percentage together give it:
+  the PC-24 starts with 3,600 lb at 69.23%, which is the 5,200 lb its file
+  declares. Measured on the A380 too: 249,120 lb at 88.97% is 280,000.
+- **What is left.** Added up from the tanks rather than read from
+  `propulsion/total-fuel-lbs`, because that total is only recomputed on a
+  step — so immediately after a reset it is a lap behind, and the glass would
+  show the fuel of the flight before this one.
+- **Endurance**, from the summed `fuel-flow-rate-pps` of every engine, as
+  kilograms an hour. It is the flow of this second and nothing more: throttled
+  back it reads hours, firewalled it reads what firewalled costs. Under a
+  kilogram an hour — engines out, or an aeroplane that has just arrived — it
+  says nothing rather than something arbitrary.
+
+**Every flight starts full.** `runIc()` does not refill the tanks: fuel is
+state, not an initial condition, and that was checked rather than assumed —
+burn five minutes, run the initial conditions again, and the tanks are still
+down five minutes. So `Fdm.reset` writes each tank back to the load the
+aircraft file gave it. Without that, picking a new airport after two hours in
+the air would have you take off on what was left.
+
+The warning line says `FUEL LOW` under a twelfth of a tank and `FUEL EMPTY`
+at nothing, and the second one is not a caution: dry tanks were measured as
+thrust 0 and N1 10%, which is to say the engines have stopped and the
+aeroplane is a glider. The bar goes amber at a fifth and red at a twelfth.
+
+The first place it was drawn was under the altitude tape, which is where it
+would go on a real PFD — and where the moving map sits, covering it. That is
+the whole reason it lives in the gap to the left.
+
 ### The second aeroplane
 
 An A380, on the same JSBSim, from the same start menu. `?aircraft=a380`, or
