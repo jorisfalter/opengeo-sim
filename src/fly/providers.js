@@ -36,6 +36,14 @@ const SOUTH_TYROL =
 // everywhere else, fused into one pyramid. That second half is why this layer
 // needs a mask rather than a bounding box.
 const PNOA = 'https://www.ign.es/wmts/pnoa-ma';
+// Portugal's own aerial photography, 25 cm over the mainland, through the
+// Direção-Geral do Território. Two of their services were compared before
+// this one was picked, and the comparison is in docs/scenery-sources.md:
+// OrtoSat2023 is 30 cm Pléiades-Neo satellite, newer and softer, and the
+// layer its ortos. host serves by default is the false-colour one, with
+// every tree in Portugal bright red. This is the true-colour aerial mosaic,
+// sharper, half the latency, and CC BY 4.0 in its own SNIG record.
+const DGT_WMS = 'https://geo.dgterritorio.gov.pt/wms/ortos2018';
 const BASEMAP_AT =
   'https://maps.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/{z}/{y}/{x}.jpeg';
 
@@ -46,6 +54,7 @@ export const ATTRIBUTION =
   '© GeoBasis-DE: NW, NI, HE, RP, SL, BW, BY, TH, SN, ST, BB/BE, MV, SH — ' +
   'dl-de/by-2-0 and CC BY 4.0 · ' +
   'Data source: basemap.at CC BY 4.0 · ' +
+  '© DGT Ortofotos 25 cm 2018, Portugal continental CC BY 4.0 · ' +
   '© EOX Sentinel-2 cloudless CC BY 4.0 · © OpenStreetMap contributors ODbL · ' +
   '© OpenFlights routes and airlines ODbL';
 
@@ -189,6 +198,15 @@ const SPAIN_MARGIN = 0.15;
 // own ground — the same rule the Dutch layer taught us at Weeze.
 const SPAIN_RECTANGLE = Rectangle.fromDegrees(-9.5, 35.9, 4.4, 44.0);
 const CANARIES_RECTANGLE = Rectangle.fromDegrees(-18.4, 27.4, -13.2, 29.6);
+// Mainland Portugal, as its own service draws it: the capabilities give
+// 9.585 W to 6.149 W and 36.929 N to 42.167 N, and this is that with a
+// margin. Madeira and the Azores are not in it — DGT's aerial coverage is
+// the mainland only, and out there Sentinel-2 is still what you fly over.
+// Nothing has to be masked: beyond its coverage this service answers the
+// same canned sheet of pure 255,255,255 that Germany and PDOK serve, so the
+// existing no-data key stops the layer at the frontier. Measured over
+// Badajoz, over the Atlantic and over Madeira: 100% white in all three.
+const PORTUGAL_RECTANGLE = Rectangle.fromDegrees(-9.65, 36.85, -6.1, 42.2);
 // The sea, as this service draws it where it has no photograph: a flat
 // (32,26,38), 100% of every offshore tile sampled. Keying it out is what lets
 // Sentinel-2's blue through around the coast. Measured before trusting it:
@@ -400,6 +418,49 @@ export function spanishLayer(rectangle = SPAIN_RECTANGLE, masked = true) {
 
 /** The Canaries, where the mainland's border table says nothing useful. */
 export const canaryLayer = () => spanishLayer(CANARIES_RECTANGLE, false);
+
+/**
+ * Mainland Portugal at 25 cm, from DGT's 2018 aerial mosaic. CC BY 4.0,
+ * keyless, CORS open, and quick: 0.2 to 0.5 s a tile against 0.4 to 0.8 for
+ * the satellite layer, at 10 to 13 kB of JPEG.
+ *
+ * It needs none of the machinery Spain needed. PNOA fuses its photography
+ * with Sentinel-2 into one pyramid, which is why that layer has to be told
+ * where the country is; this one simply stops, and says so in the one colour
+ * the no-data key already removes. Which also settles the overlap on the
+ * Minho, where both services have real imagery of both banks: Portugal is
+ * added above Spain, so over Portuguese ground the Portuguese photograph
+ * wins, and where it has none Spain shows through.
+ *
+ * Capped at 19 for the same reason as PNOA: 19 is 22 cm a pixel at this
+ * latitude against 25 cm of photography. Zoom 20 still answers, with the
+ * server's own pixels blown up.
+ */
+export function portugueseLayer() {
+  const provider = new WebMapServiceImageryProvider({
+    url: DGT_WMS,
+    layers: 'Ortos2018-RGB',
+    parameters: {
+      version: '1.3.0',
+      format: 'image/jpeg',
+      transparent: false,
+      styles: '',
+    },
+    tilingScheme: new WebMercatorTilingScheme(),
+    tileWidth: 256,
+    tileHeight: 256,
+    rectangle: PORTUGAL_RECTANGLE,
+    maximumLevel: 19,
+    credit: 'Ortofotos DGT',
+  });
+  provider.errorEvent.addEventListener(() => {});
+  const layer = new ImageryLayer(blankBelow(provider, 13));
+  layer.colorToAlpha = NODATA;
+  layer.colorToAlphaThreshold = NODATA_THRESHOLD;
+  layer.brightness = 1.03;
+  layer.saturation = 1.04;
+  return layer;
+}
 
 /**
  * Flanders at 25 cm, from the Flemish government's own winter orthomosaic.

@@ -5,6 +5,7 @@ import { Ion, JulianDate, PostProcessStage, RequestScheduler, Viewer } from 'ces
 import {
   austrianLayer,
   canaryLayer,
+  portugueseLayer,
   baseLayer,
   dutchAerialLayer,
   flemishLayer,
@@ -119,6 +120,9 @@ export async function createScene(container, { time }) {
   // tiles that stray into France are covered by French photography.
   viewer.imageryLayers.add(spanishLayer());
   viewer.imageryLayers.add(canaryLayer());
+  // Portugal above Spain, so that on the Minho — where PNOA photographs both
+  // banks — the Portuguese side is drawn from Portugal's own 25 cm mosaic.
+  viewer.imageryLayers.add(portugueseLayer());
   viewer.imageryLayers.add(orthoLayer());
   // The Low Countries go on before Germany, and resolution is not what
   // decides it. PDOK is 8 cm against North Rhine-Westphalia's 10, so by the

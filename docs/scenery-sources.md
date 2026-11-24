@@ -23,6 +23,8 @@ Coverage breadth is therefore worth more than a third aeroplane.
 | South Tyrol | Autonome Provinz Bozen, Aerial 2023 | — |
 | Austria | basemap.at bmaporthofoto30cm | 30 cm |
 | Germany, 14 states | thirteen Land WMS services (Berlin shares Brandenburg's) | 10–40 cm |
+| Spain | PNOA máxima actualidad, IDEE WMTS | 25 cm |
+| Portugal, mainland | DGT Ortofotos 2018, WMS | 25 cm |
 
 Germany was added on 2026-11-17, after the survey below turned into a bug
 report: standing at Wiesbaden the ground was a pale grey-brown smear, which
@@ -180,5 +182,53 @@ walking a real-versus-stretched test west to east for every tenth of a degree
 of latitude. `docs/flight-view.md`, "Spain, and a border measured by walking
 it", has the method and what it cost to get wrong.
 
-Still open on the peninsula: Portugal. DGT publishes orthophotography and it
-has not been tried yet.
+## Portugal, and the layer that was not the obvious one
+
+Added on 2026-11-24. DGT publishes two orthophoto services, and the one this
+file pointed at for a year is the wrong one of the two.
+
+The row in the survey above says `ortos.dgterritorio.gov.pt` `ortoSat2023`,
+which is OrtoSat2023: a cloudless Pléiades-Neo mosaic of the mainland, 30 cm,
+flown — or rather orbited — in 2023. It answers, it is quick enough, and the
+layer that host serves under that name draws every tree in Portugal bright
+red. It is the false-colour product. The true-colour one lives on a different
+hostname under a different layer name, `geo.dgterritorio.gov.pt/wms/ortosat2023`
+with `ortoSat2023-CorVerdadeira`, which no amount of reading the first
+service's capabilities would have told you.
+
+Looking for that turned up the better layer. DGT's OGC API lists its whole
+orthophoto archive — 1995, 2004-06, 2007, 2010, 2012, 2015, 2018 and the 2023
+satellite — and the 2018 one is **aerial photography at 25 cm**, the
+country's own regular coverage, with a WMS of its own at
+`geo.dgterritorio.gov.pt/wms/ortos2018`, layer `Ortos2018-RGB`. Compared side
+by side over Lisbon, Cascais and Évora it is sharper than the satellite
+mosaic — the threshold markings and the parked aeroplanes are crisp rather
+than soft — and it answers in 0.2 to 0.5 s a tile against 0.4 to 0.8. Both
+are CC BY 4.0 with an attribution condition, in their own SNIG records, and
+both answer `Access-Control-Allow-Origin: *`.
+
+So Portugal flies on five-year-old aerial photography rather than on
+two-year-old satellite. Runways do not move, and the trade was sharpness.
+
+Three things made it an afternoon's work rather than Spain's week:
+
+- **It stops at its own border.** Beyond the coverage this service answers a
+  667-byte sheet of pure 255,255,255 — measured over Badajoz, over the
+  Atlantic and over Madeira, 100% white in all three. That is the same canned
+  no-data tile Germany and PDOK serve, and the key that already removes it
+  needed no changes. PNOA needed a measured coverage mask precisely because
+  it does *not* do this: it falls back to Sentinel-2 and there is no colour
+  to key.
+- **It speaks EPSG:3857 and JPEG.** The OGC API - Maps endpoint, which is
+  what DGT's own documentation points at, is PNG only — 60 kB a tile against
+  10 to 13 — and it answers 500 to any bbox with a decimal point in it, which
+  is every tile a map client will ever ask for. The WMS has neither problem.
+- **Both banks of the Minho are now photographed twice**, once by each
+  country. Portugal is added above Spain in the stack, so over Portuguese
+  ground the Portuguese photograph wins and where it has none Spain shows
+  through.
+
+What is still missing is Madeira and the Azores: DGT's mainland coverage is
+the mainland, and out there the islands are Sentinel-2. Madeira has its own
+1:2000 orthophotography of 2018-19 in the SNIG catalogue, which is the next
+thing to try if anyone wants to fly into Funchal.
