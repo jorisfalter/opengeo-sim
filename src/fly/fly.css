@@ -356,6 +356,14 @@ body {
   font-size: 17px;
 }
 
+/* Where the head is pointing, beside the compass. Cyan rather than green:
+   this is not a state of the aeroplane, it is a state of you. */
+.fly-glass .g-look {
+  font-size: 18px;
+  fill: #7cd7ff;
+  letter-spacing: 0.06em;
+}
+
 /* The fuel bar: green while there is fuel, amber at a fifth of a tank, red
    at the last twelfth — the point at which a diversion stops being optional. */
 .fly-glass .g-fuelbar {

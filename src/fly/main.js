@@ -500,6 +500,8 @@ async function main() {
     title: type.title,
     subtitle: `${startPlace.name} · ${sim.name} · IGN, GeoBasis-DE, swisstopo, Südtirol, basemap.at and PDOK · the rest worldwide`,
     attribution: ATTRIBUTION,
+    // The speeds the airframe says no at, so the glass can say it first.
+    limits: { vle: type.vle, vlo: type.vlo, vfe: type.vfe },
   });
 
   // Buildings and villages, loaded as the aeroplane comes near them. The
@@ -1184,6 +1186,18 @@ async function main() {
         position,
         new HeadingPitchRoll(aircraft.heading, aircraft.pitch, aircraft.bank),
       );
+      // Which way the head is facing, inside that frame — x right, y forward,
+      // z up, the same frame the aeroplane mesh is drawn in. Turning the head
+      // here rather than adding to the heading is the difference that shows
+      // in a bank: looking left in a thirty-degree turn should look along the
+      // wing, at the ground you are turning over, and not at the horizon the
+      // local vertical would give you.
+      const look = controls.state.look;
+      const tilt = CesiumMath.toRadians(1.5) + look.pitch;
+      const cy = Math.cos(look.yaw);
+      const sy = Math.sin(look.yaw);
+      const ct = Math.cos(tilt);
+      const st = Math.sin(tilt);
       viewer.camera.setView({
         destination: Matrix4.multiplyByPoint(
           seat,
@@ -1191,9 +1205,14 @@ async function main() {
           new Cartesian3(),
         ),
         orientation: {
-          heading: aircraft.heading,
-          pitch: aircraft.pitch + CesiumMath.toRadians(1.5),
-          roll: aircraft.bank,
+          direction: Cartesian3.normalize(
+            Matrix4.multiplyByPointAsVector(seat, new Cartesian3(sy * ct, cy * ct, st), new Cartesian3()),
+            new Cartesian3(),
+          ),
+          up: Cartesian3.normalize(
+            Matrix4.multiplyByPointAsVector(seat, new Cartesian3(-sy * st, -cy * st, ct), new Cartesian3()),
+            new Cartesian3(),
+          ),
         },
       });
     } else if (view === 'chase') {
@@ -1224,6 +1243,7 @@ async function main() {
       tiltDiagnosis: controls.tiltDiagnosis,
       tiltLive: controls.tiltLive,
       stick: controls.stick,
+      lookDeg: view === 'cockpit' ? controls.lookDeg : 0,
       sound: sound.enabled,
       traffic: traffic.enabled,
       trafficCount: traffic.list.length,
@@ -1288,6 +1308,27 @@ async function main() {
     });
     for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
       button.addEventListener(type, () => press(false));
+    }
+  }
+
+  // Looking left and right is held in exactly the same way, and there are two
+  // pairs of these buttons — one in the desktop strip, one in the touch keys.
+  for (const [action, x] of [['look-left', -1], ['look-right', 1]]) {
+    for (const button of hud.querySelectorAll(`[data-action="${action}"]`)) {
+      const press = (on) => {
+        controls.setLookButton(on ? x : 0, 0);
+        for (const other of hud.querySelectorAll(`[data-action="${action}"]`)) {
+          other.classList.toggle('is-on', on);
+        }
+      };
+      button.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        button.setPointerCapture?.(event.pointerId);
+        press(true);
+      });
+      for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
+        button.addEventListener(type, () => press(false));
+      }
     }
   }
 
@@ -1442,6 +1483,8 @@ async function main() {
   window.__places = PLACES;
   window.__fly = {
     viewer,
+    controls,
+    panel,
     lookahead,
     plan,
     armPlan,

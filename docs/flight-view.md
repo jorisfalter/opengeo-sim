@@ -626,6 +626,71 @@ dead still. Zwartberg is the one that still moves, 2.08 → 2.02 with a tenth of
 a metre of ringing afterwards; the aeroplane there appears not to come to rest
 at all, which is a slope and a locked wheel and not this.
 
+### Looking out of the window
+
+Added 2026-11-24. A cockpit view points where the nose points, and a runway
+that is not in front of you is a runway you cannot see — which on a visual
+circuit is most of the time, and on a downwind leg is the whole point.
+
+Hold **shift and an arrow key**, drag with the **right mouse button**, or hold
+the **LOOK ◀ ▶** buttons in the strip, and your head turns: up to 140 degrees
+either side and 70 up or down. Let go and it comes back to the front over a
+quarter of a second.
+
+Three decisions worth writing down:
+
+- **Held, never latched**, in all three input paths. A view that stays where
+  you left it is a view you can forget you left, and then the aeroplane is
+  flying one way while the windscreen faces another. Coming back is also not
+  a snap: an exponential over about a quarter of a second, because a cut is
+  the one thing that loses you the horizon.
+- **The head turns inside the aeroplane's frame, not around the local
+  vertical.** Adding the offset to the camera's heading would have been one
+  line; it is wrong in a bank. Looking left in a thirty-degree turn should
+  look along the wing, down at the ground you are turning over. So the
+  cockpit camera no longer takes a heading/pitch/roll at all — it builds a
+  direction and an up vector inside the seat frame, which at zero offset is
+  exactly the view it had before.
+- **Shift takes the arrows away from the stick** while it is held. A glance to
+  the left must not roll you into the turn it was meant to avoid. The rudder
+  stays live, because Q and E are not in the way.
+
+Not on a phone yet. The touch row is six buttons at 108 px starting 96 px in,
+which is 794 of an 844 px screen in landscape; two more do not fit, and the
+desktop strip is hidden there by design. A two-finger drag on the stick area
+is the obvious place for it and is not written.
+
+The compass says `LOOK 40° L` while your head is turned, in the cyan the
+destination uses rather than the instrument green: this is a state of you,
+not of the aeroplane. Without it, a head turned forty degrees and an
+aeroplane that has quietly wandered forty degrees off heading look identical.
+
+### Gear and flap speeds
+
+Added 2026-11-24, at a user's asking, and it was a real hole: JSBSim will
+hold the gear down at three hundred knots all day, where the aeroplane would
+tear the doors off. The limits existed nowhere in this project.
+
+They are in `fleet.js` now, with the rest of the envelope, and the glass
+warns in the same line the stall and the overspeed use: `GEAR SPEED · 250
+MAX`, `FLAP SPEED · 175 MAX`. Each one carries its limit, because a warning
+that does not say what it wants costs you a guess at the speed you are trying
+to lose.
+
+| | PC-24 | A380 |
+| --- | --- | --- |
+| VLE, gear extended | 250 | 250 |
+| VLO, gear travelling | 200 | 220 |
+| VFE flap 1 | 200 (15°) | 263 (9°) |
+| VFE flap 2 | 175 (33°) | 222 (18°) |
+| VFE flap 3 | — | 196 (27°) |
+| VFE FULL | — | 182 (36°) |
+
+It warns rather than refuses. An aeroplane that silently declines a lever is
+worse than one that tells you what you have just done — and the overspeed
+protection, which does take the throttle off you, exists because VMO is a
+limit you can reach by doing nothing wrong. This one you have to select.
+
 ### Fuel, which was being burned where nobody could see it
 
 Added 2026-11-24. JSBSim has been burning fuel all along — the tanks are in

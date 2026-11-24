@@ -17,7 +17,7 @@ const ALT_PX = 0.2; // pixels per foot
 const tape = (count, step, draw) =>
   Array.from({ length: count }, (_, i) => draw(i * step - ((count - 1) * step) / 2)).join('');
 
-export function createPanel(root, { title, subtitle, attribution }) {
+export function createPanel(root, { title, subtitle, attribution, limits = {} }) {
   root.innerHTML = `
     <div class="fly-hud">
       <div class="fly-hud__top">
@@ -48,6 +48,13 @@ export function createPanel(root, { title, subtitle, attribution }) {
           <span>RUDDER</span>
           <button data-action="yaw-right" title="Rudder right (E) — steers the nosewheel on the ground">▶</button>
         </div>
+        <!-- Held, like the rudder: your head comes back to the front when you
+             let go, which is why there is no button to centre it. -->
+        <div class="fly-rudder">
+          <button data-action="look-left" title="Look left (hold) — shift+← on the keyboard, or drag with the right mouse button">◀</button>
+          <span>LOOK</span>
+          <button data-action="look-right" title="Look right (hold) — shift+→ on the keyboard, or drag with the right mouse button">▶</button>
+        </div>
         <button data-action="brakes" data-el="brakeButton">Brake</button>
         <button data-action="gear" data-el="gearButton">Gear</button>
         <button data-action="flaps" data-el="flapsButton">Flaps 0</button>
@@ -67,7 +74,13 @@ export function createPanel(root, { title, subtitle, attribution }) {
           <clipPath id="hdgClip"><rect x="306" y="556" width="388" height="46"/></clipPath>
         </defs>
 
-        <!-- attitude -->
+        <!-- attitude. One group, because all of it — ladder, bank scale,
+             aeroplane symbol, flight path marker — describes where the nose
+             is, and when you turn your head to look out of the side window it
+             is describing something you are no longer looking at. It fades
+             out while the head is turned rather than disappearing, so it is
+             clear it is still there and still true. -->
+        <g data-el="attitude">
         <g clip-path="url(#ladderClip)">
           <g data-el="ladder">
             <g data-el="ladderLines">
@@ -112,6 +125,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
         <g data-el="fpv" class="g-fpv">
           <circle cx="0" cy="0" r="13"/><line x1="-13" y1="0" x2="-30" y2="0"/>
           <line x1="13" y1="0" x2="30" y2="0"/><line x1="0" y1="-13" x2="0" y2="-26"/>
+        </g>
         </g>
 
         <!-- airspeed -->
@@ -178,6 +192,10 @@ export function createPanel(root, { title, subtitle, attribution }) {
         </g></g>
         <polygon points="500,552 490,538 510,538" class="g-fill"/>
         <text x="500" y="532" class="g-mid" text-anchor="middle" data-el="hdg">000</text>
+        <!-- Which way you are facing, when it is not the way you are going.
+             Without this a head turned forty degrees is indistinguishable
+             from an aeroplane that has quietly wandered off its heading. -->
+        <text x="616" y="532" class="g-look" data-el="look"></text>
         <!-- Where the destination lies, on the tape that says where the nose
              is pointing: the gap between the two is the turn you still owe. -->
         <g data-el="destBug" class="g-dest is-off">
@@ -251,6 +269,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
             <kbd>W</kbd><kbd>S</kbd> throttle · <kbd>[</kbd><kbd>]</kbd> trim · <kbd>G</kbd> gear ·
             <kbd>F</kbd> flaps · <kbd>B</kbd> brakes · <kbd>V</kbd> speedbrake · <kbd>M</kbd> control law ·
             <kbd>P</kbd> autopilot · <kbd>C</kbd> camera · <kbd>J</kbd> sound · <kbd>N</kbd> map · <kbd>T</kbd> traffic · <kbd>L</kbd> start · <kbd>R</kbd> plan ·
+            <kbd>shift</kbd>+<kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> look out of the window (or drag with the right mouse button) ·
             <kbd>space</kbd> pause · <kbd>1</kbd><kbd>2</kbd> time up to 8× ·
             <kbd>click</kbd> mouse yoke, <kbd>Esc</kbd> releases
           </p>
@@ -275,6 +294,7 @@ export function createPanel(root, { title, subtitle, attribution }) {
     lines: el('ladderLines'),
     bankIndex: el('bankIndex'),
     fpv: el('fpv'),
+    attitude: el('attitude'),
     speedTape: el('speedTape'),
     altTape: el('altTape'),
     hdgTape: el('hdgTape'),
@@ -478,6 +498,12 @@ export function createPanel(root, { title, subtitle, attribution }) {
       text('law', extra.law === 'direct' ? 'direct' : 'assisted');
       text('input', extra.input ?? '');
       text('ap', extra.ap ?? '');
+      const lookDeg = Math.round(extra.lookDeg ?? 0);
+      text('look', Math.abs(lookDeg) < 2 ? '' : `LOOK ${Math.abs(lookDeg)}° ${lookDeg < 0 ? 'L' : 'R'}`);
+      // Over eight degrees off the nose the attitude symbology is pointing at
+      // something behind the windscreen you are looking through, so it goes
+      // down to a tenth rather than lying at full brightness.
+      nodes.attitude.style.opacity = Math.abs(lookDeg) > 8 ? '0.1' : '1';
       // The destination: the line reads it out, the bug on the compass shows
       // where it is relative to the nose. Clamped to the ends of the tape, so
       // a target behind you parks the bug at the edge it is nearest rather
@@ -511,6 +537,18 @@ export function createPanel(root, { title, subtitle, attribution }) {
       // for exactly as long as nobody tells you the brake is on.
       if (a.onGround && extra.brakes && (a.throttle ?? 0) > 0.25) warnings.push('BRAKE ON · B or click');
       if (a.stall) warnings.push('STALL');
+      // The gear and the flaps have speeds of their own, and the glass is the
+      // only place they exist: the flight model will happily hold the gear
+      // down at three hundred knots, where a real one tears the doors off.
+      // Both are stated with the limit, because a warning that does not say
+      // what it wants costs you a guess at the speed you are trying to lose.
+      if (limits.vle && a.gear && kias > limits.vle) {
+        warnings.push(`GEAR SPEED · ${limits.vle} MAX`);
+      }
+      const flapLimit = limits.vfe?.[a.flaps ?? 0];
+      if (flapLimit && kias > flapLimit) {
+        warnings.push(`FLAP SPEED · ${flapLimit} MAX`);
+      }
       // Empty tanks are not a caution, they are why the engines stopped.
       if (left !== null && (a.fuelKg ?? 0) <= 0.5) warnings.push('FUEL EMPTY');
       else if (left !== null && left < 0.08) warnings.push('FUEL LOW');

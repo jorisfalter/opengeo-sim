@@ -69,6 +69,13 @@ export const FLEET = {
     vref: [150, 125, 110],
     flapDeg: [0, 15, 33],
     flapNames: ['0', '1', '2'],
+    // The limits that stop you tearing something off: VLE with the gear out,
+    // VLO while it is travelling, and VFE per notch of flap. Published PC-24
+    // figures — gear 250 extended, 200 to retract; flap 15 at 200, flap 33
+    // at 175. The first entry is the clean wing, which has no flap limit.
+    vle: 250,
+    vlo: 200,
+    vfe: [null, 200, 175],
     // The shortest runway the start menu's dice will offer. A PC-24 lands on
     // gravel and grass in real life, but a random unsurveyed 400 m strip is a
     // bad first impression.
@@ -158,6 +165,11 @@ export const FLEET = {
     vref: [208, 187, 171, 158, 148],
     flapDeg: [0, 9, 18, 27, 36],
     flapNames: ['0', '1', '2', '3', 'FULL'],
+    // A380: gear 250 extended, 220 to retract; flap 1 at 263, 2 at 222,
+    // 3 at 196, FULL at 182.
+    vle: 250,
+    vlo: 220,
+    vfe: [null, 263, 222, 196, 182],
     // 2,990 m. The measured take-off distance to screen height at 450 tonnes
     // is 2,756 m and the landing roll 862 m, so this is the take-off that
     // sets the figure, with a couple of hundred metres in hand. Anything

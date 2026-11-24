@@ -30,6 +30,26 @@ const KEY_AXES = {
   trimDown: ['BracketRight', 'Numpad7'],
 };
 
+// Looking out of the window. Holding shift turns the four arrows from a stick
+// into a head: a runway you are not pointing at is one you cannot see, and in
+// a cockpit view the only way to find it is to turn and look.
+//
+// Held rather than latched, in every one of the three ways you can do it, so
+// the head always comes back to the front when you let go. A view that stays
+// where you left it is a view you can forget you left, and then the aeroplane
+// is flying one way while the windscreen faces another.
+const LOOK_KEYS = {
+  left: ['ArrowLeft', 'KeyA'],
+  right: ['ArrowRight', 'KeyD'],
+  up: ['ArrowUp'],
+  down: ['ArrowDown'],
+};
+const LOOK_RATE = (140 * Math.PI) / 180; // degrees a second on the keys
+const LOOK_YAW_MAX = (140 * Math.PI) / 180; // over your shoulder, not past it
+const LOOK_PITCH_MAX = (70 * Math.PI) / 180;
+const LOOK_RETURN = 11; // how fast the head comes back, per second
+const MOUSE_LOOK = 0.0032; // radians a pixel on a right-button drag
+
 // Pitch is inverted on purpose: pulling back, which is stick-down on a mouse
 // and arrow-down on a keyboard, raises the nose. That is how an aeroplane works
 // and it is worth not quietly "fixing".
@@ -47,13 +67,37 @@ export function createControls(element, { onAction, onNotice } = {}) {
     source: 'keyboard',
     yoke: false,
     mouse: { x: 0, y: 0 },
+    // Where the head is pointing, relative to straight ahead, in radians.
+    look: { yaw: 0, pitch: 0 },
   };
+  // What the on-screen Look buttons are asking for, −1 … 1 on each axis.
+  const buttonLook = { x: 0, y: 0 };
+  let mouseLooking = false;
 
   const held = (names) => names.some((code) => keys.has(code));
   const axis = (minus, plus) => (held(minus) ? -1 : 0) + (held(plus) ? 1 : 0);
 
   // ---- mouse as a yoke ----------------------------------------------------
   const onMouseMove = (event) => {
+    // The right button is the head, whether or not the yoke has the pointer:
+    // drag with it and you look around, let go and you are facing forward
+    // again. It is the one gesture that is free — the left button is already
+    // the stick, and under pointer lock there is nothing else left.
+    if (event.buttons & 2) {
+      mouseLooking = true;
+      state.look.yaw = clamp(
+        state.look.yaw + event.movementX * MOUSE_LOOK,
+        -LOOK_YAW_MAX,
+        LOOK_YAW_MAX,
+      );
+      state.look.pitch = clamp(
+        state.look.pitch - event.movementY * MOUSE_LOOK,
+        -LOOK_PITCH_MAX,
+        LOOK_PITCH_MAX,
+      );
+      return;
+    }
+    mouseLooking = false;
     if (!state.yoke) return;
     // The virtual stick is in screen-ish units: half a screen is full travel.
     const scale = 2 / Math.min(window.innerWidth, window.innerHeight);
@@ -81,6 +125,12 @@ export function createControls(element, { onAction, onNotice } = {}) {
   });
   element.addEventListener('mousedown', (event) => {
     if (event.button === 0) grabYoke();
+  });
+  // Without this the right-button drag opens the browser's own menu over the
+  // windscreen on the way past.
+  element.addEventListener('contextmenu', (event) => event.preventDefault());
+  window.addEventListener('mouseup', (event) => {
+    if (event.button === 2) mouseLooking = false;
   });
   window.addEventListener('mousemove', onMouseMove);
 
@@ -430,11 +480,52 @@ export function createControls(element, { onAction, onNotice } = {}) {
     return true;
   }
 
+  const looking = () => keys.has('ShiftLeft') || keys.has('ShiftRight');
+
+  /**
+   * Moves the head, or lets it come back. Held on the keys, held on the
+   * buttons, held on the right mouse button; nothing latches.
+   */
+  function headLook(dt) {
+    const shift = looking();
+    const x = (shift ? axis(LOOK_KEYS.left, LOOK_KEYS.right) : 0) + buttonLook.x;
+    const y = (shift ? axis(LOOK_KEYS.down, LOOK_KEYS.up) : 0) + buttonLook.y;
+    if (x || y) {
+      state.look.yaw = clamp(state.look.yaw + x * LOOK_RATE * dt, -LOOK_YAW_MAX, LOOK_YAW_MAX);
+      state.look.pitch = clamp(
+        state.look.pitch + y * LOOK_RATE * dt,
+        -LOOK_PITCH_MAX,
+        LOOK_PITCH_MAX,
+      );
+      return;
+    }
+    if (mouseLooking) return;
+    // Back to the front, quickly but not instantly: a head that snaps is a
+    // cut, and a cut is the one thing that loses you the horizon.
+    const back = Math.exp(-LOOK_RETURN * dt);
+    state.look.yaw *= back;
+    state.look.pitch *= back;
+    if (Math.abs(state.look.yaw) < 0.002) state.look.yaw = 0;
+    if (Math.abs(state.look.pitch) < 0.002) state.look.pitch = 0;
+  }
+
   return {
     state,
 
+    /** The on-screen Look buttons, held like the rudder ones. */
+    setLookButton(x, y) {
+      buttonLook.x = x;
+      buttonLook.y = y;
+    },
+
+    /** Where the head is, in degrees: negative left, positive right. */
+    get lookDeg() {
+      return (state.look.yaw * 180) / Math.PI;
+    },
+
     /** Reads every input and returns the axes for this frame. */
     sample(dt) {
+      headLook(dt);
       const onGamepad = readGamepad(dt);
       if (stick.active) {
         // Dragging down is pulling back, which is nose up — and it honours the
@@ -460,8 +551,11 @@ export function createControls(element, { onAction, onNotice } = {}) {
           state.roll = state.mouse.x;
           state.yaw = axis(KEY_AXES.yawLeft, KEY_AXES.yawRight);
         } else {
-          state.pitch = axis(KEY_AXES.pitchDown, KEY_AXES.pitchUp);
-          state.roll = axis(KEY_AXES.rollLeft, KEY_AXES.rollRight);
+          // Shift has taken the arrows for the head this frame, so they are
+          // not also the stick: a glance to the left must not roll you into
+          // the turn it was meant to avoid.
+          state.pitch = looking() ? 0 : axis(KEY_AXES.pitchDown, KEY_AXES.pitchUp);
+          state.roll = looking() ? 0 : axis(KEY_AXES.rollLeft, KEY_AXES.rollRight);
           state.yaw = axis(KEY_AXES.yawLeft, KEY_AXES.yawRight);
         }
         const lever = axis(KEY_AXES.throttleDown, KEY_AXES.throttleUp);
