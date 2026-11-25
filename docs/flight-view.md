@@ -1858,6 +1858,70 @@ used here at all:
 | Aircraft models | NASA 3D Resources | public domain | yes |
 | Aircraft models | FlightGear / X-Plane | GPL / proprietary | no |
 
+## The fields France does not photograph
+
+Rolling "surprise me" kept putting you on a runway made of blocks. France
+pixelates its air bases in BD ORTHO: the whole field is replaced by a mosaic of
+flat squares about twenty metres across, and the simulator dutifully drapes
+that over the ground you are about to take off from.
+
+Which fields those are is measured, not guessed from the name. Three zoom-18
+tiles along each runway, two numbers each:
+
+- **flat** — the share of horizontally adjacent pixels that differ by 2 or
+  less. The inside of a block is flat; photographed ground never is.
+- **grid** — the share of all the horizontal gradient that falls in the busiest
+  12% of columns. A mosaic puts all of its contrast on block boundaries.
+
+All 168 French fields with a thousand metres of hard runway went through it and
+the two groups do not touch:
+
+| | flat | grid |
+| --- | --- | --- |
+| the seventeen censored | 0.879 – 0.955 | 0.388 – 0.761 |
+| the other 151 | ≤ 0.867 | ≤ 0.272 |
+
+Every one of the seventeen was then looked at on a contact sheet, and every one
+is a mosaic: LFBC Cazaux, LFBG Cognac, LFBM Mont-de-Marsan, LFJA Chaumont,
+LFMI Istres, LFOA Avord, LFOE Évreux, LFOJ Orléans-Bricy, LFPV Villacoublay,
+LFQE Mantoux, LFQP Phalsbourg, LFRL Lanvéoc, LFSI Saint-Dizier, LFSX Luxeuil,
+LFTF Cuers, LFTH Toulon-Hyères, LFXA Ambérieu.
+
+The name alone would have been close and wrong. It would have taken
+Toulouse-Francazal and Rochefort, which still carry "BA 101" and "BA 721" and
+are photographed like anywhere else, and it would have missed Chaumont, Cuers
+and Toulon-Hyères, which say nothing and are blocks.
+
+The same test was run over the other photographed regions — Switzerland,
+Austria, South Tyrol, the Netherlands, Flanders and the German states whose DOP
+this flies over. Nothing outside France is censored at all. Kleine Brogel,
+Koksijde, Zutendaal, Meiringen, Brumowski, Nörvenich, Ramstein, Büchel,
+Spangdahlem, Wiesbaden and Neuburg all score like any civil field.
+
+So the dice skip the seventeen — both dice, because the world die lands in
+France often enough and a mosaic is no better for being a surprise. The pool
+goes from 311 to 294 inside the sharp photography, and from 41 to 37 for the
+A380. Searching still finds them, with `photograph censored` on the line: they
+are real airfields and the runway under the blur is in the right place.
+
+## A stuck shift, and an aeroplane that stopped answering
+
+The head-look added the day before made shift mean "the arrows are a head, not
+a stick". A key counts as down until its keyup arrives, and on macOS that keyup
+does not always arrive: hold shift for Cmd+Shift+4 and the screenshot overlay
+swallows it. The page then believes shift is held for the rest of the session.
+The arrows go to the head for ever, and in assisted law the aeroplane holds the
+attitude it had — wings down, nose on the horizon, no response to the controls
+and no stall either, because nothing is asking it for anything. It looks like
+three separate bugs and it is one.
+
+Two changes, either of which would have been enough. The four modifiers are now
+read from the event rather than remembered, so the next key you press clears
+one that was left behind, and keys are dropped when the tab goes hidden as well
+as on blur. And shift on its own no longer gates pitch and roll: only shift
+*and* an arrow is a glance out of the window. A modifier that takes the stick
+away by itself is one lost keyup from an aeroplane that does not fly.
+
 ## Next
 
 Airports from OurAirports, so there is somewhere to land outside Savoie; a head

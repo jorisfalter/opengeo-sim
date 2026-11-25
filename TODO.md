@@ -11,6 +11,11 @@ Open punten van dit project. Klaar = weg of afgevinkt met datum.
 
 ## Cockpit (2026-11-24)
 
+- [x] **Shift bleef hangen en legde de besturing plat** (2026-11-25)
+  Na Cmd+Shift+4 (schermfoto) komt de keyup van shift nooit aan; de pagina dacht daarna voor altijd dat shift ingedrukt was, de pijltjes gingen naar het hoofd en in assisted law bleef het toestel in zijn stand hangen. Modifiers worden nu uit het event gelezen en shift alleen pakt de stick niet meer af.
+- [ ] **De "scherpe foto"-dobbelsteen is ruimer dan de diensten** (2026-11-25)
+  De zes rechthoeken in `COVERED` (start.js) lopen over landen heen waar geen eigen luchtfoto is: Wallonie, Luxemburg, Noord-Italie, delen van Duitsland buiten de dertien DOP-diensten. Een worp kan daar landen en dan krijg je Sentinel-2 op 10 m. EBBE Beauvechain kwam zo boven bij de controle. Te meten op dezelfde manier als de censuurtest: welke velden krijgen uberhaupt een eigen luchtfoto?
+
 - [ ] **Rondkijken ontbreekt op de telefoon** (2026-11-24)
   Shift+pijl, rechtermuisknop en de LOOK-knoppen in de strip werken; de strip is op een telefoon verborgen en in de touch-rij passen geen twee knoppen meer (zes van 108 px vanaf 96 px is al 794 van de 844). Een tweevingersleep op het stickvlak is de logische plek en is niet geschreven.
 - [ ] **Taxiroute kent geen holding points en geen verkeer** (2026-11-24)

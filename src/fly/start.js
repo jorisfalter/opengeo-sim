@@ -45,6 +45,40 @@ const COVERED = [
 // shrinks by a factor of eight, which is exactly what should happen.
 const HARD = 'hard';
 
+// France does not photograph its air bases, it pixelates them: BD ORTHO
+// replaces the whole field with a mosaic of flat blocks twenty metres across,
+// and taking off from one is like taking off from a spreadsheet. The dice
+// should not hand you that.
+//
+// Which fields those are was measured rather than guessed from the name, on
+// two numbers off three zoom-18 tiles along each runway: the share of
+// horizontally adjacent pixels that differ by 2 or less — the inside of a
+// block is flat, photographed ground never is — and the share of all the
+// horizontal gradient that falls in the busiest 12% of columns, because a
+// mosaic puts everything on its block boundaries. All 168 French fields with
+// a thousand metres of hard runway were put through it and the two groups do
+// not touch: the censored ones score 0.879 to 0.955 flat and 0.388 to 0.761
+// on the grid, the photographed ones at most 0.867 and 0.272. Every one of
+// the seventeen was then looked at on a contact sheet.
+//
+// The name would have been close but not right. It would have picked up
+// Toulouse-Francazal and Rochefort, which still say "BA 101" and "BA 721" and
+// are photographed like anywhere else, and it would have missed Chaumont,
+// Cuers and Toulon-Hyères, which do not say so and are blocks.
+//
+// The same test was run on the other photographed regions — Switzerland,
+// Austria, South Tyrol, the Netherlands, Flanders, and the German states
+// whose DOP the simulator flies over. Nothing there is censored at all:
+// Kleine Brogel, Koksijde, Meiringen, Ramstein, Büchel and Neuburg are all
+// ordinary photographs. France is the only one that does this.
+const CENSORED = new Set([
+  'LFBC', 'LFBG', 'LFBM', 'LFJA', 'LFMI', 'LFOA', 'LFOE', 'LFOJ', 'LFPV',
+  'LFQE', 'LFQP', 'LFRL', 'LFSI', 'LFSX', 'LFTF', 'LFTH', 'LFXA',
+]);
+
+/** Is this field a mosaic of blocks rather than a photograph? */
+export const isCensored = (ident) => CENSORED.has(ident);
+
 const inBox = (airport, [west, south, east, north]) =>
   airport.lon >= west && airport.lon <= east && airport.lat >= south && airport.lat <= north;
 
@@ -53,6 +87,9 @@ function randomField(index, covered, minLengthFt) {
   const pool = index.filter((airport) => {
     const runway = airport.runways[0];
     if (!runway || !(runway.lengthFt >= minLengthFt) || runway.surface !== HARD) return false;
+    // Both dice, not just the sharp one: the world die lands in France often
+    // enough, and a blurred field is no better for being a surprise.
+    if (CENSORED.has(airport.ident)) return false;
     if (covered && !COVERED.some((region) => inBox(airport, region.box))) return false;
     // Only offer what the simulator can actually line up on.
     return Boolean(startFrom(airport));
@@ -230,7 +267,9 @@ export function askWhereToStart(params) {
             field.ident,
           )}</strong> ${escape(field.name)}<span>${escape(field.country ?? '')} · ${Math.round(
             (field.runways[0]?.lengthFt ?? 0) * 0.3048,
-          )} m ${escape(field.runways[0]?.surface ?? '')}</span></button></li>`,
+          )} m ${escape(field.runways[0]?.surface ?? '')}${
+            CENSORED.has(field.ident) ? ' · photograph censored' : ''
+          }</span></button></li>`,
       )
       .join('');
   });
