@@ -77,8 +77,34 @@ export function createControls(element, { onAction, onNotice } = {}) {
   const held = (names) => names.some((code) => keys.has(code));
   const axis = (minus, plus) => (held(minus) ? -1 : 0) + (held(plus) ? 1 : 0);
 
+  // A key that is down is remembered until its keyup arrives, and on macOS
+  // that keyup does not always arrive: hold shift for Cmd+Shift+4 and the
+  // screenshot overlay swallows it, so the page still believes shift is down
+  // minutes later. With shift meaning "the arrows are a head, not a stick",
+  // that was an aeroplane which silently stopped answering the controls —
+  // in assisted law it then holds the attitude it had, wings down and nose
+  // on the horizon, for as long as you like.
+  //
+  // Every keyboard and mouse event carries the true state of the four
+  // modifiers, so they are read from the event rather than remembered, and
+  // the next key you press puts a stuck one right.
+  const MODIFIERS = [
+    ['ShiftLeft', 'ShiftRight', 'shiftKey'],
+    ['ControlLeft', 'ControlRight', 'ctrlKey'],
+    ['AltLeft', 'AltRight', 'altKey'],
+    ['MetaLeft', 'MetaRight', 'metaKey'],
+  ];
+  const syncModifiers = (event) => {
+    for (const [left, right, flag] of MODIFIERS) {
+      if (event[flag]) continue;
+      keys.delete(left);
+      keys.delete(right);
+    }
+  };
+
   // ---- mouse as a yoke ----------------------------------------------------
   const onMouseMove = (event) => {
+    syncModifiers(event);
     // The right button is the head, whether or not the yoke has the pointer:
     // drag with it and you look around, let go and you are facing forward
     // again. It is the one gesture that is free — the left button is already
@@ -158,6 +184,7 @@ export function createControls(element, { onAction, onNotice } = {}) {
     return node.tagName === 'BUTTON' && (code === 'Space' || code === 'Enter');
   };
   const onKeyDown = (event) => {
+    syncModifiers(event);
     if (owns(event.target, event.code)) return;
     if (event.repeat) {
       if (HELD.has(event.code)) event.preventDefault();
@@ -181,10 +208,18 @@ export function createControls(element, { onAction, onNotice } = {}) {
         onAction?.(event.code);
     }
   };
-  const onKeyUp = (event) => keys.delete(event.code);
+  const onKeyUp = (event) => {
+    syncModifiers(event);
+    keys.delete(event.code);
+  };
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('blur', () => keys.clear());
+  // Switching tabs or spaces does not always blur the window, and whatever
+  // was held at that moment is held forever otherwise.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) keys.clear();
+  });
 
   // ---- the phone ----------------------------------------------------------
   //
@@ -480,7 +515,13 @@ export function createControls(element, { onAction, onNotice } = {}) {
     return true;
   }
 
-  const looking = () => keys.has('ShiftLeft') || keys.has('ShiftRight');
+  // Shift *and* an arrow is a glance out of the window. Shift on its own is
+  // nothing at all — deliberately, because a modifier that takes the stick
+  // away on its own is one key away from an aeroplane that does not answer.
+  const shiftDown = () => keys.has('ShiftLeft') || keys.has('ShiftRight');
+  const looking = () =>
+    shiftDown() &&
+    Boolean(axis(LOOK_KEYS.left, LOOK_KEYS.right) || axis(LOOK_KEYS.down, LOOK_KEYS.up));
 
   /**
    * Moves the head, or lets it come back. Held on the keys, held on the
