@@ -1945,8 +1945,10 @@ riverbed. A grass strip has no edges to find, so the search takes the
 strongest straight thing nearby, and near a small French aerodrome that is
 usually a road.
 
-So every candidate was looked at. Red for the published line, yellow for the
-found one, on the photograph, four to a sheet; then, for the ones that
+So every candidate that would actually put you in the wrong place was looked
+at: the 49 flagged among the fields the dice can offer, and, among the rest,
+every one the rule wanted to move by 150 m or more. Red for the published
+line, yellow for the found one, on the photograph, four to a sheet; then, for the ones that
 survived, the measured line in green with a ring on the threshold you start
 from, at 20 cm a pixel. The ring has to sit on the piano keys. That last step
 threw out four more:
@@ -1981,7 +1983,10 @@ surplus falls off the far end.
 
 The other 379 are left alone, which is the point of measuring: a published
 line that is right should stay, and a correction nobody has looked at is not a
-correction.
+correction. What is not ruled out is a field the rule wanted to move by less
+than 150 m and nobody looked at — on a 900 m strip that is still the
+difference between the asphalt and the grass beside it, and those are the
+ones left to do.
 
 ## A stuck shift, and an aeroplane that stopped answering
 
