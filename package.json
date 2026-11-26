@@ -15,6 +15,7 @@
     "predev": "node scripts/sync-wasm.mjs",
     "prebuild": "node scripts/sync-wasm.mjs",
     "test:fdm": "node scripts/test-fdm.mjs",
+    "test:approach": "node scripts/test-approach.mjs",
     "check:deploy": "node scripts/deploy-check.mjs",
     "build:scenery": "node scripts/build-scenery.mjs",
     "build:airports": "node scripts/build-airport-index.mjs",

@@ -352,7 +352,7 @@ export function runwayLine(airport) {
  *
  * So a secondary runway is drawn where the data says or it is not drawn.
  */
-function plainLine(airport, runway) {
+export function plainLine(airport, runway) {
   const scale = Math.cos((airport.lat * Math.PI) / 180);
   const north = (runway.heLat - runway.leLat) * METERS_PER_DEGREE;
   const east = (runway.heLon - runway.leLon) * METERS_PER_DEGREE * scale;

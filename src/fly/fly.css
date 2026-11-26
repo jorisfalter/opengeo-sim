@@ -332,6 +332,75 @@ body {
   fill: #ffd166;
 }
 
+/* The approach. Cyan, the same colour the glass already uses for "where you
+   are going" rather than "where you are": the pitch ladder and the horizon
+   are green because they are attitude, the flight path marker is amber
+   because it is the aeroplane, and guidance has always been cyan here.
+   Everything in this group is hidden until there is an approach to fly, so
+   the glass of an aeroplane in the cruise looks exactly as it did. */
+.fly-glass .g-gp line {
+  fill: none;
+  stroke: #7cd7ff;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.fly-glass .g-gp text {
+  fill: #7cd7ff;
+}
+
+.fly-glass .g-gs .g-line {
+  stroke: #7cd7ff;
+  stroke-width: 1.5;
+}
+
+.fly-glass .g-gs circle.g-line {
+  fill: none;
+}
+
+.fly-glass .g-gs text {
+  fill: #7cd7ff;
+}
+
+/* The zero on the glideslope scale is the path itself, so it is drawn and not
+   left to be inferred from the gap between two dots. */
+.fly-glass .g-gp-zero {
+  stroke: #7cd7ff;
+  stroke-width: 2.5;
+}
+
+.fly-glass .g-gs-pointer {
+  fill: #7cd7ff;
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 1.5;
+}
+
+/* Parked at the end of the scale: hollow, because the needle is no longer
+   measuring anything — it is only still saying which way. */
+.fly-glass .g-gs-pointer.is-parked {
+  fill: none;
+  stroke: #7cd7ff;
+  stroke-width: 2.5;
+}
+
+.fly-glass .g-course polygon {
+  fill: none;
+  stroke: #7cd7ff;
+  stroke-width: 2.5;
+}
+
+.fly-glass .g-app {
+  font-size: 17px;
+  fill: #7cd7ff;
+  letter-spacing: 0.05em;
+}
+
+.fly-glass .g-gp.is-off,
+.fly-glass .g-gs.is-off,
+.fly-glass .g-course.is-off {
+  display: none;
+}
+
 .fly-glass .g-box {
   fill: rgba(8, 14, 12, 0.3);
   stroke: rgba(122, 240, 176, 0.35);

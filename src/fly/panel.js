@@ -89,6 +89,17 @@ export function createPanel(root, { title, attribution, limits = {} }) {
         <g data-el="attitude">
         <g clip-path="url(#ladderClip)">
           <g data-el="ladder">
+            <!-- The glide path, as a HUD shows it: a dashed line three
+                 degrees below the horizon, drawn inside the ladder so it
+                 rolls and slides with it. Put the flight path marker on it
+                 and the aeroplane is descending at three degrees — which is
+                 the approach. Nothing is highlighted, nothing is chased: it
+                 is one more line on the ladder, at the one angle that
+                 matters on final. -->
+            <g data-el="glidePath" class="g-gp is-off">
+              <line x1="-104" y1="27" x2="104" y2="27" stroke-dasharray="16 11"/>
+              <text x="112" y="32" class="g-small">GP</text>
+            </g>
             <g data-el="ladderLines">
               ${tape(37, 5, (angle) => {
                 if (angle === 0) {
@@ -173,6 +184,26 @@ export function createPanel(root, { title, attribution, limits = {} }) {
         <polygon points="978,0 994,-9 994,9" class="g-fill" data-el="vsPointer"/>
         <text x="996" y="452" class="g-label" text-anchor="end" data-el="vs">0</text>
 
+        <!-- Deviation from the glide path, on a real scale: full deflection is
+             the ±0.7° of a glideslope, so one dot here is one dot there. It
+             lives in the gap between the pitch ladder and the altitude tape
+             and only exists while there is an approach to be off. -->
+        <g data-el="gs" class="g-gs is-off">
+          <!-- Which runway, over the scale, and how far off the path you are
+               beside the needle. It used to say the distance too, in a line
+               along the bottom of the glass that ran straight through the
+               heading tape: the destination line two inches away was already
+               saying how far it was. -->
+          <text x="800" y="206" class="g-app" text-anchor="middle" data-el="app">GP</text>
+          <line x1="800" y1="222" x2="800" y2="398" class="g-line"/>
+          ${[-90, -45, 45, 90]
+            .map((y) => `<circle cx="800" cy="${310 + y}" r="3.5" class="g-line"/>`)
+            .join('')}
+          <line x1="784" y1="310" x2="816" y2="310" class="g-gp-zero"/>
+          <polygon points="800,-11 812,0 800,11 788,0" class="g-gs-pointer" data-el="gsPointer"/>
+          <text x="776" y="316" class="g-app" text-anchor="end" data-el="appDev"></text>
+        </g>
+
         <!-- fuel: how much is left, and how long that lasts at this moment's
              flow. The bar is the honest part — a number alone does not say
              whether 900 kg is most of the tank or the last of it.
@@ -206,6 +237,12 @@ export function createPanel(root, { title, attribution, limits = {} }) {
              is pointing: the gap between the two is the turn you still owe. -->
         <g data-el="destBug" class="g-dest is-off">
           <polygon points="0,602 -10,617 10,617"/>
+        </g>
+        <!-- The runway's own course, hollow, above the tape: the gap between
+             it and the filled pointer is how far round the centreline still
+             is. When the two sit on each other you are lined up. -->
+        <g data-el="courseBug" class="g-course is-off">
+          <polygon points="0,538 -9,547 0,556 9,547"/>
         </g>
 
         <!-- where you are going, and what the aeroplane is set to -->
@@ -277,7 +314,7 @@ export function createPanel(root, { title, attribution, limits = {} }) {
             <kbd>↑</kbd><kbd>↓</kbd> pitch · <kbd>←</kbd><kbd>→</kbd> roll · <kbd>Q</kbd><kbd>E</kbd> rudder ·
             <kbd>W</kbd><kbd>S</kbd> throttle · <kbd>[</kbd><kbd>]</kbd> trim · <kbd>G</kbd> gear ·
             <kbd>F</kbd> flaps · <kbd>B</kbd> brakes · <kbd>V</kbd> speedbrake · <kbd>M</kbd> control law ·
-            <kbd>P</kbd> autopilot · <kbd>X</kbd> taxi route · <kbd>C</kbd> camera · <kbd>J</kbd> sound · <kbd>N</kbd> map · <kbd>T</kbd> traffic · <kbd>L</kbd> start · <kbd>R</kbd> plan ·
+            <kbd>P</kbd> autopilot · <kbd>I</kbd> glide path · <kbd>X</kbd> taxi route · <kbd>C</kbd> camera · <kbd>J</kbd> sound · <kbd>N</kbd> map · <kbd>T</kbd> traffic · <kbd>L</kbd> start · <kbd>R</kbd> plan ·
             <kbd>shift</kbd>+<kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> look out of the window (or drag with the right mouse button) ·
             <kbd>space</kbd> pause · <kbd>1</kbd><kbd>2</kbd> time up to 8× ·
             <kbd>click</kbd> mouse yoke, <kbd>Esc</kbd> releases
@@ -289,6 +326,17 @@ export function createPanel(root, { title, attribution, limits = {} }) {
             and amber once <kbd>P</kbd> has handed it to the autopilot; the bug under
             the compass is the turn you still owe it. A link can carry one:
             <code>?to=EDDL</code>.
+          </p>
+          <h3>The glide path</h3>
+          <p class="fly-hud__keys">
+            Four lamps stand beside the threshold of the runway you are arriving
+            at: white above three degrees, red below, so two white and two red is
+            the path. On the glass, the dashed <strong>GP</strong> line on the
+            pitch ladder is that same three degrees — put the flight path marker
+            on it and hold it there — and the diamond beside the altitude tape is
+            how far off it you are, on a real ±0.7° scale. There is no ILS in
+            this simulator: the paths are geometry to a surveyed threshold, which
+            is why they are called glide paths. <kbd>I</kbd> turns the lot off.
           </p>
           <h3>Data</h3>
           <p class="fly-hud__credit">${attribution}</p>
@@ -310,6 +358,10 @@ export function createPanel(root, { title, attribution, limits = {} }) {
     vsPointer: el('vsPointer'),
     vref: el('vref'),
     destBug: el('destBug'),
+    courseBug: el('courseBug'),
+    glidePath: el('glidePath'),
+    gs: el('gs'),
+    gsPointer: el('gsPointer'),
     destLabel: el('dest'),
     notice: el('notice'),
     // `text()` looks elements up by name on its own, so most of the glass
@@ -537,6 +589,48 @@ export function createPanel(root, { title, attribution, limits = {} }) {
       nodes.rateLabel.textContent = `${wanted}×`;
       nodes.rateLabel.classList.toggle('is-capped', wanted !== rate);
       text('rate', rate === 1 && wanted === 1 ? '' : wanted === rate ? `${rate}× TIJD` : `${rate}× TIJD · ${wanted}× gevraagd`);
+
+      // The approach. Everything here is geometry — a three degree slope to a
+      // surveyed threshold — so it is called a glide path and not an ILS, and
+      // it appears only while there is one to fly: inside twenty-five miles,
+      // pointing roughly the right way, and not yet past the runway.
+      const app = extra.approach;
+      const live = Boolean(app?.live);
+      nodes.glidePath.classList.toggle('is-off', !live);
+      nodes.gs.classList.toggle('is-off', !live);
+      nodes.courseBug.classList.toggle('is-off', !live);
+      if (live) {
+        // Two dots is full scale, which is 0.7 degrees.
+        //
+        // The diamond points at the path, not at the aeroplane: above the
+        // glide path it sits low, because what it is showing you is where the
+        // path is from where you are, and the way to it is down. That is the
+        // convention on every glideslope indicator ever built and it is worth
+        // getting right — a needle that moved the other way would have you
+        // flying away from the thing you are trying to join.
+        //
+        // Past full scale it parks at the end of the scale rather than
+        // leaving the glass: it is no longer measuring, only pointing.
+        nodes.gsPointer.setAttribute(
+          'transform',
+          `translate(0 ${310 + clamp(app.gsDots, -2.4, 2.4) * 45})`,
+        );
+        nodes.gsPointer.classList.toggle('is-parked', Math.abs(app.gsDots) > 2.4);
+        let off = app.course - heading;
+        while (off > 180) off -= 360;
+        while (off < -180) off += 360;
+        nodes.courseBug.setAttribute('transform', `translate(${clamp(500 + off * 4.2, 318, 682)} 0)`);
+        // How far off the path, in feet, which is the number you can do
+        // something with: a dot of glideslope at four miles is a hundred feet
+        // and at one mile it is twenty-five. Rounded to tens, because the
+        // flight model's altitude moves faster than anyone can read it.
+        const dh = Math.round(app.aboveFt / 10) * 10;
+        text('app', `GP ${app.runway}`);
+        text('appDev', dh === 0 ? '0' : `${dh > 0 ? '+' : '−'}${Math.abs(dh)}`);
+      } else {
+        text('app', 'GP');
+        text('appDev', '');
+      }
 
       // Vref bug on the speed tape, and the warnings that matter close in.
       const vref = extra.vref ?? 0;

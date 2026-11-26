@@ -23,6 +23,17 @@ Open punten van dit project. Klaar = weg of afgevinkt met datum.
 - [ ] **Taxi: geen route zonder OSM-taxibanen** (2026-11-24)
   Bij een veld zonder `aeroway=taxiway` in OpenStreetMap zegt hij dat eerlijk en tekent niets. Een terugval op "rij rechtdoor van de baan af" is denkbaar.
 
+## Naderen (2026-11-26)
+
+- [x] **Glijpad zichtbaar zonder dat het arcade wordt** (2026-11-26)
+  Een PAPI van vier lampen naast de drempel (ICAO-hoeken 3°30' 3°10' 2°50' 2°30', de steilste het dichtst bij het asfalt, dus twee rood twee wit is 3° zonder dat er een regel in de code staat die dat zegt), een gestreepte GP-lijn op de pitch-ladder waar je de flight path vector op zet, en een afwijkingsruit naast de hoogtemeterband op de echte ±0,7°-schaal. Geen ILS: OurAirports heeft nul localizers (11.008 bakens, alleen NDB/VOR/DME), en X-Plane's earth_nav.dat is GPL. Het is meetkunde naar een ingemeten drempel en heet daarom glijpad. `I` zet het uit, `?gp=0` start het uit. Meetkunde nagerekend in `npm run test:approach`.
+- [ ] **Het pad rekent met de veldhoogte, niet met de drempelhoogte** (2026-11-26)
+  `runways.csv` van OurAirports heeft `le_elevation_ft` en `he_elevation_ft` per baaneinde; de index bewaart ze niet, dus het glijpad gebruikt de hoogte van het veld. Op een vlak veld is dat een paar voet. Op Courchevel (18,6% helling) scheelt het tientallen meters en is het pad dus fout. Toevoegen in `scripts/build-airport-index.mjs` en in `loadAirports`, en dan de index opnieuw bouwen — die stap raakt alle 17.000 velden, dus hij verdient zijn eigen ronde. Hetzelfde geldt voor waar de lampen staan: die krijgen hun hoogte van het 30 m-DEM en niet van de ingemeten baan, dus op de negen gebouwde velden kunnen ze een paar meter zweven of wegzakken.
+- [ ] **De PAPI staat bij elk veld, ook waar er geen is** (2026-11-26)
+  OurAirports weet niet welke banen een PAPI hebben; het weet alleen of een baan verlicht is (`lighted`, 12.398 van de 49.908 banen) en ook dat bewaart de index niet. Nu krijgt elke baan vier lampen. Eerlijker zou zijn: alleen bij verlichte banen, en dat is één kolom in de bouwstap.
+- [ ] **Geen baan- of naderingsverlichting** (2026-11-26)
+  De PAPI is er; de middenlijn, de drempelbalk en de randlichten zijn er niet. In de schemering is dat het verschil tussen een baan en een grijze streep. Zelfde machinerie als de PAPI (punt-primitieven uit de ingemeten lijn), meer lampen.
+
 ## Verenigd Koninkrijk (2026-11-26)
 
 - [x] **Gebouwen van Londen** (2026-11-26) Heathrow, de City met Westminster en Canary Wharf, 17.553 gebouwen uit OSM. De bouwer sorteert nu op volume in plaats van grondvlak, zodat de limiet van 6000 de torens houdt en niet de stations.

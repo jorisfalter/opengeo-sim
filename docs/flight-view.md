@@ -1988,6 +1988,136 @@ than 150 m and nobody looked at — on a 900 m strip that is still the
 difference between the asphalt and the grass beside it, and those are the
 ones left to do.
 
+## The glide path, without an ILS
+
+An approach you can see, without the simulator turning into a game about
+following a line. The two are the same problem: the thing that makes an aid
+feel like an arcade overlay is not that it is drawn, it is that it exists only
+for the player. A hoop in the sky, a magenta tunnel, an arrow pointing at the
+runway — none of those are in an aeroplane or at an aerodrome. A PAPI is. So
+is a glide path reference line on a HUD, and so is a deviation scale on a PFD.
+Everything added here exists in the real world, at the same angles.
+
+### There is no ILS to ship, and that is not a detail
+
+The field index is OurAirports, which is public domain and is the reason it is
+used. Its `navaids.csv` has 11,008 rows and not one localizer or glideslope:
+counted by type, it is NDB, VOR, VOR-DME, VORTAC, TACAN, DME and NDB-DME, which
+is en-route navigation and nothing else. The installations themselves live in
+databases we may not ship — X-Plane's `earth_nav.dat` is GPL, openAIP needs a
+key and bars commercial use — and `scripts/build-airport-index.mjs` already
+refuses `apt.dat` for exactly that reason.
+
+That matters more than it sounds, because a real ILS is not a 3° line. It has a
+frequency you tune, a published course that is sometimes deliberately not the
+runway centreline, and an angle set by the terrain in front of it. Innsbruck is
+the standard example: no ILS to 08 at all, a LOC/DME to 26 whose final approach
+course is offset several degrees from the runway and whose descent angle is
+about 3.8° rather than 3.0°. Drawing a straight 3° path there and calling it the
+ILS would be wrong in exactly the place where being wrong matters, and it would
+look as convincing as a correct one.
+
+So nothing here claims to be an ILS. What it claims to be is a 3° glide path to
+a surveyed threshold, which is a different thing and an honest one: it is what a
+PAPI shows, what an RNAV approach flies, and what every visual approach in the
+world aims at.
+
+### Geometry we already own
+
+The threshold is the part we are sure of. Eleven French runways and nine
+Portuguese ones were measured off the orthophoto to twenty centimetres this
+month; every other runway has a published length, a heading and — one in eleven
+— a displaced threshold. From that the approach is arithmetic: a 3° slope to a
+point 50 ft over the threshold, which rises 5.24% and so stands 1,769 ft above
+the field at ten kilometres. `scripts/test-approach.mjs` checks the module
+against that arithmetic rather than against itself: full-scale localizer at 5 km
+is 218.3 m off the centreline, a 3.5° slope reads 0.5° high, 0.71 dots.
+
+Three refusals are built in, because a path to the wrong place is worse than no
+path:
+
+* **A runway the index could not place gets no approach.** When the two end
+  coordinates disagree with the published length by more than a third,
+  `runwayLine` falls back to laying the strip out around the airport reference
+  point on the heading in its number. That is good enough to start an aeroplane
+  on and nowhere near good enough to descend towards, so `approachEnds` skips
+  it.
+* **The displaced threshold moves the path.** At Besançon La Vèze the 05
+  threshold is displaced 250 m; aiming at the painted end of the pavement there
+  would be aiming 250 m short of where you may touch down.
+* **It is named after what it is.** `GP`, not `ILS`, on the glass and in the
+  legend.
+
+### What you see
+
+Three things, in two places, and each of them real:
+
+1. **A PAPI beside the threshold.** Four lamps, 15 m out from the runway edge
+   and abeam the aiming point, each a split beam: white above its setting, red
+   below. The settings are the ICAO ones — 3°30′, 3°10′, 2°50′, 2°30′, the
+   steepest nearest the asphalt — so two red and two white is 3° and there is no
+   rule in the code that says so. Fly high and the reds turn white one at a
+   time. They are drawn as point primitives rather than boxes because a PAPI is
+   visible from five miles out, where its housings are a thousandth of a pixel
+   wide and a light is still a light.
+2. **A glide path line on the pitch ladder.** Dashed, three degrees below the
+   horizon, inside the ladder group so it rolls and slides with it. Put the
+   flight path marker on it and hold it there and the aeroplane is descending at
+   three degrees — which is the approach. That is how a HUD is flown, and it
+   needs no new symbol: the FPV has been on this glass since the beginning.
+3. **A deviation diamond beside the altitude tape**, on the real ±0.7°
+   glideslope scale, so one dot here means one dot there. It points at the
+   path rather than at the aeroplane — above the glide path the diamond sits
+   low, because the way to the path is down — which is the convention on every
+   glideslope indicator ever built. It parks hollow at the end of the scale
+   rather than leaving the glass. The runway's own course shows
+   as a hollow diamond above the heading tape, next to the filled pointer that
+   is the nose: the gap between them is the turn you still owe the centreline.
+
+There is no localizer scale, and that is deliberate rather than an omission.
+Lateral guidance out of the window is the runway, and the runway is already
+there — this simulator's whole premise is that the asphalt under you is a
+photograph of the real asphalt. What the eye cannot judge is three degrees of
+slope, which is why PAPIs exist and why the vertical cue is the one worth
+drawing.
+
+The whole group is hidden until there is an approach to fly: inside 25 NM, within
+35° of the course, and not yet past the threshold. An aeroplane in the cruise has
+exactly the glass it had before. `I` turns it off; `?gp=0` starts it off.
+
+### What it is wrong about
+
+Two things, both of them data rather than arithmetic, and both written down
+rather than hidden.
+
+The path is measured from the **field** elevation, not the threshold's.
+OurAirports publishes `le_elevation_ft` and `he_elevation_ft` per runway end
+and the index does not keep them, so a 3° path to the 05 threshold at Besançon
+is drawn to 1,271 ft because that is the figure we have. At a flat aerodrome
+that is a few feet. At Courchevel, where the strip climbs 18.6% from end to
+end, the two differ by tens of metres and the path is simply wrong — which is
+why the index build has to learn those two columns before anyone flies an
+approach into a mountain.
+
+And the PAPI stands at every field, including the ones that have none.
+OurAirports does not record approach aids; it records whether a runway is
+lighted, which is 12,398 of 49,908 runways, and the index does not keep that
+column either. Four lamps beside a grass strip in the Gers are four lamps that
+are not there.
+
+### Which runway you are arriving at
+
+Nobody tunes anything, so the simulator has to work out which end you mean. It
+takes the field you are going to if the plan ends at one within 25 NM, and
+otherwise the nearest field within 15 km — which is the circuit: take off, turn
+downwind, and the field behind you is the one you are coming back to without
+having planned it. Among that field's ends, both of every runway, it scores each
+on how well its extended centreline points at you and, at six tenths of the
+weight, how well your heading matches its course. Position alone picks nonsense
+overhead the field, where every end is equally "out there"; heading alone picks
+whichever runway you happen to be tracking across the circuit. The sum picks the
+one a pilot would call downwind for.
+
 ## A stuck shift, and an aeroplane that stopped answering
 
 The head-look added the day before made shift mean "the arrows are a head, not

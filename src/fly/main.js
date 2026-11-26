@@ -29,6 +29,8 @@ import { createScenery } from './scenery.js';
 import { buildStrip } from './strip.js';
 import { createTraffic } from './traffic.js';
 import { createSound } from './sound.js';
+import { approachEnds, deviation, pickEnd, RANGE_M } from './approach.js';
+import { createPapi } from './papi.js';
 import { GROUPS, PLACES, findPlace, groupsOf } from './places.js';
 import { askWhereToStart } from './start.js';
 import { FLEET, typeFor, vrefFor } from './fleet.js';
@@ -554,6 +556,12 @@ async function main() {
   // with T fetches it then, which costs a second once and nothing ever again.
   if (traffic.enabled) traffic.load();
 
+  // Four lamps beside the threshold of wherever you are going. They are the
+  // whole of the glide path that exists outside the cockpit, and they are
+  // switched on from the start: a PAPI is part of the aerodrome, not an
+  // assistance setting.
+  const papi = createPapi(viewer, terrain);
+
   const minimap = createMinimap(mapRoot, {
     // Every field in the index that is under the map, so the moving map shows
     // somewhere to land wherever you are and not only around the Alps.
@@ -974,11 +982,66 @@ async function main() {
         case 'KeyX':
           taxi.request(aircraft);
           break;
+        case 'KeyI':
+          appOn = !appOn;
+          if (!appOn) papi.update(null, aircraft, 0);
+          panel.notice(appOn ? 'Glide path on — PAPI and GP' : 'Glide path off');
+          break;
         default:
           break;
       }
     },
   });
+
+  // ---- the approach -------------------------------------------------------
+  //
+  // Which runway you are arriving at, and where you are relative to its glide
+  // path. There is no ILS in this: see approach.js for why there cannot be
+  // one, and why three degrees to a surveyed threshold is nevertheless the
+  // real thing rather than a line drawn to help.
+  let appField = null;
+  let appEnds = [];
+  let appClock = 9;
+  let appOn = params.get('gp') !== '0';
+
+  /**
+   * The field the approach belongs to: where you are going if that is close
+   * enough to be approaching, and otherwise whatever you are flying over.
+   * The second case is the circuit — take off, turn downwind, and the field
+   * behind you is the one you are coming back to without having planned it.
+   */
+  function approachField(target) {
+    const name = target?.last?.name;
+    const ident = name ? String(name).trim().split(/\s+/)[0].toUpperCase() : null;
+    if (ident && target?.last) {
+      const away = distanceBetween(aircraft, target.last);
+      if (away < RANGE_M) {
+        const found = searchAirports(ident, 1)[0];
+        if (found && found.ident.toUpperCase() === ident) return found;
+      }
+    }
+    return nearestAirports(aircraft.lat, aircraft.lon, 1, 15)[0] ?? null;
+  }
+
+  function updateApproach(dt, target, altFt) {
+    if (!appOn || !airportsReady()) return null;
+    // Seventeen thousand fields are scanned to find the nearest one, which is
+    // not a thing to do sixty times a second for an answer that changes every
+    // few kilometres.
+    appClock += dt;
+    if (appClock > 1.5) {
+      appClock = 0;
+      const field = approachField(target);
+      if (field?.ident !== appField?.ident) {
+        appField = field ?? null;
+        appEnds = appField ? approachEnds(appField) : [];
+      }
+    }
+    if (!appEnds.length) return null;
+    const end = pickEnd(appEnds, aircraft);
+    if (!end) return null;
+    return { end, ...deviation(end, aircraft, altFt) };
+  }
 
   // Off, then hold what you have, then your own plan if you made one, then
   // the scripted valley run, then off again.
@@ -1234,8 +1297,14 @@ async function main() {
     const taxiState = taxi.update(aircraft);
     const target = plan.points.length ? plan.preview(aircraft) : null;
     const targetKm = target ? target.distance / 1000 : 0;
+    // The approach, and the lamps that show it out of the window. Both work
+    // off the same arithmetic and the same altitude the glass is reading, so
+    // the needle and the lights cannot disagree.
+    const altFtMsl = (aircraft.alt - datum) / FT;
+    const app = updateApproach(real, target, altFtMsl);
+    papi.update(appOn ? app?.end ?? null : null, aircraft, altFtMsl);
     panel.update(aircraft, {
-      altFt: (aircraft.alt - datum) / FT,
+      altFt: altFtMsl,
       aglFt: aircraft.agl !== undefined ? aircraft.agl / FT : (aircraft.alt - ground) / FT,
       trim: axes.trim,
       law: axes.law,
@@ -1274,6 +1343,17 @@ async function main() {
         : '',
       destBearing: target ? target.bearing : null,
       destArmed: autoMode === 'nav',
+      approach: app
+        ? {
+            runway: app.end.runway,
+            course: app.end.course,
+            toGo: app.toGo,
+            gsDots: app.gsDots,
+            locDots: app.locDots,
+            aboveFt: altFtMsl - app.targetFt,
+            live: app.live,
+          }
+        : null,
       ap:
         autoMode === 'nav' && navLeg
           ? `NAV · ${Math.round((navLeg.alt - datum) / FT / 100) * 100} ft`
@@ -1499,6 +1579,7 @@ async function main() {
     controls,
     panel,
     taxi,
+    papi,
     lookahead,
     plan,
     armPlan,
