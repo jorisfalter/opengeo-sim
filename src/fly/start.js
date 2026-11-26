@@ -74,6 +74,12 @@ const HARD = 'hard';
 const CENSORED = new Set([
   'LFBC', 'LFBG', 'LFBM', 'LFJA', 'LFMI', 'LFOA', 'LFOE', 'LFOJ', 'LFPV',
   'LFQE', 'LFQP', 'LFRL', 'LFSI', 'LFSX', 'LFTF', 'LFTH', 'LFXA',
+  // Found by running the same measurement over all 407 French fields with a
+  // runway instead of only the ones the dice could offer. These seven came
+  // back with the same signature and the tile over the runway shows the
+  // same mosaic: Lorient and Solenzara sit lowest, at 0.31 grid, and the
+  // photograph confirms both.
+  'LFKS', 'LFMO', 'LFPC', 'LFRH', 'LFRJ', 'LFSO', 'LFYR',
 ]);
 
 /** Is this field a mosaic of blocks rather than a photograph? */

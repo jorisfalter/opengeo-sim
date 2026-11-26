@@ -122,6 +122,32 @@ const MEASURED = {
   // brightness along the strip: 720 m apart on bearing 126.4, with the
   // pavement running on past both for the turn pads.
   LFKT: { '12': [42.2934, 9.18692, 42.28956, 9.19396] },
+  // Ten more off the same photograph, after a sweep of every French field
+  // with a runway. Each of these was found by the strip search, measured
+  // along its own pavement with the walk that stops where the surface stops,
+  // and then looked at threshold by threshold at 20 cm a pixel: the start
+  // ring has to sit on the piano keys, not beside them. Fields where the
+  // search had locked onto a road, a taxiway or the parallel grass runway
+  // were thrown out again rather than written down half right.
+  LFCC: { '13': [44.35616, 1.46848, 44.34786, 1.48333] },
+  LFCW: { '10': [44.40011, 0.75315, 44.39801, 0.76589] },
+  LFDA: { '12': [43.70918, -0.25075, 43.70544, -0.23945] },
+  LFGK: { '08': [47.99395, 3.38745, 47.99574, 3.40134] },
+  LFED: { '10': [48.05699, -2.92646, 48.05628, -2.91144] },
+  LFAV: { '11': [50.32924, 3.4473, 50.32374, 3.46974] },
+  LFCS: { '03': [44.69572, -0.60035, 44.70181, -0.59499] },
+  LFYG: { '08L': [50.1402, 3.25688, 50.14257, 3.26895] },
+  LFEQ: { '11': [47.48211, -3.10524, 47.47975, -3.09555] },
+  // Besançon La Vèze, the one the edge test called loudest: 2% of the
+  // published line finds stripes against 49% of this one. The start ring
+  // lands on the displaced threshold bar of 05, with the stopway arrows
+  // running on behind it.
+  LFQM: { '05': [47.20465, 6.07916, 47.21205, 6.09414] },
+  // Figeac has 701 m of asphalt where the record declares 900. Centring the
+  // declared length on the pavement put the start 136 m short of the
+  // threshold, in the scrub, so the line is anchored on the 11 threshold
+  // instead and the surplus falls off the far end.
+  LFCF: { '11': [44.67368, 1.78259, 44.671, 1.79331] },
 };
 
 let loading = null;

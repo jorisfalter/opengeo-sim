@@ -50,5 +50,11 @@ Open punten van dit project. Klaar = weg of afgevinkt met datum.
   Dat is de baan waar `?start=` je op zet. De 24 tweede banen in Spanje worden alleen op de kaart getekend en zijn niet nagelopen.
 - [ ] **DEM-vlakheidstest als algemene controle?** (idee 2026-11-23)
   Een baan is vlak, dus een lijn over een helling ligt niet op een baan. Gemeten op Terrarium: LECT's foute lijn 73,9 m spreiding tegen 16 m voor de echte; maar LERO's foute lijn 11,9 m tegen 9,7 m voor de echte en Burgos' goede lijn 12,2 m. Vangt dus alleen de grove gevallen. Zou in de bouwstap kunnen draaien over de 1368 velden waarvan het vliegveldpunt meer dan 150 m van de baan ligt.
-- [ ] **Dezelfde ronde voor Frankrijk, Duitsland, de Lage Landen?** (idee 2026-11-23)
-  De methode uit de Spaanse ronde (zoeken + met het oog nalopen op contactvellen) werkt overal waar we een orthofoto hebben. Spanje leverde 12 fouten op 137 velden; LFMA was al eerder zo'n geval in Frankrijk.
+- [x] **Dezelfde ronde voor Frankrijk** (2026-11-26)
+  390 velden met minstens 450 m baan: 151 die de dobbelsteen kan aanbieden, 239 die hij niet aanbiedt. Tien banen lagen naast hun asfalt en zijn opnieuw ingemeten (LFCC, LFCW, LFDA, LFGK, LFED, LFAV, LFCS, LFYG, LFEQ, LFCF), bovenop LFNH, LFKJ en LFKT eerder die week. De automatische regel alleen deugt hier niet: bij kleine grasvelden grijpt de zoeker een snelweg of een grindgat, dus alles is met het oog nagelopen en bij de tien is de drempel op 20 cm per pixel gecontroleerd.
+- [ ] **Vier Franse velden blijven open** (2026-11-26)
+  LFFI Ancenis (zowel de oude lijn als de gevonden lijn ligt naast de baan; de gevonden lijn ligt op de N23), LFQC Lunéville-Croismare (de randstreepfit komt op de zuidrand uit, een halve baanbreedte naast het midden), LFOX Étampes-Mondésir en LFCN Nogaro (geen randstrepen, de zoeker vindt niets bruikbaars). Met de hand inmeten zoals Corte.
+- [ ] **LFCH Arcachon-La Teste heeft twee parallelle banen** (2026-11-26)
+  07L/25R verhard en 07R/25L gras. Welke van de twee de lijn van OurAirports beschrijft is uit de foto niet zeker; niet aangeraakt.
+- [ ] **Dezelfde ronde voor Duitsland en de Lage Landen?** (idee 2026-11-23)
+  De methode werkt overal waar we een orthofoto hebben. Spanje leverde 12 fouten op 137 velden, Portugal 7 op 44, Frankrijk 13 op 390.

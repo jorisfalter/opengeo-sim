@@ -1898,11 +1898,90 @@ this flies over. Nothing outside France is censored at all. Kleine Brogel,
 Koksijde, Zutendaal, Meiringen, Brumowski, Nörvenich, Ramstein, Büchel,
 Spangdahlem, Wiesbaden and Neuburg all score like any civil field.
 
-So the dice skip the seventeen — both dice, because the world die lands in
+### Seven more, by widening the net
+
+The first pass only tested fields with a kilometre of hard runway, because
+that is what the dice can offer. Running the same two numbers over **all 407
+French fields with any runway at all** turned up seven more, and the tile over
+each of them is the same mosaic: LFKS Solenzara, LFMO Orange-Caritat, LFPC
+Creil, LFRH Lorient, LFRJ Landivisiau, LFSO Nancy-Ochey, LFYR Romorantin.
+
+Four of them are air bases the first sweep never looked at. Lorient is a naval
+air station with a civil terminal, and Solenzara is the lowest-scoring of the
+lot at 0.31 grid — low enough to fall under the earlier threshold, and a
+mosaic beyond argument once you look at the tile.
+
+The only false positive in 407 was FR-0278, the Glacier du Tour altisurface:
+flat 1.000, grid 0.857, and a photograph of nothing but snow. A landing
+strip on a glacier has no texture to measure, which the test cannot tell from
+a field that was never photographed. It is not censored, so it stays.
+
+So the dice skip the twenty-four — both dice, because the world die lands in
 France often enough and a mosaic is no better for being a surprise. The pool
-goes from 311 to 294 inside the sharp photography, and from 41 to 37 for the
-A380. Searching still finds them, with `photograph censored` on the line: they
+goes from 311 to 294 inside the sharp photography for the first seventeen, and
+the seven found later take out fields the dice mostly could not offer anyway. Searching still finds them, with `photograph censored` on the line: they
 are real airfields and the runway under the blur is in the right place.
+
+## Every French runway, walked
+
+Carpentras, Ajaccio and Corte were each found by hand, after a screenshot of
+an aeroplane standing in a vineyard. The same question was then asked of the
+whole country: of the 390 French fields with at least 450 m of runway, which
+ones have their published line somewhere other than on the asphalt?
+
+The sweep is the strip search already used for Spain and Portugal — walk a
+window along every bearing, score how much of it looks like pavement — run
+over the 151 fields the dice can offer and then over the 239 it cannot. Three
+measures come out of it per field: how much of the published line lies on
+anything paved (`run_oa`), how much of the best line found does, and how far
+apart the two are.
+
+What the numbers alone say is not worth much. The rule that flagged Carpentras
+correctly — a good line, far from the published one, stopping at about the
+declared length — also flagged Saint-Rambert-d'Albon, Compiègne, Redon,
+Bagnères-de-Luchon, Belfort-Chaux and a dozen more where the published line is
+right and the search had locked onto a motorway, a gravel pit or a dry
+riverbed. A grass strip has no edges to find, so the search takes the
+strongest straight thing nearby, and near a small French aerodrome that is
+usually a road.
+
+So every candidate was looked at. Red for the published line, yellow for the
+found one, on the photograph, four to a sheet; then, for the ones that
+survived, the measured line in green with a ring on the threshold you start
+from, at 20 cm a pixel. The ring has to sit on the piano keys. That last step
+threw out four more:
+
+| | what the ring was standing on |
+| --- | --- |
+| LFFI Ancenis | the dual carriageway beside the field |
+| LFRE La Baule | the parallel taxiway, 120 m south of the runway |
+| LFQC Lunéville | the southern edge stripe, half a runway off centre |
+| LFCH Arcachon | ambiguous: the field has two parallel runways |
+
+Eleven were written down. Pontivy's line lay 207 m north of its runway in a
+field; Ancenis' lies in the next field over and stays there, because the
+alternative was worse. Figeac needed one more correction: 701 m of asphalt
+against a declared 900, which centred puts the start 136 m short of the
+threshold in the scrub, so its line is anchored on the 11 threshold and the
+surplus falls off the far end.
+
+| Field | moved | why the photograph says so |
+| --- | --- | --- |
+| LFCC Cahors | 116 m | 1518 m of pavement along the new line against 1500 declared |
+| LFCW Villeneuve-sur-Lot | 126 m | 1061 against 1040; the old line is in the field south |
+| LFDA Aire-sur-l'Adour | 248 m | 1055 against 1000; the old line crosses the trotting track |
+| LFGK Joigny | 274 m | 1080 against 1054; the old line is 270 m south in the grass |
+| LFED Pontivy | 207 m | the old line is in a field north of the aerodrome |
+| LFAV Valenciennes | 102 m | lateral; the old line runs along the runway's edge |
+| LFCS Bordeaux-Léognan | 227 m | the old line is in the woods east of the strip |
+| LFYG Cambrai-Niergnies | 168 m | the old line is in the grass south of the runway |
+| LFEQ Quiberon | 143 m | the old line runs through the village |
+| LFCF Figeac | 155 m | the old line is in the fields north-east |
+| LFQM Besançon | 110 m | 2% of the old line finds edge stripes, 49% of the new one |
+
+The other 379 are left alone, which is the point of measuring: a published
+line that is right should stay, and a correction nobody has looked at is not a
+correction.
 
 ## A stuck shift, and an aeroplane that stopped answering
 
