@@ -108,6 +108,11 @@ const MEASURED = {
   // median width 18.7 m against a declared 20 — so the line sits within two
   // metres of the middle over the whole kilometre.
   LFNH: { '13': [44.03096, 5.07944, 44.02464, 5.08921] },
+  // Ajaccio's line is a good line in the wrong lane: fitted to the edge
+  // stripes it sits 47 m to one side, which on a 45 m runway is the shoulder.
+  // Measured over 54 of 61 stations, median width 43.8 m against a declared
+  // 45, both ends on the threshold bars beside the painted 02 and 20.
+  LFKJ: { '02': [41.91219, 8.79515, 41.9294, 8.80586] },
 };
 
 let loading = null;
