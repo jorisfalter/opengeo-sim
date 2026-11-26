@@ -113,6 +113,15 @@ const MEASURED = {
   // Measured over 54 of 61 stations, median width 43.8 m against a declared
   // 45, both ends on the threshold bars beside the painted 02 and 20.
   LFKJ: { '02': [41.91219, 8.79515, 41.9294, 8.80586] },
+  // Corte, in the mountains of Corsica, and the same case as Carpentras: a
+  // line whose own numbers agree perfectly — 938 m against a declared 940,
+  // bearing 126 for a runway called 12 — lying 345 m northeast of the
+  // asphalt, in the maquis on the valley side. Starting there put the
+  // windscreen inside a hill. Scored 0.22 against the found line's 0.95.
+  // These two are the threshold bars, found as the bright spikes in the
+  // brightness along the strip: 720 m apart on bearing 126.4, with the
+  // pavement running on past both for the turn pads.
+  LFKT: { '12': [42.2934, 9.18692, 42.28956, 9.19396] },
 };
 
 let loading = null;
