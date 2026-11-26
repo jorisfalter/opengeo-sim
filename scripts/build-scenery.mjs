@@ -47,6 +47,13 @@ const AREAS = {
   // and found an empty valley — which is what every field outside these
   // boxes still looks like.
   seudurgell: { name: "La Seu d'Urgell en LESU", bbox: [42.31, 1.36, 42.40, 1.52] },
+  // Londen. Drie vakken in plaats van een: een vak over heel Londen zou
+  // honderdduizenden gebouwen hebben en de kaart zou de grootste grondvlakken
+  // houden, wat stations en winkelcentra zijn. Deze drie staan waar je
+  // aankomt en waar de torens staan.
+  heathrow: { name: 'Heathrow en omgeving', bbox: [51.44, -0.51, 51.50, -0.40] },
+  londoncity: { name: 'City of London en Westminster', bbox: [51.49, -0.16, 51.53, -0.06] },
+  docklands: { name: 'Canary Wharf en de Docklands', bbox: [51.48, -0.05, 51.52, 0.03] },
 };
 
 const args = process.argv.slice(2);
@@ -173,7 +180,12 @@ out geom tags;`;
       return { points, area: footprintArea(points), tags: way.tags };
     })
     .filter((b) => b.area >= MIN_FOOTPRINT)
-    .sort((a, b) => b.area - a.area)
+    // By volume rather than by footprint. Six thousand is a ceiling you only
+    // meet in a city, and in a city the largest footprints are the stations
+    // and the shopping centres — flat things you fly over without noticing —
+    // while what you actually see from the air is the tall ones. Below the
+    // ceiling this changes nothing: everything is kept either way.
+    .sort((a, b) => b.area * heightOf(b.tags) - a.area * heightOf(a.tags))
     .slice(0, MAX_BUILDINGS);
   console.log(`    ${kept.length} gehouden (minimaal ${MIN_FOOTPRINT} m²)`);
   if (!kept.length) throw new Error('geen gebouwen in dit vak');

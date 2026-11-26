@@ -526,6 +526,9 @@ async function main() {
     genk: [50.94, 5.46, 51.00, 5.56],
     lommel: [51.19, 5.25, 51.27, 5.38],
     seudurgell: [42.31, 1.36, 42.40, 1.52],
+    heathrow: [51.44, -0.51, 51.50, -0.40],
+    londoncity: [51.49, -0.16, 51.53, -0.06],
+    docklands: [51.48, -0.05, 51.52, 0.03],
   };
   const scenery = createScenery(viewer, { datum });
   const sound = createSound({ onNotice: (message) => panel.notice(message), voice: type.voice });
