@@ -101,6 +101,13 @@ const MEASURED = {
   LPVL: { '16': [41.28599, -8.5217, 41.2716, -8.51236] },
   LPVR: { '02': [41.27031, -7.72277, 41.27721, -7.71968] },
   LP77: { '15': [39.40494, -8.29323, 39.39747, -8.28453] },
+  // France, off IGN's BD ORTHO. Carpentras' line is 254 m southwest of its
+  // asphalt, in the vineyards, and 295 m of it lies on anything paved at all
+  // against the 1051 m the runway actually runs. The ends here are the
+  // centreline fitted through the two painted edge stripes at 58 stations —
+  // median width 18.7 m against a declared 20 — so the line sits within two
+  // metres of the middle over the whole kilometre.
+  LFNH: { '13': [44.03096, 5.07944, 44.02464, 5.08921] },
 };
 
 let loading = null;
