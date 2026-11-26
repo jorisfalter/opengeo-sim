@@ -88,6 +88,7 @@ Hamburg, so a neighbour's service does not quietly fill in a city state.
 | Slovenia | `storitve.eprostor.gov.si` resets the connection. |
 | Slovakia | `zbgisws.skgeodesy.sk` 404 on every WMTS form tried. |
 | New Zealand | `basemaps.linz.govt.nz` 400 — requires an API key. |
+| United Kingdom | Not a missing endpoint but a licence. Ordnance Survey's WMTS answers **401** without an API key, which breaks the keyless rule. The national aerial photography — APGB, flown by Getmapping and Bluesky — is not open data: Natural Resources Wales' own metadata for the copy it holds says the licence limits it to internal use. So Britain stays on Sentinel-2 at 10 m, and the only thing worth adding there is OpenStreetMap's buildings, which is what the three London boxes are. |
 | Catalonia | ICGC 500; moot, since PNOA covers it. |
 | Lombardy, Trentino | Service renamed or DNS gone. Italy has no national open ortho; it is region by region. |
 

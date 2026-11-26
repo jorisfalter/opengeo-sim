@@ -23,6 +23,12 @@ Open punten van dit project. Klaar = weg of afgevinkt met datum.
 - [ ] **Taxi: geen route zonder OSM-taxibanen** (2026-11-24)
   Bij een veld zonder `aeroway=taxiway` in OpenStreetMap zegt hij dat eerlijk en tekent niets. Een terugval op "rij rechtdoor van de baan af" is denkbaar.
 
+## Verenigd Koninkrijk (2026-11-26)
+
+- [x] **Gebouwen van Londen** (2026-11-26) Heathrow, de City met Westminster en Canary Wharf, 17.553 gebouwen uit OSM. De bouwer sorteert nu op volume in plaats van grondvlak, zodat de limiet van 6000 de torens houdt en niet de stations.
+- [ ] **Geen open luchtfoto van Groot-Brittannie** (2026-11-26)
+  OS vereist een sleutel (401), en APGB (Getmapping/Bluesky) is geen open data — de metadata van Natural Resources Wales zegt dat de licentie het tot intern overheidsgebruik beperkt. Boven Engeland dus Sentinel-2 op 10 m. Als er ooit een open bron komt: de machinerie staat klaar, het is een laag in providers.js.
+
 ## Portugal
 
 - [x] **Alle 44 vastelandvelden nagelopen op de DGT-luchtfoto van 2018** (2026-11-24)
