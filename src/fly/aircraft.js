@@ -27,7 +27,7 @@ import {
   GeometryAttribute,
   GeometryAttributes,
   GeometryInstance,
-  HeadingPitchRoll,
+  Matrix4,
   PerInstanceColorAppearance,
   Primitive,
   PrimitiveType,
@@ -50,6 +50,71 @@ const METAL = Color.fromCssColorString('#9aa0a6');
  * moment it had a nose and swept wings it was obviously flying sideways.
  */
 const toCesiumFrame = ([x, y, z]) => [-y, x, z];
+
+const frameScratch = new Matrix4();
+const F = new Cartesian3();
+const R0 = new Cartesian3();
+const U0 = new Cartesian3();
+const R = new Cartesian3();
+const U = new Cartesian3();
+const SCRATCH = new Cartesian3();
+const EAST = new Cartesian3();
+const NORTH = new Cartesian3();
+const UP = new Cartesian3();
+
+/**
+ * The aeroplane's own frame: x out the right wing, y out the nose, z up,
+ * placed and turned to the attitude the flight model reports.
+ *
+ * `Transforms.headingPitchRollToFixedFrame` looks like it would do this and
+ * does not, for the same reason the vertices above need turning: its frame is
+ * x forward, y left, z up. Passing it a compass heading does give this frame
+ * — the quarter turn is exactly the difference between "nose east at heading
+ * zero" and "nose north" — but the other two angles then land on the wrong
+ * axes. Its pitch tilts its own x, which here is the right wing, so the
+ * aeroplane's pitch came out as bank; its roll turns about that same x, so
+ * bank came out as pitch. Flown in the cockpit that is an aeroplane which
+ * leans when it climbs and climbs when you bank it, which is precisely how it
+ * felt. Swapping the two arguments is not a fix either: Cesium applies them
+ * in its own order, so the roll would be put on before the pitch, and an
+ * aeroplane pitched up and banked over would end up somewhere between the two
+ * attitudes.
+ *
+ * So the three axes are built here instead, in the order an attitude is
+ * defined in: heading first, then the nose up by the pitch, then the right
+ * wing down by the bank, about the nose where it now points.
+ */
+export function bodyFrame(position, heading, pitch, bank, result) {
+  const enu = Transforms.eastNorthUpToFixedFrame(position, undefined, frameScratch);
+  const ch = Math.cos(heading), sh = Math.sin(heading);
+  const cp = Math.cos(pitch), sp = Math.sin(pitch);
+  const cb = Math.cos(bank), sb = Math.sin(bank);
+  // East, north, up — the frame `enu` is written in.
+  Cartesian3.fromElements(sh * cp, ch * cp, sp, F);
+  Cartesian3.fromElements(ch, -sh, 0, R0);
+  Cartesian3.cross(R0, F, U0);
+  // The bank turns the right wing down about the nose.
+  Cartesian3.subtract(
+    Cartesian3.multiplyByScalar(R0, cb, R),
+    Cartesian3.multiplyByScalar(U0, sb, SCRATCH),
+    R,
+  );
+  Cartesian3.cross(R, F, U);
+  // Out of the local frame and into the one Cesium draws in, as three
+  // columns: right, forward, up, and the seat itself in the fourth.
+  const right = Matrix4.multiplyByPointAsVector(enu, R, EAST);
+  const fwd = Matrix4.multiplyByPointAsVector(enu, F, NORTH);
+  const up = Matrix4.multiplyByPointAsVector(enu, U, UP);
+  return Matrix4.fromColumnMajorArray(
+    [
+      right.x, right.y, right.z, 0,
+      fwd.x, fwd.y, fwd.z, 0,
+      up.x, up.y, up.z, 0,
+      position.x, position.y, position.z, 1,
+    ],
+    result ?? new Matrix4(),
+  );
+}
 
 /**
  * Turns a list of faces — each three or four points in model space, wound
@@ -403,14 +468,11 @@ export function addAircraft(viewer, shape = 'pc24') {
   });
   viewer.scene.primitives.add(primitive);
 
-  const hpr = new HeadingPitchRoll();
+  const matrix = new Matrix4();
   return {
     primitive,
     update(position, heading, pitch, roll) {
-      hpr.heading = heading;
-      hpr.pitch = pitch;
-      hpr.roll = roll;
-      primitive.modelMatrix = Transforms.headingPitchRollToFixedFrame(position, hpr);
+      primitive.modelMatrix = Matrix4.clone(bodyFrame(position, heading, pitch, roll, matrix));
     },
     setVisible(visible) {
       primitive.show = visible;

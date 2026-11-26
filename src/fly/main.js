@@ -8,7 +8,6 @@ import { asset } from '../base.js';
 import {
   Cartesian3,
   Cartographic,
-  HeadingPitchRoll,
   Math as CesiumMath,
   Matrix4,
   Transforms,
@@ -16,7 +15,7 @@ import {
 } from 'cesium';
 import { createScene } from './scene.js';
 import { addAirport, clipGlobeTo, runwayGround } from './airport.js';
-import { addAircraft } from './aircraft.js';
+import { addAircraft, bodyFrame } from './aircraft.js';
 import { autopilot as simpleAutopilot, createAircraft, step as simpleStep } from './flight.js';
 import { autopilot as routeAutopilot, createFdm, holdAutopilot } from './jsbsim.js';
 import { createTerrainService } from './terrain.js';
@@ -1151,10 +1150,11 @@ async function main() {
   const CHASE = type.chase;
   let chaseEye = null;
   const scratch = new Cartesian3();
+  const chaseFrame = new Matrix4();
+  const seatFrame = new Matrix4();
 
   function chaseCamera(position, a, dt) {
-    const attitude = new HeadingPitchRoll(a.heading, a.pitch * 0.65, a.bank * 0.3);
-    const frame = Transforms.headingPitchRollToFixedFrame(position, attitude);
+    const frame = bodyFrame(position, a.heading, a.pitch * 0.65, a.bank * 0.3, chaseFrame);
     // x is right, y is forward and z is up in this frame — which is why the
     // aeroplane mesh had to be rotated into it as well.
     const wanted = Matrix4.multiplyByPoint(frame, new Cartesian3(0, -CHASE.back, CHASE.up), new Cartesian3());
@@ -1190,10 +1190,7 @@ async function main() {
       // flight deck is 28 m ahead of the centre of gravity, which is why the
       // nose wheel on that aeroplane goes somewhere other than where you are
       // looking.
-      const seat = Transforms.headingPitchRollToFixedFrame(
-        position,
-        new HeadingPitchRoll(aircraft.heading, aircraft.pitch, aircraft.bank),
-      );
+      const seat = bodyFrame(position, aircraft.heading, aircraft.pitch, aircraft.bank, seatFrame);
       // Which way the head is facing, inside that frame — x right, y forward,
       // z up, the same frame the aeroplane mesh is drawn in. Turning the head
       // here rather than adding to the heading is the difference that shows
