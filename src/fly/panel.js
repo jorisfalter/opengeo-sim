@@ -17,11 +17,16 @@ const ALT_PX = 0.2; // pixels per foot
 const tape = (count, step, draw) =>
   Array.from({ length: count }, (_, i) => draw(i * step - ((count - 1) * step) / 2)).join('');
 
-export function createPanel(root, { title, subtitle, attribution, limits = {} }) {
+export function createPanel(root, { title, attribution, limits = {} }) {
   root.innerHTML = `
     <div class="fly-hud">
       <div class="fly-hud__top">
-        <div class="fly-hud__title"><strong>${title}</strong><span>${subtitle}</span></div>
+        <!-- The aeroplane and nothing else. The field, the flight model and
+             the list of photographic services used to sit on a second line
+             here, where they were read once and then occupied the top left
+             corner of the windscreen for the rest of the flight. The credits
+             that have to be shown are shown, along the bottom. -->
+        <div class="fly-hud__title"><strong>${title}</strong></div>
         <div class="fly-hud__modes">
           <button data-view="cockpit" class="is-active">Cockpit</button>
           <button data-view="chase">Chase</button>

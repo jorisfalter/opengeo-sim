@@ -499,7 +499,6 @@ async function main() {
   // ---- the glass ----------------------------------------------------------
   const panel = createPanel(document.querySelector('#hud'), {
     title: type.title,
-    subtitle: `${startPlace.name} · ${sim.name} · IGN, GeoBasis-DE, swisstopo, Südtirol, basemap.at and PDOK · the rest worldwide`,
     attribution: ATTRIBUTION,
     // The speeds the airframe says no at, so the glass can say it first.
     limits: { vle: type.vle, vlo: type.vlo, vfe: type.vfe },
