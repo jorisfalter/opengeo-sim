@@ -521,6 +521,16 @@ async function main() {
    * remembered here so they cannot drift from what it is doing.
    */
   let taxiShown = null;
+  /**
+   * Asks, and repaints the button at once rather than waiting for the next
+   * frame. `request` sets its own busy flag before it awaits anything, so by
+   * the time this returns there is already something true to show.
+   */
+  const askTaxi = () => {
+    const asked = taxi.request(aircraft);
+    markTaxi();
+    asked?.finally?.(markTaxi);
+  };
   const markTaxi = () => {
     const now = taxi.busy ? 'busy' : taxi.parked ? 'parked' : taxi.active ? 'on' : 'off';
     if (now === taxiShown) return;
@@ -1019,7 +1029,7 @@ async function main() {
           traffic.toggle();
           break;
         case 'KeyX':
-          taxi.request(aircraft);
+          askTaxi();
           break;
         case 'KeyI':
           appOn = !appOn;
@@ -1617,7 +1627,7 @@ async function main() {
         break;
       }
       case 'taxi':
-        taxi.request(aircraft);
+        askTaxi();
         break;
       case 'plan':
         showPlan(true);
