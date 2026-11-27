@@ -52,18 +52,46 @@ const QUERY = (lat, lon) => `[out:json][timeout:30];
  node["aeroway"~"^(parking_position|gate)$"](around:${RADIUS},${lat},${lon}););
 out body; >; out skel qt;`;
 
-async function ask(lat, lon) {
+// How long one mirror gets before the next one is tried. Overpass answers a
+// query this small in a second or two when it is well; when it is busy it
+// queues you behind everyone else and the server-side `timeout:30` means you
+// can wait half a minute per mirror, three mirrors deep, with nothing to show
+// for it. Twelve seconds is long enough for a slow answer and short enough
+// that the one that is simply not coming does not cost you the other two.
+const PATIENCE = 12000;
+
+async function ask(lat, lon, onNotice) {
   let lastError;
-  for (const endpoint of MIRRORS) {
+  let lastWhy = null;
+  for (const [i, endpoint] of MIRRORS.entries()) {
+    const stop = new AbortController();
+    const timer = setTimeout(() => stop.abort(), PATIENCE);
     try {
-      const response = await fetch(endpoint, { method: 'POST', body: QUERY(lat, lon) });
+      if (i > 0) onNotice?.(`${lastWhy ?? 'No answer'} — trying another server…`);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: QUERY(lat, lon),
+        signal: stop.signal,
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     } catch (error) {
       lastError = error;
+      lastWhy =
+        error.name === 'AbortError'
+          ? 'That server did not answer in twelve seconds'
+          : /50[02348]|429/.test(error.message)
+            ? "OpenStreetMap's server is busy"
+            : `That server said ${error.message}`;
+    } finally {
+      clearTimeout(timer);
     }
   }
-  throw lastError ?? new Error('Overpass unreachable');
+  throw new Error(
+    lastWhy
+      ? `${lastWhy}. OpenStreetMap's taxiway service is shared and free; try again in a minute.`
+      : (lastError?.message ?? 'Overpass unreachable'),
+  );
 }
 
 /**
@@ -288,6 +316,16 @@ export function createTaxi(viewer, { onNotice } = {}) {
       return Boolean(state);
     },
 
+    /** True while OpenStreetMap is being asked, which can take a few seconds. */
+    get busy() {
+      return asking;
+    },
+
+    /** Whether the aeroplane has reached the stand it was routed to. */
+    get parked() {
+      return Boolean(state?.done);
+    },
+
     clear() {
       erase();
       state = null;
@@ -308,13 +346,18 @@ export function createTaxi(viewer, { onNotice } = {}) {
         onNotice?.('Taxi guidance is for the ground');
         return;
       }
-      if (asking) return;
+      // Overpass can take a few seconds, and a button that does nothing when
+      // you press it reads as a button that is broken.
+      if (asking) {
+        onNotice?.('Still asking OpenStreetMap for the taxiways…');
+        return;
+      }
       asking = true;
       try {
         const key = `${aircraft.lat.toFixed(2)},${aircraft.lon.toFixed(2)}`;
         if (!cache.has(key)) {
           onNotice?.('Asking OpenStreetMap for the taxiways…');
-          cache.set(key, buildGraph(await ask(aircraft.lat, aircraft.lon)));
+          cache.set(key, buildGraph(await ask(aircraft.lat, aircraft.lon, onNotice)));
         }
         graph = cache.get(key);
         if (!graph.taxiways || !graph.stands.length) {
@@ -335,7 +378,7 @@ export function createTaxi(viewer, { onNotice } = {}) {
         const name = found.stand.ref ? `stand ${found.stand.ref}` : 'the apron';
         onNotice?.(`Taxi to ${name} — ${Math.round(length(found.points))} m`);
       } catch (error) {
-        onNotice?.(`The taxiways did not arrive: ${error.message}`);
+        onNotice?.(`No taxi route: ${error.message}`);
       } finally {
         asking = false;
       }

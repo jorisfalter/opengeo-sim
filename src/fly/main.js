@@ -509,6 +509,36 @@ async function main() {
   // from OpenStreetMap's own ground layout. See src/fly/taxi.js.
   const taxi = createTaxi(viewer, { onNotice: (message) => panel.notice(message) });
 
+  /**
+   * What the Taxi button says about itself.
+   *
+   * It used to say "Taxi" in all four states: before you asked, while
+   * OpenStreetMap was being asked — which takes seconds, over a connection
+   * nobody can see — once a route was drawn, and after you had parked on it.
+   * A button that looks identical whether or not it heard you is a button you
+   * press twice, and the second press cancelled the route the first one had
+   * just asked for. Four labels, one class, read off the module rather than
+   * remembered here so they cannot drift from what it is doing.
+   */
+  let taxiShown = null;
+  const markTaxi = () => {
+    const now = taxi.busy ? 'busy' : taxi.parked ? 'parked' : taxi.active ? 'on' : 'off';
+    if (now === taxiShown) return;
+    taxiShown = now;
+    const label = { busy: 'Taxi…', parked: 'Parked', on: 'Taxi on', off: 'Taxi' };
+    for (const button of document.querySelectorAll('[data-action="taxi"]')) {
+      button.classList.toggle('is-on', now === 'on' || now === 'parked');
+      button.classList.toggle('is-busy', now === 'busy');
+      button.textContent = label[now];
+      button.title =
+        now === 'busy'
+          ? 'Asking OpenStreetMap for the taxiways at this field…'
+          : now === 'off'
+            ? 'Route from here to a stand (X) — needs taxiways in OpenStreetMap'
+            : 'Clear the taxi route (X)';
+    }
+  };
+
   // Buildings and villages, loaded as the aeroplane comes near them. The
   // boxes match scripts/build-scenery.mjs; anything not built yet simply
   // never loads and nothing breaks.
@@ -1392,6 +1422,7 @@ async function main() {
     // preview does not sequence the plan, so this is safe to ask every frame
     // with the autopilot switched off.
     const taxiState = taxi.update(aircraft);
+    markTaxi();
     const target = plan.points.length ? plan.preview(aircraft) : null;
     const targetKm = target ? target.distance / 1000 : 0;
     // The approach, and the lamps that show it out of the window. Both work
