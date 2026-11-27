@@ -26,8 +26,11 @@ Open punten van dit project. Klaar = weg of afgevinkt met datum.
   Het vliegtuig stond in het midden, dus de helft van de kaart was waar je vandaan kwam. Het middelpunt schuift nu mee langs de koers tot het vliegtuig op ongeveer een kwart van onderen staat — tweemaal zoveel vooruit als achteruit — en dat schuift op met de snelheid, zodat je op de grond nog gewoon je eigen veld ziet. Slepen en de centreerknop werken zoals ze deden.
 - [ ] **Vertrekken aan een gate** (gevraagd 2026-11-27)
   Nu start je altijd op de baan. De gegevens liggen er al: `taxi.js` haalt `aeroway=parking_position` en `gate` uit OpenStreetMap voor het veld waar je staat, en tekent er al een route naartoe. Wat ontbreekt is de andere kant op — een startplaats op een stand kiezen (in het startmenu, of `?start=EHAM&gate=B12`), het toestel daar met de neus naar buiten zetten, en een taxiroute van de stand naar de baan in plaats van omgekeerd.
-- [ ] **In de autopilot zelf een hoogte en een koers kiezen** (gevraagd 2026-11-27)
-  `P` wisselt nu tussen uit, HOLD (houdt vast wat je had), NAV (volgt je plan) en de vallei-route. Je kunt dus geen "klim naar 8000 voet op koers 240" zeggen zonder eerst zelf op koers 240 en 8000 voet te gaan vliegen. Wat het moet worden: een klein paneel met een hoogte, een koers en een snelheid die je instelt, en knoppen HDG / ALT / NAV ernaast — een echte autopilot-strip, geen extra toets.
+- [x] **In de autopilot zelf een hoogte en een koers kiezen** (2026-11-27)
+  De knop Autopilot opent nu een strip onder de bedieningsbalk met drie getallen — koers, hoogte, snelheid — die je kunt intikken of stappen, elk met een eigen knop HDG / ALT / SPD om die as over te geven. Een as die je niet armeert laat hij met rust: wings level, de hoogte die je hebt, stuwkracht voor de kruissnelheid. `P` armeert nog steeds alle drie op wat je op dat moment doet, NAV vliegt het plan, en een stevige ruk aan de stick neemt alles terug.
+
+- [ ] **De autopilot-regel op het glas botst met de bedieningsbalk** (2026-11-27)
+  `AUTOPILOT · 090° · 12000 ft` staat midden bovenaan op het glas (SVG 500,86) en op een breed scherm valt dat precies achter de rechterkant van de balk. Bestond al met de kortere tekst (`PAUSED` stond er ook half achter); met drie waardes erbij valt het meer op. Of de regel naar beneden, of de balk smaller.
 
 - [ ] **Rondkijken ontbreekt op de telefoon** (2026-11-24)
   Shift+pijl, rechtermuisknop en de LOOK-knoppen in de strip werken; de strip is op een telefoon verborgen en in de touch-rij passen geen twee knoppen meer (zes van 108 px vanaf 96 px is al 794 van de 844). Een tweevingersleep op het stickvlak is de logische plek en is niet geschreven.

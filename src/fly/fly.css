@@ -541,6 +541,88 @@ body {
   color: var(--fly-accent);
 }
 
+/* The autopilot panel, under the strip it belongs to. Small, fixed in place
+   and open while you fly: an autopilot you cannot see the numbers of is a
+   dialogue box, and this is an instrument. */
+.fly-ap {
+  display: grid;
+  gap: 4px;
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 7px 8px;
+  border: 1px solid var(--fly-line);
+  border-radius: 10px;
+  background: var(--fly-panel);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+.fly-ap[hidden] {
+  display: none;
+}
+
+.fly-ap__row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.fly-ap__row button {
+  min-width: 30px;
+  padding: 4px 7px;
+  border: 1px solid var(--fly-line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fly-text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.fly-ap__row button[data-action="ap-arm"],
+.fly-ap__row--wide button {
+  min-width: 46px;
+  letter-spacing: 0.06em;
+}
+
+.fly-ap__row button.is-on {
+  border-color: var(--fly-accent);
+  background: rgba(94, 200, 242, 0.16);
+  color: var(--fly-accent);
+}
+
+.fly-ap input {
+  width: 84px;
+  appearance: textfield;
+  padding: 4px 6px;
+  border: 1px solid var(--fly-line);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--fly-text);
+  font: inherit;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* The spinners are a target the size of a grain of rice on a moving
+   aeroplane; the − and + beside them are the same thing done properly. */
+.fly-ap input::-webkit-outer-spin-button,
+.fly-ap input::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.fly-ap__unit {
+  width: 18px;
+  color: var(--fly-muted);
+  font-size: 12px;
+}
+
+.fly-ap__row--wide {
+  margin-top: 2px;
+}
+
 /* Tall enough to be a slider you can actually hit, which is the point of
    having it at all. */
 .fly-lever {
@@ -876,6 +958,13 @@ body {
   .fly-hud__keys,
   .fly-hud__legend h3:first-child {
     display: none;
+  }
+
+  /* The autopilot panel is not noise — the touch row has its own AP button
+     and this is what it opens — but with the strip gone it has nothing to
+     hang under, so it goes to the top left under the mode buttons. */
+  .fly-ap {
+    margin-top: 0;
   }
 
   /* The glass is one fixed-aspect SVG, so on a short landscape screen it fits

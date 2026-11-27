@@ -856,6 +856,10 @@ async function main() {
     controls.setTrim(0);
     navState.leg = resolved.route ?? 0;
     autoMode = 'off';
+    apArm.hdg = false;
+    apArm.alt = false;
+    apArm.spd = false;
+    showAp();
     panel.notice(`Now at ${place.name}`);
     showPicker(false);
   }
@@ -874,7 +878,12 @@ async function main() {
     const whole = Math.max(0, Math.round(seconds));
     return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
   };
-  let hold = null;
+  // What the autopilot is being asked for, and which of the three it is
+  // actually flying. A row that is not armed is not a number it ignores: it
+  // is an axis it leaves alone — wings level, or the height you have.
+  const apSel = { hdg: 0, alt: 3000, spd: 220 };
+  const apArm = { hdg: false, alt: false, spd: false };
+  let apSeeded = false;
   let rateIndex = RATES.indexOf(1);
   let paused = false;
   let brakes = start.onGround;
@@ -1055,13 +1064,80 @@ async function main() {
     return appState;
   }
 
+  /**
+   * The three numbers, in the units the flight model wants them in. An unarmed
+   * axis is handed over as null, which `holdAutopilot` reads as "whatever the
+   * aeroplane is doing": no bank error, no vertical speed, cruise thrust.
+   */
+  const apTarget = () => ({
+    heading: apArm.hdg ? ((((apSel.hdg % 360) + 360) % 360) * DEG) : null,
+    alt: apArm.alt ? apSel.alt * FT + datum : null,
+    speed: apArm.spd ? apSel.spd : null,
+  });
+
+  /** Fills the panel with what you are doing now. */
+  function seedAp(force = false) {
+    if (apSeeded && !force) return;
+    apSeeded = true;
+    apSel.hdg = Math.round((((aircraft.heading / DEG) % 360) + 360) % 360);
+    apSel.alt = Math.max(0, Math.round((aircraft.alt - datum) / FT / 100) * 100);
+    apSel.spd = Math.round(Math.max(80, aircraft.kias ?? 220) / 5) * 5;
+  }
+
+  /** Writes the state onto the panel; `open` also shows or hides it. */
+  function showAp(open = null) {
+    const node = document.querySelector('[data-el="apPanel"]');
+    if (!node) return;
+    if (open !== null) node.hidden = !open;
+    const set = (name, value) => {
+      const el = document.querySelector(`[data-el="${name}"]`);
+      if (el && document.activeElement !== el) el.value = String(value);
+    };
+    set('apHdg', apSel.hdg);
+    set('apAlt', apSel.alt);
+    set('apSpd', apSel.spd);
+    for (const [name, on] of [
+      ['apArmHdg', apArm.hdg && autoMode === 'hold'],
+      ['apArmAlt', apArm.alt && autoMode === 'hold'],
+      ['apArmSpd', apArm.spd && autoMode === 'hold'],
+      ['apNav', autoMode === 'nav'],
+    ]) {
+      document.querySelector(`[data-el="${name}"]`)?.classList.toggle('is-on', on);
+    }
+    for (const button of document.querySelectorAll('[data-action="ap"]')) {
+      button.classList.toggle('is-on', autoMode !== 'off');
+    }
+  }
+
+  /** Arms or disarms one of the three rows, switching the autopilot on with it. */
+  function armAp(field) {
+    seedAp();
+    apArm[field] = !(apArm[field] && autoMode === 'hold');
+    autoMode = 'hold';
+    if (!apArm.hdg && !apArm.alt && !apArm.spd) autoMode = 'off';
+    showAp(true);
+    panel.notice(
+      autoMode === 'off'
+        ? 'Autopilot off — you are flying'
+        : `Autopilot: ${[
+            apArm.hdg ? `heading ${apSel.hdg}°` : null,
+            apArm.alt ? `${apSel.alt} ft` : null,
+            apArm.spd ? `${apSel.spd} kt` : null,
+          ].filter(Boolean).join(' · ')}`,
+    );
+  }
+
   // Off, then hold what you have, then your own plan if you made one, then
   // the scripted valley run, then off again.
   function cycleAutopilot() {
     if (autoMode === 'off') {
       autoMode = 'hold';
-      hold = { heading: aircraft.heading, alt: aircraft.alt, speed: aircraft.kias ?? 250 };
-      panel.notice('Autopilot: heading and altitude hold');
+      seedAp(true);
+      apArm.hdg = true;
+      apArm.alt = true;
+      apArm.spd = true;
+      showAp(true);
+      panel.notice(`Autopilot: ${apSel.hdg}° · ${apSel.alt} ft · ${apSel.spd} kt`);
     } else if (autoMode === 'hold' && plan.points.length) {
       armPlan();
     } else if (autoMode !== 'route') {
@@ -1080,6 +1156,7 @@ async function main() {
     }
     const first = plan.arm(aircraft);
     autoMode = 'nav';
+    showAp();
     panel.notice(`Flight plan armed — ${first.name}`);
   }
 
@@ -1139,6 +1216,10 @@ async function main() {
       const nudge = controls.tilting && !controls.stick ? 0.45 : 0.2;
       if (autoMode !== 'off' && (Math.abs(axes.pitch) > nudge || Math.abs(axes.roll) > nudge)) {
         autoMode = 'off';
+        apArm.hdg = false;
+        apArm.alt = false;
+        apArm.spd = false;
+        showAp();
         panel.notice('Autopilot off — you are flying');
       }
 
@@ -1161,11 +1242,15 @@ async function main() {
           // aeroplane somebody thought was being flown.
           navLeg = null;
           autoMode = 'hold';
-          hold = { heading: aircraft.heading, alt: aircraft.alt, speed: aircraft.kias ?? 250 };
-          input = sim.holdAutopilot(hold, delta);
+          seedAp(true);
+          apArm.hdg = true;
+          apArm.alt = true;
+          apArm.spd = true;
+          showAp();
+          input = sim.holdAutopilot(apTarget(), delta);
         }
       } else if (autoMode === 'hold') {
-        input = sim.holdAutopilot(hold, delta);
+        input = sim.holdAutopilot(apTarget(), delta);
       } else if (controls.tilting && !controls.stick) {
         // Twenty degrees of phone is twenty degrees of aeroplane. The model
         // takes an attitude directly — the same door the autopilot uses.
@@ -1372,7 +1457,11 @@ async function main() {
           : autoMode === 'route'
           ? `AUTOPILOT · ${route[navState.leg]?.name ?? ''}`
           : autoMode === 'hold'
-            ? `AUTOPILOT · ${Math.round((hold.heading / DEG + 360) % 360)}° · ${Math.round((hold.alt - datum) / FT / 100) * 100} ft`
+            ? `AUTOPILOT · ${[
+                apArm.hdg ? `${apSel.hdg}°` : 'WINGS LEVEL',
+                apArm.alt ? `${apSel.alt} ft` : 'ALT HOLD',
+                apArm.spd ? `${apSel.spd} kt` : null,
+              ].filter(Boolean).join(' · ')}`
             : paused
               ? 'PAUSED'
               : '',
@@ -1433,6 +1522,26 @@ async function main() {
         markLook();
       });
     }
+  }
+
+  // Typing a number is the whole point of having the panel, so the fields are
+  // read on every keystroke rather than on blur: set 8000 and the aeroplane
+  // starts climbing while you are still looking at the box.
+  for (const [name, field] of [['apHdg', 'hdg'], ['apAlt', 'alt'], ['apSpd', 'spd']]) {
+    const input = document.querySelector(`[data-el="${name}"]`);
+    if (!input) continue;
+    input.addEventListener('input', () => {
+      const value = Number(input.value);
+      if (!Number.isFinite(value)) return;
+      apSeeded = true;
+      if (field === 'hdg') apSel.hdg = (((Math.round(value) % 360) + 360) % 360);
+      if (field === 'alt') apSel.alt = Math.min(45000, Math.max(0, Math.round(value)));
+      if (field === 'spd') apSel.spd = Math.min(400, Math.max(60, Math.round(value)));
+    });
+    // Enter hands the keyboard back to the aeroplane.
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') input.blur();
+    });
   }
 
   controls.attachStick(document.querySelector('[data-el="stickArea"]'));
@@ -1500,8 +1609,41 @@ async function main() {
       case 'flaps':
         sim.setFlaps((aircraft.flaps + 1) % type.flapDeg.length);
         break;
-      case 'ap':
-        cycleAutopilot();
+      case 'ap': {
+        // The button opens the panel; the panel is the autopilot. P still
+        // cycles, for the hand that is already on the keyboard.
+        const node = document.querySelector('[data-el="apPanel"]');
+        seedAp();
+        showAp(node.hidden);
+        break;
+      }
+      case 'ap-arm':
+        armAp(event.target.closest('button').dataset.field);
+        break;
+      case 'ap-step': {
+        const { field, step } = event.target.closest('button').dataset;
+        seedAp();
+        const by = Number(step);
+        if (field === 'hdg') apSel.hdg = (((apSel.hdg + by) % 360) + 360) % 360;
+        if (field === 'alt') apSel.alt = Math.min(45000, Math.max(0, apSel.alt + by));
+        if (field === 'spd') apSel.spd = Math.min(400, Math.max(60, apSel.spd + by));
+        showAp(true);
+        break;
+      }
+      case 'ap-nav':
+        if (autoMode === 'nav') {
+          autoMode = 'off';
+          panel.notice('Autopilot off — you are flying');
+        } else armPlan();
+        showAp(true);
+        break;
+      case 'ap-off':
+        autoMode = 'off';
+        apArm.hdg = false;
+        apArm.alt = false;
+        apArm.spd = false;
+        showAp(true);
+        panel.notice('Autopilot off — you are flying');
         break;
       case 'rate-down':
         setRate(rateIndex - 1);

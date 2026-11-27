@@ -72,6 +72,42 @@ export function createPanel(root, { title, attribution, limits = {} }) {
         </div>
       </div>
 
+      <!-- The autopilot, with the three numbers written on it.
+           It used to be a key that cycled through modes and captured whatever
+           you happened to be doing, so "climb to eight thousand on 240" meant
+           first flying to eight thousand on 240 yourself. This is the panel
+           that is in the aeroplane instead: a heading, an altitude and a
+           speed, each one armed on its own. A row that is not armed is not a
+           number the autopilot ignores — it is an axis it leaves to you,
+           wings level and the height you have. -->
+      <div class="fly-ap" data-el="apPanel" hidden>
+        <div class="fly-ap__row">
+          <button data-action="ap-arm" data-field="hdg" data-el="apArmHdg" title="Fly this heading">HDG</button>
+          <button data-action="ap-step" data-field="hdg" data-step="-1" title="Left one degree">−</button>
+          <input data-el="apHdg" data-field="hdg" type="number" min="0" max="359" step="1" inputmode="numeric" aria-label="Autopilot heading">
+          <button data-action="ap-step" data-field="hdg" data-step="1" title="Right one degree">+</button>
+          <span class="fly-ap__unit">°</span>
+        </div>
+        <div class="fly-ap__row">
+          <button data-action="ap-arm" data-field="alt" data-el="apArmAlt" title="Climb or descend to this altitude">ALT</button>
+          <button data-action="ap-step" data-field="alt" data-step="-500" title="Five hundred feet down">−</button>
+          <input data-el="apAlt" data-field="alt" type="number" min="0" max="45000" step="500" inputmode="numeric" aria-label="Autopilot altitude">
+          <button data-action="ap-step" data-field="alt" data-step="500" title="Five hundred feet up">+</button>
+          <span class="fly-ap__unit">ft</span>
+        </div>
+        <div class="fly-ap__row">
+          <button data-action="ap-arm" data-field="spd" data-el="apArmSpd" title="Hold this indicated airspeed">SPD</button>
+          <button data-action="ap-step" data-field="spd" data-step="-5" title="Five knots slower">−</button>
+          <input data-el="apSpd" data-field="spd" type="number" min="60" max="400" step="5" inputmode="numeric" aria-label="Autopilot speed">
+          <button data-action="ap-step" data-field="spd" data-step="5" title="Five knots faster">+</button>
+          <span class="fly-ap__unit">kt</span>
+        </div>
+        <div class="fly-ap__row fly-ap__row--wide">
+          <button data-action="ap-nav" data-el="apNav" title="Fly the flight plan instead">NAV</button>
+          <button data-action="ap-off" data-el="apOff" title="Hand the aeroplane back">OFF</button>
+        </div>
+      </div>
+
       <svg class="fly-glass" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
         <defs>
           <clipPath id="ladderClip"><rect x="300" y="60" width="400" height="500" rx="12"/></clipPath>
@@ -326,6 +362,16 @@ export function createPanel(root, { title, attribution, limits = {} }) {
             and amber once <kbd>P</kbd> has handed it to the autopilot; the bug under
             the compass is the turn you still owe it. A link can carry one:
             <code>?to=EDDL</code>.
+          </p>
+          <h3>The autopilot</h3>
+          <p class="fly-hud__keys">
+            The <strong>Autopilot</strong> button opens a panel with three
+            numbers on it: a heading, an altitude and a speed. Type one or step
+            it, then press HDG, ALT or SPD to hand that axis over — an axis you
+            do not arm is one it leaves alone, wings level at the height you
+            have. <kbd>P</kbd> still engages all three at what you are doing
+            now, <strong>NAV</strong> flies the plan instead, and a firm pull
+            on the stick takes everything back.
           </p>
           <h3>The glide path</h3>
           <p class="fly-hud__keys">
