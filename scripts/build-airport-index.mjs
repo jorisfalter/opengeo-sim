@@ -125,16 +125,36 @@ async function main() {
     // runway in eleven. Without it the aeroplane is set down on the stopway.
     // Both are left off the row when neither is given, because they are two
     // more numbers on 47,000 runways and almost all of them would be zero.
-    const displaced = [
+    // Everything after the ninth column is an extra: a number that is zero or
+    // missing on most runways. They are written positionally and the trailing
+    // empties are cut off, so a runway with none of them costs nothing and a
+    // runway with all of them costs five numbers.
+    //
+    //  9,10  displaced thresholds, in feet
+    // 11,12  threshold elevations above sea level, in feet. A runway is a
+    //        plane, not a drape over the terrain, and these two numbers are
+    //        its two corners: 12,525 runways have both, their median slope is
+    //        0.14% and seven hundred of them are steeper than one per cent.
+    //        Without them a glide path aims at the field elevation and the
+    //        ground under the wheels is whatever a 30 m DEM thinks, which at
+    //        Courchevel is tens of metres out.
+    // 13     lighted, 0 or 1. The only thing OurAirports says about what is
+    //        installed at a runway, and the closest thing to "does this field
+    //        have a PAPI" that public-domain data has.
+    const extras = [
       Math.round(num(r.le_displaced_threshold_ft) ?? 0),
       Math.round(num(r.he_displaced_threshold_ft) ?? 0),
+      num(r.le_elevation_ft) === null ? null : Math.round(num(r.le_elevation_ft)),
+      num(r.he_elevation_ft) === null ? null : Math.round(num(r.he_elevation_ft)),
+      r.lighted === '1' ? 1 : 0,
     ];
+    while (extras.length && !extras[extras.length - 1]) extras.pop();
     list.push([
       placed ? round(le[0], 5) : null, placed ? round(le[1], 5) : null,
       placed ? round(he[0], 5) : null, placed ? round(he[1], 5) : null,
       Math.round(length), Math.round(num(r.width_ft) ?? 0), SURFACE(r.surface),
       r.le_ident || '', r.he_ident || '',
-      ...(displaced[0] || displaced[1] ? displaced : []),
+      ...extras,
     ]);
     byIdent.set(r.airport_ident, list);
   }
@@ -164,7 +184,7 @@ async function main() {
     fields: ['ident', 'name', 'lat', 'lon', 'elevationFt', 'country', 'runways'],
     runwayFields: [
       'leLat', 'leLon', 'heLat', 'heLon', 'lengthFt', 'widthFt', 'surface', 'leId', 'heId',
-      'leDisplacedFt', 'heDisplacedFt',
+      'leDisplacedFt', 'heDisplacedFt', 'leElevationFt', 'heElevationFt', 'lighted',
     ],
     airports: index,
   };

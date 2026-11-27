@@ -48,6 +48,17 @@ export const PAPI_ANGLES = [3.5, 3.1667, 2.8333, 2.5];
 /** How far out the needles come alive: 25 NM, and within 35° of the course. */
 export const RANGE_M = 46300;
 export const CAPTURE_DEG = 35;
+/**
+ * The shortest runway worth an approach.
+ *
+ * Nothing below about six hundred metres carries published approach guidance
+ * anywhere, and a glider strip does not have a PAPI beside it. Siegerland is
+ * the case that forced the number: beside its 1620 m runway the index lists a
+ * 600 m grass strip, a 500 m cross strip and a 300 m glider lane, and standing
+ * on the 13 threshold the aeroplane was told it was approaching the glider
+ * lane — which was true of the geometry and nonsense in the cockpit.
+ */
+export const MIN_LENGTH_M = 600;
 
 const metres = (from, to) => ({
   n: (to.lat - from.lat) * M,
@@ -75,6 +86,13 @@ function end(airport, strip, runway, which) {
   const displaced = ((low ? runway.leDisplacedFt : runway.heDisplacedFt) ?? 0) * FT;
   const back = (length / 2 - displaced) * (low ? -1 : 1);
   const scale = Math.cos(airport.lat * DEG);
+  // The height the path aims at is the height of *this* threshold, which is
+  // not the field elevation: the field's is one number for the whole aerodrome
+  // and is usually the highest point of the landing area. OurAirports has both
+  // thresholds for twelve thousand runways; where it does not, the field
+  // elevation is the only number there is and the path says so.
+  const published = low ? runway.leElevationFt : runway.heElevationFt;
+  const elevFt = Number.isFinite(published) ? published : (airport.elevationFt ?? 0);
   return {
     ident: airport.ident,
     name: airport.name,
@@ -82,7 +100,14 @@ function end(airport, strip, runway, which) {
     lat: strip.lat + (back * alongN) / M,
     lon: strip.lon + (back * alongE) / (M * scale),
     course: ((strip.heading + (low ? 0 : 180)) % 360 + 360) % 360,
-    elevFt: airport.elevationFt ?? 0,
+    elevFt,
+    // Whether that height is the threshold's own or the whole field's, because
+    // on a sloping runway the difference is the difference between a glide
+    // path and a guess, and nothing downstream should have to assume.
+    surveyedEnd: Number.isFinite(published),
+    // Runway lighting, the one thing OurAirports says about what is installed
+    // here. A PAPI is not an edge light, but an unlit runway has neither.
+    lighted: Boolean(runway.lighted),
     lengthM: length,
     widthM: Math.max(18, (runway.widthFt ?? 100) * FT),
     displacedM: displaced,
@@ -106,13 +131,15 @@ export function approachEnds(airport) {
   if (!airport?.runways?.length) return [];
   const out = [];
   const main = runwayLine(airport);
-  if (main && !main.laidOut) {
+  if (main && !main.laidOut && main.length >= MIN_LENGTH_M) {
     const strip = { lat: main.lat, lon: main.lon, heading: main.heading, length: main.length };
     out.push(end(airport, strip, main.runway, 'le'), end(airport, strip, main.runway, 'he'));
   }
   for (const runway of airport.runways.slice(1)) {
     const strip = plainLine(airport, runway);
-    if (strip) out.push(end(airport, strip, runway, 'le'), end(airport, strip, runway, 'he'));
+    if (strip && strip.length >= MIN_LENGTH_M) {
+      out.push(end(airport, strip, runway, 'le'), end(airport, strip, runway, 'he'));
+    }
   }
   return out;
 }
@@ -128,18 +155,25 @@ export function approachEnds(airport) {
  * more, picks what a pilot would call downwind for.
  */
 export function pickEnd(ends, aircraft) {
-  let best = null;
-  for (const approach of ends) {
+  const scored = ends.map((approach) => {
     const d = metres(approach, aircraft);
     const toPlane = (Math.atan2(d.e, d.n) / DEG + 360) % 360;
     // Zero when the aeroplane sits straight out on this end's final.
     const offCourse = Math.abs(wrap(toPlane - ((approach.course + 180) % 360)));
     const heading = aircraft.heading === undefined ? null : (aircraft.heading / DEG + 360) % 360;
     const offHeading = heading === null ? 0 : Math.abs(wrap(heading - approach.course));
-    const score = offCourse + offHeading * 0.6;
-    if (!best || score < best.score) best = { score, approach };
-  }
-  return best?.approach ?? null;
+    return { score: offCourse + offHeading * 0.6, approach };
+  });
+  if (!scored.length) return null;
+  scored.sort((a, b) => a.score - b.score);
+  // Parallel runways are the same geometry twice and score within a degree of
+  // each other, so geometry cannot separate them and something else has to:
+  // the longer one, which is the one with the approach lights, the longer
+  // taxi-off and the published procedure. Fifteen degrees is wide enough to
+  // hold two parallels and far too narrow to reach a crossing runway.
+  const close = scored.filter((entry) => entry.score <= scored[0].score + 15);
+  close.sort((a, b) => b.approach.lengthM - a.approach.lengthM);
+  return close[0].approach;
 }
 
 /**

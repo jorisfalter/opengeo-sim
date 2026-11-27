@@ -89,5 +89,36 @@ is('te laag: alles rood', low.map((u) => (u.white ? 'W' : 'R')).join(' '), 'R R 
 const steep = papiColours(le, plane, TCH_FT + (tenKm * Math.tan(3.9 * DEG)) / FT);
 is('te hoog: alles wit', steep.map((u) => (u.white ? 'W' : 'R')).join(' '), 'W W W W');
 
+console.log('De drempelhoogte');
+// The same field with a slope: 09 at sea level, 27 thirty metres higher, and
+// a field elevation that is neither of them. A path to the low end must aim
+// at the low end.
+const sloped = {
+  ...field,
+  elevationFt: 100,
+  runways: [{ ...field.runways[0], leElevationFt: 0, heElevationFt: 98, lighted: true }],
+};
+const [low09, high27] = approachEnds(sloped);
+is('09 pakt zijn eigen drempel', low09.elevFt, 0);
+is('27 pakt de zijne', high27.elevFt, 98);
+is('en zegt dat het een ingemeten drempel is', low09.surveyedEnd, true);
+const atLow = deviation(low09, plane, onPathFt);
+near('het pad naar 09 ligt waar het lag', atLow.gsDots, 0, 0.02);
+const atHigh = deviation(
+  high27,
+  { lat: 0, lon: (L / 2 + tenKm) / 111320 },
+  98 + TCH_FT + (tenKm * Math.tan(GLIDE_DEG * DEG)) / FT,
+);
+near('het pad naar 27 ligt dertig meter hoger', atHigh.gsDots, 0, 0.02);
+// Without the published numbers the field elevation is all there is.
+const flat = { ...field, elevationFt: 100 };
+const [plain] = approachEnds(flat);
+is('zonder drempelhoogte: het veld', plain.elevFt, 100);
+is('en dat wordt niet verzwegen', plain.surveyedEnd, false);
+
+console.log('Verlichting');
+is('onverlicht tenzij het in de index staat', plain.lighted, false);
+is('verlicht als het er wel in staat', low09.lighted, true);
+
 console.log(bad === 0 ? '\nAlles klopt.' : `\n${bad} fout(en).`);
 process.exit(bad === 0 ? 0 : 1);

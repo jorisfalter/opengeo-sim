@@ -1003,6 +1003,9 @@ async function main() {
   let appEnds = [];
   let appClock = 9;
   let appOn = params.get('gp') !== '0';
+  // The last answer, kept only so that a check in scripts/ can ask the
+  // running simulator what it thinks it is approaching.
+  let appState = null;
 
   /**
    * The field the approach belongs to: where you are going if that is close
@@ -1025,6 +1028,14 @@ async function main() {
 
   function updateApproach(dt, target, altFt) {
     if (!appOn || !airportsReady()) return null;
+    // On the wheels there is no approach to fly. Without this the glass picks
+    // the nearest threshold ahead of you while you are lined up waiting to go
+    // — at Siegerland a glider strip three hundred metres down the field —
+    // and shows a deviation from a path nobody is on.
+    if (aircraft.onGround) {
+      appState = null;
+      return null;
+    }
     // Seventeen thousand fields are scanned to find the nearest one, which is
     // not a thing to do sixty times a second for an answer that changes every
     // few kilometres.
@@ -1040,7 +1051,8 @@ async function main() {
     if (!appEnds.length) return null;
     const end = pickEnd(appEnds, aircraft);
     if (!end) return null;
-    return { end, ...deviation(end, aircraft, altFt) };
+    appState = { end, ...deviation(end, aircraft, altFt) };
+    return appState;
   }
 
   // Off, then hold what you have, then your own plan if you made one, then
@@ -1580,6 +1592,7 @@ async function main() {
     panel,
     taxi,
     papi,
+    approach: () => appState,
     lookahead,
     plan,
     armPlan,

@@ -133,7 +133,9 @@ const MEASURED = {
   LFCW: { '10': [44.40011, 0.75315, 44.39801, 0.76589] },
   LFDA: { '12': [43.70918, -0.25075, 43.70544, -0.23945] },
   LFGK: { '08': [47.99395, 3.38745, 47.99574, 3.40134] },
-  LFED: { '10': [48.05699, -2.92646, 48.05628, -2.91144] },
+  // Pontivy. OurAirports called this one 10 until November 2026 and now
+  // calls it 09; the asphalt did not move, the magnetic variation did.
+  LFED: { '09': [48.05699, -2.92646, 48.05628, -2.91144] },
   LFAV: { '11': [50.32924, 3.4473, 50.32374, 3.46974] },
   LFCS: { '03': [44.69572, -0.60035, 44.70181, -0.59499] },
   LFYG: { '08L': [50.1402, 3.25688, 50.14257, 3.26895] },
@@ -149,6 +151,33 @@ const MEASURED = {
   // instead and the surplus falls off the far end.
   LFCF: { '11': [44.67368, 1.78259, 44.671, 1.79331] },
 };
+
+/**
+ * The measurement for one runway end, found by its number.
+ *
+ * Not simply `MEASURED[ident][leId]`, because a runway's number is a magnetic
+ * heading rounded to ten degrees and magnetic north moves: OurAirports
+ * renamed Pontivy's runway 10 into 09 between two builds of the index, and a
+ * key that no longer matches is a measurement that silently stops being
+ * applied. One step of drift is still the same strip, as long as the suffix
+ * agrees — 08L and 09L are one runway renumbered, 08L and 08R are two
+ * runways — and as long as only one candidate matches.
+ */
+function measuredFor(ident, leId) {
+  const ends = MEASURED[ident];
+  if (!ends) return null;
+  if (ends[leId]) return ends[leId];
+  const read = (id) => /^\s*(\d{1,2})\s*([LRC]?)/.exec(id ?? '');
+  const want = read(leId);
+  if (!want) return null;
+  const near = Object.keys(ends).filter((key) => {
+    const have = read(key);
+    if (!have || have[2] !== want[2]) return false;
+    const step = Math.abs((((Number(have[1]) - Number(want[1])) % 36) + 36) % 36);
+    return Math.min(step, 36 - step) <= 1;
+  });
+  return near.length === 1 ? ends[near[0]] : null;
+}
 
 let loading = null;
 let index = null;
@@ -168,11 +197,14 @@ export function loadAirports() {
           elevationFt,
           country,
           runways: runways.map(
-            ([leLat, leLon, heLat, heLon, lengthFt, widthFt, surface, leId, heId, leDisp, heDisp]) => {
+            ([
+              leLat, leLon, heLat, heLon, lengthFt, widthFt, surface, leId, heId,
+              leDisp, heDisp, leElev, heElev, lighted,
+            ]) => {
               // The index is a faithful copy of OurAirports; the handful of
               // rows measured off an orthophoto are corrected here, on the way
               // in, so that every reader of it sees the same runway.
-              const measured = MEASURED[ident]?.[leId];
+              const measured = measuredFor(ident, leId);
               const [a, b, c, d] = measured ?? [leLat, leLon, heLat, heLon];
               return {
                 leLat: a, leLon: b, heLat: c, heLon: d,
@@ -180,6 +212,13 @@ export function loadAirports() {
                 lengthFt, widthFt, surface, leId, heId,
                 leDisplacedFt: leDisp ?? 0,
                 heDisplacedFt: heDisp ?? 0,
+                // Null rather than the field elevation when OurAirports does
+                // not have them, so that a reader can tell "the threshold is
+                // at 1961 ft" from "nobody surveyed this threshold" instead of
+                // being handed a plausible number for both.
+                leElevationFt: Number.isFinite(leElev) ? leElev : null,
+                heElevationFt: Number.isFinite(heElev) ? heElev : null,
+                lighted: lighted === 1,
               };
             },
           ),

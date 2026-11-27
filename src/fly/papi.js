@@ -49,11 +49,11 @@ export function createPapi(viewer, terrain) {
   /**
    * Puts the lamps on the ground.
    *
-   * The angles are measured against the field's published elevation, which is
-   * the datum the approach is built on; the lamps themselves have to stand on
-   * the terrain the viewer is actually drawing, or they float or sink. So the
-   * geometry comes from the record and the height from a terrain probe, each
-   * from the source that is right about it.
+   * The angles are measured against the threshold's published elevation,
+   * which is the datum the approach is built on; the lamps themselves have to
+   * stand on the terrain the viewer is actually drawing, or they float or
+   * sink. So the geometry comes from the record and the height from a terrain
+   * probe, each from the source that is right about it.
    */
   async function install(approach) {
     const wanted = `${approach.ident}/${approach.runway}`;
@@ -116,7 +116,15 @@ export function createPapi(viewer, terrain) {
     /** Called every frame with the approach in use, or null when there is none. */
     update(approach, aircraft, altFt) {
       if (!enabled) return;
-      if (!approach) {
+      // An unlit runway has no PAPI, and until now every runway had one —
+      // four lamps beside a thousand-metre grass strip that in daylight has
+      // nothing beside it but a windsock. OurAirports does not record the
+      // approach aids, but it does record whether a runway is lit, and that
+      // is the closest the public-domain data comes: ten thousand runways of
+      // thirty-nine thousand. It is a proxy and it is wrong in both
+      // directions — a lit runway may have no PAPI — but it is a published
+      // fact instead of an assumption.
+      if (!approach || approach.lighted === false) {
         if (key) clear();
         return;
       }

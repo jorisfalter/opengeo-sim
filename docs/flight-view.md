@@ -196,9 +196,12 @@ the search box and the dice hand back.
 
 ## Any airfield in the world
 
-`npm run build:airports` turns **OurAirports** into a 3.9 MB index — 1.3 MB
-over the wire. 28,375 fields with at least one runway, 33,406 runways, from
-86,000 entries. Open the start picker, type an ICAO or a name, and you are
+`npm run build:airports` turns **OurAirports** into a 4.2 MB index — 1.4 MB
+over the wire. 29,460 fields with at least one runway, 34,772 runways, from
+86,000 entries. Each runway row carries its two end coordinates, the published
+length, width and surface, the two runway numbers, and then three extras that
+are only written when they are not empty: the displaced thresholds, the two
+threshold elevations, and whether the runway is lit. Open the start picker, type an ICAO or a name, and you are
 lined up on the longest runway.
 
 The index is fetched in the background as soon as the aeroplane is flying,
@@ -1473,21 +1476,46 @@ Seven more things had to be right:
    patch before the model is built, at half the usual span so the samples are
    25 m apart, and reads the start height out of it the way the first frame
    will. The two cannot disagree any more, because they are one measurement.
-7. **Every field gets a flat runway.** The six built airports have a surveyed
-   platform; everywhere else the wheels are on the global terrain model, and
-   along a runway that model has waviness in it — flat ground sampled from
-   space and interpolated. Measured down Deurne's runway: 30 cm of it over
-   380 m, in steps of up to 15 cm between samples 20 m apart, which at
-   touchdown speed is 15 cm in a third of a second, over and over. You cannot
-   see it and you can certainly feel it. `src/fly/strip.js` now lays a paper
-   runway at whichever indexed field the aeroplane is near and low: the
-   terrain is sampled along each centreline, a straight line is fitted through
-   those heights, and that line is the ground inside the strip, handing back
-   to the terrain within sixty metres of it. Same probe as the built airports,
-   same skirt; the only difference is that the centreline's heights are a fit
-   to the terrain rather than a survey, so it meets the ground at the ends and
-   introduces no step. Down the same runway afterwards: 0 cm of waviness, 8 mm
-   of worst step. It costs one terrain sample per field.
+7. **Every field gets a smooth runway — and the smoothing had to be
+   rethought.** The nine built airports have a surveyed platform; everywhere
+   else the wheels are on the global terrain model, and along a runway that
+   model has waviness in it — flat ground sampled from space and interpolated.
+   Measured down Deurne's runway: 30 cm of it over 380 m, in steps of up to
+   15 cm between samples 20 m apart, which at touchdown speed is 15 cm in a
+   third of a second, over and over. You cannot see it and you can certainly
+   feel it.
+
+   The first answer was a **straight line**: sample the terrain along the
+   centreline, fit a line through the heights, and let that line be the ground
+   inside the strip. A runway is flat or evenly sloped, so this is what a
+   runway is. Down Deurne afterwards: 0 cm of waviness, 8 mm of worst step.
+
+   It is also what put an aeroplane inside a hill at Siegerland. Nothing is
+   drawn at an indexed field — what you see is the orthophoto over the terrain
+   model — so the wheels and the eyes have to be on the same surface, and a
+   straight line is not that surface. Measured along EDGS runway 13/31: the
+   model carries a **three-metre hump** over the middle of it, so the fitted
+   line started 3.7 m *above* the drawn ground, took off from a hover, and
+   then cut 3.2 m *into* the ground halfway down. The cockpit eye sits about
+   two metres over the wheels, so mid-runway the view is from inside the hill.
+
+   `src/fly/strip.js` now samples every 60 m and **smooths** rather than
+   straightens — a five-point binomial, a filter 240 m wide, which is wider
+   than anything the model has to say between two of its own 25 m cells and
+   narrower than anything a runway could be doing. The hump stays, the noise
+   goes, and the wheels are on the surface you can see. Along the same runway
+   afterwards the wheels are within **0.3 m of the drawn ground at every one
+   of 33 stations**, against −3.7 to +3.2 m before.
+
+   The hump is the model's, not the runway's, and now we can prove it:
+   OurAirports publishes the elevation of each threshold, and Siegerland's
+   runway runs straight from 645.0 m down to 635.0 m — which is the model's
+   own height at both ends, to within a metre, with three metres of invented
+   hill in between. Knowing that does not let us put the wheels on the true
+   plane, because then the aeroplane floats seven metres over the drawn ground
+   at one end. Flattening the *picture* is the real answer, and it is a bigger
+   one: cutting the globe open at 29,460 fields and drawing a platform in the
+   hole, with no photograph to lay on it. It is in `TODO.md`.
 
 Checked away from the Alps by flying two minutes at each of several places and
 watching the ground: Mont Blanc 2209 m, the Matterhorn 3453 m, the Grand Canyon
@@ -2085,25 +2113,64 @@ The whole group is hidden until there is an approach to fly: inside 25 NM, withi
 35° of the course, and not yet past the threshold. An aeroplane in the cruise has
 exactly the glass it had before. `I` turns it off; `?gp=0` starts it off.
 
-### What it is wrong about
+### The two columns the index was throwing away
 
-Two things, both of them data rather than arithmetic, and both written down
-rather than hidden.
+The first version of this got the height of the path from the **field**
+elevation, and put a PAPI beside **every** runway, because those were the only
+numbers the index kept. Both were written down as wrong rather than hidden, and
+both are now fixed in the place they belonged: the index build.
 
-The path is measured from the **field** elevation, not the threshold's.
-OurAirports publishes `le_elevation_ft` and `he_elevation_ft` per runway end
-and the index does not keep them, so a 3° path to the 05 threshold at Besançon
-is drawn to 1,271 ft because that is the figure we have. At a flat aerodrome
-that is a few feet. At Courchevel, where the strip climbs 18.6% from end to
-end, the two differ by tens of metres and the path is simply wrong — which is
-why the index build has to learn those two columns before anyone flies an
-approach into a mountain.
+`runways.csv` carries `le_elevation_ft` and `he_elevation_ft` — the elevation
+of each threshold — for 12,525 of the 39,791 open runways, and a `lighted`
+flag for all of them, 10,596 of which are lit. Neither survived into
+`public/airports/index.json`. They do now, as three more positional columns on
+the runway row, written only when they are not empty: the index grew from
+3.9 MB to 4.2 MB, 1.3 MB to 1.4 MB over the wire.
 
-And the PAPI stands at every field, including the ones that have none.
-OurAirports does not record approach aids; it records whether a runway is
-lighted, which is 12,398 of 49,908 runways, and the index does not keep that
-column either. Four lamps beside a grass strip in the Gers are four lamps that
-are not there.
+What they buy:
+
+* **The path aims at the threshold it is named after.** A field elevation is
+  one number for the whole aerodrome, usually its highest point. Across the
+  12,525 runways that publish both ends the median slope is 0.14%, the
+  ninetieth percentile 0.77%, and 747 of them are steeper than one per cent —
+  for those, aiming at the field elevation is aiming at neither end. Pontivy's
+  two thresholds are 381 and 400 ft with the field at 407; Siegerland's are
+  1,961 and 1,928 with the field at 1,966. The glide path, the deviation
+  diamond and the PAPI angles all now read the end you are landing on, and say
+  so: `surveyedEnd` is true when the number is the threshold's own and false
+  when it is the field's, so nothing downstream has to assume.
+* **The lamps stand only where there are lights.** OurAirports does not record
+  approach aids — no index that may be shipped does — but it does record
+  whether a runway is lit, and an unlit runway has no PAPI. 186 of France's
+  1,080 runways are lit, 155 of Germany's 620. A thousand-metre grass strip in
+  the Gers no longer grows four lamps it does not have.
+
+The lighting flag is a proxy and it is wrong in both directions: a lit runway
+may have no PAPI, and a few unlit ones have one. It is, however, a published
+fact rather than an assumption, which is the standard the rest of this file
+holds itself to.
+
+### What it is still wrong about
+
+**Three degrees, everywhere.** The angle is the standard one because the
+standard one is all we may know. London City's approach is 5.5°, Innsbruck's
+LOC/DME to 26 about 3.8°, and both are published in databases we cannot ship.
+At those two fields the path drawn here is wrong, and the PAPI beside it is
+wrong by the same amount — which is at least consistent, and it is why the
+thing is called a glide path and not an approach.
+
+**There is still no runway or approach lighting.** The PAPI is there; the
+centreline, the threshold bar and the edge lights are not. At dusk that is the
+difference between a runway and a grey stripe. Same machinery as the PAPI —
+point primitives from the surveyed line — and more lamps.
+
+**The lamps stand on the terrain, not on the runway.** Their position comes
+from the record and their height from a terrain probe, each from the source
+that is right about it; but at a field where the terrain model is a few metres
+out, the lamps follow the model and the angles they are computed from follow
+the published threshold. At Siegerland that is under a metre. It is written
+down here because it is the kind of thing that is invisible until it is three
+metres.
 
 ### Which runway you are arriving at
 
