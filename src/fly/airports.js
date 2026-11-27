@@ -145,6 +145,24 @@ const MEASURED = {
   // lands on the displaced threshold bar of 05, with the stopway arrows
   // running on behind it.
   LFQM: { '05': [47.20465, 6.07916, 47.21205, 6.09414] },
+  // Saint-Inglevert, and a different kind of error from all of the above: the
+  // line is the right length, on the right bearing, and on the pavement — just
+  // not in the middle of it. It runs along the north-west edge of a strip
+  // forty metres wide, which is where Joris found himself parked. Read off the
+  // centreline dashes, which are the one thing on a runway that is in the
+  // middle of it by definition: the published line sits 16.3 m to their left
+  // over all 603 m, and the start ring now lands between the piano keys of 03
+  // instead of beside them.
+  LFIS: { '03': [50.88019, 1.73381, 50.88488, 1.7381] },
+  // Arcachon-La Teste has two runways in the record, 1346 m of asphalt and
+  // 1284 m of grass, and neither published line is on the asphalt: 07L runs
+  // 267 m off it and out past the threshold into the houses by the roundabout.
+  // The pavement is one strip, found by the search and then fitted station by
+  // station across its own width — 18.9 m wide against a declared 23, with the
+  // declared length centred on it and the turn pads running on past both ends.
+  // The grass runway is left exactly as the record has it; a secondary runway
+  // is drawn where the data says or it is not drawn.
+  LFCH: { '07L': [44.59435, -1.12062, 44.59798, -1.10442] },
   // Figeac has 701 m of asphalt where the record declares 900. Centring the
   // declared length on the pavement put the start 136 m short of the
   // threshold, in the scrub, so the line is anchored on the 11 threshold

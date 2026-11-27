@@ -34,10 +34,18 @@ const KEY_AXES = {
 // into a head: a runway you are not pointing at is one you cannot see, and in
 // a cockpit view the only way to find it is to turn and look.
 //
-// Held rather than latched, in every one of the three ways you can do it, so
-// the head always comes back to the front when you let go. A view that stays
-// where you left it is a view you can forget you left, and then the aeroplane
-// is flying one way while the windscreen faces another.
+// Two ways, and they are different on purpose. Shift and the arrows, or a drag
+// with the right mouse button, are *held*: a glance. You look, you let go, you
+// are facing forward again, and a glance cannot be forgotten.
+//
+// The two LOOK buttons are *steps*: each click turns the head another forty-five
+// degrees and leaves it there, and a click the other way brings it back. Holding
+// a button down to keep ninety degrees of right is not a thing hands do while
+// also flying, and it was the first thing anyone tried. What makes it safe is
+// that the glass says so — LOOK 90° R beside the attitude, which is dimmed to a
+// tenth while the head is turned — so a head you left over your shoulder is
+// announced rather than quietly in effect. A glance still springs back, now to
+// wherever the head is parked rather than always to the front.
 const LOOK_KEYS = {
   left: ['ArrowLeft', 'KeyA'],
   right: ['ArrowRight', 'KeyD'],
@@ -46,6 +54,8 @@ const LOOK_KEYS = {
 };
 const LOOK_RATE = (140 * Math.PI) / 180; // degrees a second on the keys
 const LOOK_YAW_MAX = (140 * Math.PI) / 180; // over your shoulder, not past it
+const LOOK_STEP = (45 * Math.PI) / 180; // one click of a LOOK button
+const LOOK_PARK_MAX = (135 * Math.PI) / 180; // three clicks, and no further
 const LOOK_PITCH_MAX = (70 * Math.PI) / 180;
 const LOOK_RETURN = 11; // how fast the head comes back, per second
 const MOUSE_LOOK = 0.0032; // radians a pixel on a right-button drag
@@ -68,10 +78,10 @@ export function createControls(element, { onAction, onNotice } = {}) {
     yoke: false,
     mouse: { x: 0, y: 0 },
     // Where the head is pointing, relative to straight ahead, in radians.
-    look: { yaw: 0, pitch: 0 },
+    // `park` is where it returns to: zero unless the LOOK buttons put it
+    // somewhere and left it there.
+    look: { yaw: 0, pitch: 0, park: 0 },
   };
-  // What the on-screen Look buttons are asking for, −1 … 1 on each axis.
-  const buttonLook = { x: 0, y: 0 };
   let mouseLooking = false;
 
   const held = (names) => names.some((code) => keys.has(code));
@@ -524,13 +534,13 @@ export function createControls(element, { onAction, onNotice } = {}) {
     Boolean(axis(LOOK_KEYS.left, LOOK_KEYS.right) || axis(LOOK_KEYS.down, LOOK_KEYS.up));
 
   /**
-   * Moves the head, or lets it come back. Held on the keys, held on the
-   * buttons, held on the right mouse button; nothing latches.
+   * Moves the head, or lets it come back — to where it is parked, which is
+   * straight ahead unless a LOOK button put it over your shoulder.
    */
   function headLook(dt) {
     const shift = looking();
-    const x = (shift ? axis(LOOK_KEYS.left, LOOK_KEYS.right) : 0) + buttonLook.x;
-    const y = (shift ? axis(LOOK_KEYS.down, LOOK_KEYS.up) : 0) + buttonLook.y;
+    const x = shift ? axis(LOOK_KEYS.left, LOOK_KEYS.right) : 0;
+    const y = shift ? axis(LOOK_KEYS.down, LOOK_KEYS.up) : 0;
     if (x || y) {
       state.look.yaw = clamp(state.look.yaw + x * LOOK_RATE * dt, -LOOK_YAW_MAX, LOOK_YAW_MAX);
       state.look.pitch = clamp(
@@ -541,22 +551,42 @@ export function createControls(element, { onAction, onNotice } = {}) {
       return;
     }
     if (mouseLooking) return;
-    // Back to the front, quickly but not instantly: a head that snaps is a
-    // cut, and a cut is the one thing that loses you the horizon.
+    // Back to where the head belongs, quickly but not instantly: a head that
+    // snaps is a cut, and a cut is the one thing that loses you the horizon.
     const back = Math.exp(-LOOK_RETURN * dt);
-    state.look.yaw *= back;
+    state.look.yaw = state.look.park + (state.look.yaw - state.look.park) * back;
     state.look.pitch *= back;
-    if (Math.abs(state.look.yaw) < 0.002) state.look.yaw = 0;
+    if (Math.abs(state.look.yaw - state.look.park) < 0.002) state.look.yaw = state.look.park;
     if (Math.abs(state.look.pitch) < 0.002) state.look.pitch = 0;
   }
 
   return {
     state,
 
-    /** The on-screen Look buttons, held like the rudder ones. */
-    setLookButton(x, y) {
-      buttonLook.x = x;
-      buttonLook.y = y;
+    /**
+     * One click of a LOOK button: forty-five degrees further that way, and
+     * the head stays there. Clicking the other way walks it back, through
+     * straight ahead and on round if you keep going.
+     */
+    stepLook(direction) {
+      const wanted = state.look.park + direction * LOOK_STEP;
+      // Within a degree of the front, park on the front exactly, so that three
+      // clicks left after three clicks right is dead ahead and not a rounding
+      // error you can see.
+      state.look.park =
+        Math.abs(wanted) < LOOK_STEP / 2 ? 0 : clamp(wanted, -LOOK_PARK_MAX, LOOK_PARK_MAX);
+      return state.look.park;
+    },
+
+    /** Straight ahead again, whatever was asked for. */
+    centreLook() {
+      state.look.park = 0;
+      return 0;
+    },
+
+    /** Where the head is parked, in degrees; zero means facing forward. */
+    get lookParkDeg() {
+      return (state.look.park * 180) / Math.PI;
     },
 
     /** Where the head is, in degrees: negative left, positive right. */

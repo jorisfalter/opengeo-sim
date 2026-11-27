@@ -16,6 +16,19 @@ Open punten van dit project. Klaar = weg of afgevinkt met datum.
 - [ ] **De "scherpe foto"-dobbelsteen is ruimer dan de diensten** (2026-11-25)
   De zes rechthoeken in `COVERED` (start.js) lopen over landen heen waar geen eigen luchtfoto is: Wallonie, Luxemburg, Noord-Italie, delen van Duitsland buiten de dertien DOP-diensten. Een worp kan daar landen en dan krijg je Sentinel-2 op 10 m. EBBE Beauvechain kwam zo boven bij de controle. Te meten op dezelfde manier als de censuurtest: welke velden krijgen uberhaupt een eigen luchtfoto?
 
+## Cockpit (2026-11-27)
+
+- [x] **De LOOK-knoppen zijn stappen geworden** (2026-11-27)
+  Je kon niet 60 of 90 graden naar rechts kijken en dat vasthouden: ingedrukt houden draaide door tot over je schouder, loslaten veerde terug. Nu is één klik 45 graden en blijft het hoofd daar staan, tot drie klikken; de andere knop loopt terug door nul heen. Shift+pijl en slepen met de rechtermuisknop blijven een blik die terugveert — naar waar het hoofd geparkeerd staat. Het glas zegt LOOK 90° R en dimt de kunsthorizon, dus een hoofd dat over de schouder blijft staan is aangekondigd.
+- [x] **Spatie na een muisklik deed de knop in plaats van pauze** (2026-11-27)
+  Een aangeklikte knop houdt de focus, en een knop met focus slikt de spatiebalk. Klik op Brake en de volgende spatie zette de rem aan in plaats van te pauzeren. De focus wordt nu teruggegeven na een muisklik (niet na een toetsenbordklik, want daar heeft hij hem nodig).
+- [x] **De kaart loopt voor op het vliegtuig** (2026-11-27)
+  Het vliegtuig stond in het midden, dus de helft van de kaart was waar je vandaan kwam. Het middelpunt schuift nu mee langs de koers tot het vliegtuig op ongeveer een kwart van onderen staat — tweemaal zoveel vooruit als achteruit — en dat schuift op met de snelheid, zodat je op de grond nog gewoon je eigen veld ziet. Slepen en de centreerknop werken zoals ze deden.
+- [ ] **Vertrekken aan een gate** (gevraagd 2026-11-27)
+  Nu start je altijd op de baan. De gegevens liggen er al: `taxi.js` haalt `aeroway=parking_position` en `gate` uit OpenStreetMap voor het veld waar je staat, en tekent er al een route naartoe. Wat ontbreekt is de andere kant op — een startplaats op een stand kiezen (in het startmenu, of `?start=EHAM&gate=B12`), het toestel daar met de neus naar buiten zetten, en een taxiroute van de stand naar de baan in plaats van omgekeerd.
+- [ ] **In de autopilot zelf een hoogte en een koers kiezen** (gevraagd 2026-11-27)
+  `P` wisselt nu tussen uit, HOLD (houdt vast wat je had), NAV (volgt je plan) en de vallei-route. Je kunt dus geen "klim naar 8000 voet op koers 240" zeggen zonder eerst zelf op koers 240 en 8000 voet te gaan vliegen. Wat het moet worden: een klein paneel met een hoogte, een koers en een snelheid die je instelt, en knoppen HDG / ALT / NAV ernaast — een echte autopilot-strip, geen extra toets.
+
 - [ ] **Rondkijken ontbreekt op de telefoon** (2026-11-24)
   Shift+pijl, rechtermuisknop en de LOOK-knoppen in de strip werken; de strip is op een telefoon verborgen en in de touch-rij passen geen twee knoppen meer (zes van 108 px vanaf 96 px is al 794 van de 844). Een tweevingersleep op het stickvlak is de logische plek en is niet geschreven.
 - [ ] **Taxiroute kent geen holding points en geen verkeer** (2026-11-24)
@@ -71,9 +84,9 @@ Open punten van dit project. Klaar = weg of afgevinkt met datum.
   390 velden met minstens 450 m baan: 151 die de dobbelsteen kan aanbieden, 239 die hij niet aanbiedt. Tien banen lagen naast hun asfalt en zijn opnieuw ingemeten (LFCC, LFCW, LFDA, LFGK, LFED, LFAV, LFCS, LFYG, LFEQ, LFCF), bovenop LFNH, LFKJ en LFKT eerder die week. De automatische regel alleen deugt hier niet: bij kleine grasvelden grijpt de zoeker een snelweg of een grindgat, dus alles is met het oog nagelopen en bij de tien is de drempel op 20 cm per pixel gecontroleerd.
 - [ ] **De kleine verschuivingen in de tweede Franse ronde** (2026-11-26)
   Van de 239 velden die de dobbelsteen niet aanbiedt zijn alleen de kandidaten met 150 m of meer verschuiving met het oog nagelopen. Zestien met minder dan 150 m staan nog open; op een baan van 900 m is dat nog altijd het verschil tussen asfalt en gras. Lijst: `decide.py fr2-results.jsonl`, kop "corrigeren".
-- [ ] **Vier Franse velden blijven open** (2026-11-26)
-  LFFI Ancenis (zowel de oude lijn als de gevonden lijn ligt naast de baan; de gevonden lijn ligt op de N23), LFQC Lunéville-Croismare (de randstreepfit komt op de zuidrand uit, een halve baanbreedte naast het midden), LFOX Étampes-Mondésir en LFCN Nogaro (geen randstrepen, de zoeker vindt niets bruikbaars). Met de hand inmeten zoals Corte.
-- [ ] **LFCH Arcachon-La Teste heeft twee parallelle banen** (2026-11-26)
-  07L/25R verhard en 07R/25L gras. Welke van de twee de lijn van OurAirports beschrijft is uit de foto niet zeker; niet aangeraakt.
+- [x] **De vier Franse velden zijn opgelost, drie door OurAirports zelf** (2026-11-27)
+  LFFI Ancenis, LFQC Lunéville-Croismare, LFOX Étampes-Mondésir en LFCN Nogaro. Bij de herbouw van de index bleken Ancenis (153 m verschoven) en Lunéville (41 m) upstream verbeterd, en Étampes en Nogaro lagen al goed; de verhardingsfit over de hele lijn geeft nu 2,0 / 0,9 / 0,5 / 1,1 m uit het midden, bij baanbreedtes van 24,5 / 18,4 / 35,1 / 14,0 m. De gevonden lijnen van de zoeker waren bij alle vier de verkeerde: bij Ancenis de N23, bij Étampes de spoorlijn.
+- [x] **LFCH Arcachon-La Teste ingemeten** (2026-11-27)
+  Geen van beide gepubliceerde lijnen ligt op het asfalt; die van 07L loopt er 267 m naast en voorbij de drempel door tot bij de rotonde. Het asfalt is één strook, gevonden met de zoeker (score 0,12 → 0,93) en daarna station voor station over de breedte gefit: 18,9 m breed tegen 23 opgegeven, 1346 m gecentreerd op de verharding, met de keerplaatsen voorbij beide einden. Staat in `MEASURED`. De grasbaan 07R/25L blijft zoals het record hem heeft.
 - [ ] **Dezelfde ronde voor Duitsland en de Lage Landen?** (idee 2026-11-23)
   De methode werkt overal waar we een orthofoto hebben. Spanje leverde 12 fouten op 137 velden, Portugal 7 op 44, Frankrijk 13 op 390.

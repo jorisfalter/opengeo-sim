@@ -56,9 +56,9 @@ export function createPanel(root, { title, attribution, limits = {} }) {
         <!-- Held, like the rudder: your head comes back to the front when you
              let go, which is why there is no button to centre it. -->
         <div class="fly-rudder">
-          <button data-action="look-left" title="Look left (hold) — shift+← on the keyboard, or drag with the right mouse button">◀</button>
+          <button data-action="look-left" title="Look 45° further left — click again for 90°, click the other one to come back. Shift+← is a glance that springs back.">◀</button>
           <span>LOOK</span>
-          <button data-action="look-right" title="Look right (hold) — shift+→ on the keyboard, or drag with the right mouse button">▶</button>
+          <button data-action="look-right" title="Look 45° further right — click again for 90°, click the other one to come back. Shift+→ is a glance that springs back.">▶</button>
         </div>
         <button data-action="brakes" data-el="brakeButton">Brake</button>
         <button data-action="gear" data-el="gearButton">Gear</button>
@@ -315,7 +315,7 @@ export function createPanel(root, { title, attribution, limits = {} }) {
             <kbd>W</kbd><kbd>S</kbd> throttle · <kbd>[</kbd><kbd>]</kbd> trim · <kbd>G</kbd> gear ·
             <kbd>F</kbd> flaps · <kbd>B</kbd> brakes · <kbd>V</kbd> speedbrake · <kbd>M</kbd> control law ·
             <kbd>P</kbd> autopilot · <kbd>I</kbd> glide path · <kbd>X</kbd> taxi route · <kbd>C</kbd> camera · <kbd>J</kbd> sound · <kbd>N</kbd> map · <kbd>T</kbd> traffic · <kbd>L</kbd> start · <kbd>R</kbd> plan ·
-            <kbd>shift</kbd>+<kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> look out of the window (or drag with the right mouse button) ·
+            <kbd>shift</kbd>+<kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> glance out of the window, springs back (or drag with the right mouse button); the two LOOK buttons turn the head 45° a click and leave it there ·
             <kbd>space</kbd> pause · <kbd>1</kbd><kbd>2</kbd> time up to 8× ·
             <kbd>click</kbd> mouse yoke, <kbd>Esc</kbd> releases
           </p>

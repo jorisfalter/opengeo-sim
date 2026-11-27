@@ -1413,24 +1413,25 @@ async function main() {
     }
   }
 
-  // Looking left and right is held in exactly the same way, and there are two
-  // pairs of these buttons — one in the desktop strip, one in the touch keys.
+  // Looking left and right is a step rather than a hold: one click, another
+  // forty-five degrees, and the head stays there until you click it back.
+  // There are two pairs of these buttons — one in the desktop strip, one in
+  // the touch keys — and both show where the head is parked.
+  const markLook = () => {
+    const parked = controls.lookParkDeg;
+    for (const [other, dir] of [['look-left', -1], ['look-right', 1]]) {
+      for (const node of hud.querySelectorAll(`[data-action="${other}"]`)) {
+        node.classList.toggle('is-on', parked !== 0 && Math.sign(parked) === dir);
+      }
+    }
+  };
   for (const [action, x] of [['look-left', -1], ['look-right', 1]]) {
     for (const button of hud.querySelectorAll(`[data-action="${action}"]`)) {
-      const press = (on) => {
-        controls.setLookButton(on ? x : 0, 0);
-        for (const other of hud.querySelectorAll(`[data-action="${action}"]`)) {
-          other.classList.toggle('is-on', on);
-        }
-      };
       button.addEventListener('pointerdown', (event) => {
         event.preventDefault();
-        button.setPointerCapture?.(event.pointerId);
-        press(true);
+        controls.stepLook(x);
+        markLook();
       });
-      for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
-        button.addEventListener(type, () => press(false));
-      }
     }
   }
 
@@ -1456,7 +1457,13 @@ async function main() {
 
   // The old single-slider wiring, kept for the desktop strip.
   document.querySelector('#hud').addEventListener('click', (event) => {
-    const { view: mode, action } = event.target.closest('button')?.dataset ?? {};
+    const button = event.target.closest('button');
+    // A clicked button keeps the focus, and a focused button swallows the
+    // space bar: click Brake with the mouse and the next space toggles the
+    // brake instead of pausing. That is the browser being right about buttons
+    // and wrong about this cockpit, so the focus is handed back.
+    if (button && event.detail > 0) button.blur();
+    const { view: mode, action } = button?.dataset ?? {};
     if (mode) setView(mode);
     switch (action) {
       case 'where':

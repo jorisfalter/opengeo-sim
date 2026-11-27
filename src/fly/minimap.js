@@ -104,14 +104,36 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
   const metresPerPixel = (lat, z) =>
     (156543.03392 * Math.cos(lat * DEG)) / 2 ** z;
 
+  let shown = null;
+
   function draw(aircraft, { route = [], leg = null, armed = false, traffic = [] } = {}) {
     if (!visible) return;
     const { width: w, height: h } = canvas;
     const cx = w / 2;
     const cy = h / 2;
     const view = pan ?? aircraft;
-    const centreX = lonToX(view.lon, zoom);
-    const centreY = latToY(view.lat, zoom);
+    // The map leads the aeroplane. Where you have been is on the moving map
+    // only because it is on the way to where you are, and at a hundred and
+    // eighty knots the half of the map behind you is four minutes of nothing
+    // you can still do anything about. So the view slides forward along the
+    // heading until the aeroplane sits about a quarter of the way up from the
+    // bottom, with twice as much ahead of it as behind.
+    //
+    // Only when the map is following the aeroplane, and only once it is
+    // moving: parked, the lead would put the field you are sitting on at the
+    // edge, and dragged, the map is yours and not the autopilot's.
+    let lead = 0;
+    if (!pan && Number.isFinite(aircraft.heading)) {
+      const pace = Math.min(1, Math.max(0, (aircraft.speed ?? 0) / 30));
+      lead = Math.min(w, h) * 0.22 * pace;
+    }
+    const centreX =
+      lonToX(view.lon, zoom) + (lead * Math.sin(aircraft.heading ?? 0)) / TILE_SIZE;
+    const centreY =
+      latToY(view.lat, zoom) - (lead * Math.cos(aircraft.heading ?? 0)) / TILE_SIZE;
+    // What the middle of the map is actually showing, so that taking hold of
+    // it with the pointer does not first snap the lead away.
+    shown = { lat: yToLat(centreY, zoom), lon: xToLon(centreX, zoom) };
 
     ctx.fillStyle = '#0b1014';
     ctx.fillRect(0, 0, w, h);
@@ -489,7 +511,7 @@ export function createMinimap(root, { places = [], airports = [], fieldsNear, on
     drag.moved = true;
     drag.x = event.clientX;
     drag.y = event.clientY;
-    const from = pan ?? lastSeen;
+    const from = pan ?? shown ?? lastSeen;
     const lat = yToLat(latToY(from.lat, zoom) - dy / TILE_SIZE, zoom);
     pan = {
       lat: Math.max(-85, Math.min(85, lat)),
