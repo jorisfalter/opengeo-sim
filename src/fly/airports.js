@@ -145,6 +145,14 @@ const MEASURED = {
   // lands on the displaced threshold bar of 05, with the stopway arrows
   // running on behind it.
   LFQM: { '05': [47.20465, 6.07916, 47.21205, 6.09414] },
+  // Vichy-Charmeil, found by the same reading of the centreline as
+  // Saint-Inglevert below, and the only other French field that failed it: the
+  // line runs 9.9 m right of the middle of a forty-five-metre runway, which
+  // puts the start ring on the right-hand third of the piano keys at both
+  // ends. The stripes say it twice over — two edges exactly 45.1 m apart,
+  // which is the published width to a tenth, with the dashed centreline
+  // halfway between them.
+  LFLV: { '01': [46.15993, 3.4016, 46.1795, 3.40562] },
   // Saint-Inglevert, and a different kind of error from all of the above: the
   // line is the right length, on the right bearing, and on the pavement — just
   // not in the middle of it. It runs along the north-west edge of a strip

@@ -2016,6 +2016,61 @@ than 150 m and nobody looked at — on a 900 m strip that is still the
 difference between the asphalt and the grass beside it, and those are the
 ones left to do.
 
+### The line that is on the runway and not in the middle of it
+
+Saint-Inglevert is the error the sweep above cannot see. Its published line is
+the right length, on the right bearing, and on the pavement — along the
+north-west edge of it. Sixteen metres is nothing to a line six hundred metres
+long, so every measure the strip search uses says that line is fine; under a
+pair of wheels it is the difference between the runway and the shoulder, and
+it is what the aeroplane was parked on.
+
+So the question was asked again, of all 227 French fields with a paved runway,
+and differently: not "is this line on pavement" but "is it in the middle of
+it". Two readings, which have to agree.
+
+**The stripes.** A runway's centreline is the one thing on it that is in the
+middle of it by definition. It is also interrupted, so an average along the
+line never sees it — at any one station the brightest narrow thing across the
+strip is usually the continuous edge stripe instead, and reading that is how
+the first version put Grenoble 22 m off a line that was in fact on the dashes.
+So every narrow bright run at every station is collected, not only the
+brightest, and the clusters they form are read as a shape. The key is the
+published width: the pair of stripes that stands exactly one runway-width
+apart is the two edges, the centre is halfway between them, and if a cluster
+sits there too, that is the centreline and it wins, because painted beats
+computed. Without that key any other pair of stripes points just as
+convincingly, which is what sent Saint-Brieuc 26 m into the grass.
+
+**The pavement.** `frfit` walks the line and measures the contiguous band of
+one brightness around it at forty stations: roughly where the asphalt is, and
+how wide. On a wide runway it sometimes takes only half of it — Strasbourg and
+Clermont-Ferrand both read five metres out that way — so it is the check and
+not the answer. A centre is only accepted if it falls inside the band.
+
+Together they are steady enough to be worth reading: of the 227 fields the
+median line sits **1.1 m** from the centre of its runway and the ninetieth
+percentile 4.6 m, which for a line nobody measured is a good deal better than
+it had to be. Eighteen came out beyond five metres and every one of them was
+looked at on the photograph, because a measurement that has been fooled this
+often does not get the last word. Seventeen of those eighteen are the
+measurement being fooled again — by a taxiway edge at Angers, a mown grass
+strip at Strasbourg-Neuhof, a censored military field at Ambérieu where there
+is nothing to read at all.
+
+The eighteenth is **Vichy-Charmeil**, where the line runs 9.9 m right of the
+middle of a forty-five-metre runway. The stripes say it twice: two edges
+exactly 45.1 m apart, which is the published width to a tenth, with the dashed
+centreline halfway between them. The piano keys at both thresholds say it
+again — the start ring was standing on their right-hand third. It is in
+`MEASURED` now, and the same reading afterwards puts it 10 cm off centre.
+
+One field is left open rather than guessed at: **Alès-Cévennes**, where the
+line does run along the right edge, the threshold bar is plainly to the left
+of it, and the pavement fit finds only 13.5 m of band on a runway declared at
+30 — so the ten metres it offers is not a number to write down. It is in
+`TODO.md` to be measured the way Corte was, by hand.
+
 ## The glide path, without an ILS
 
 An approach you can see, without the simulator turning into a game about
